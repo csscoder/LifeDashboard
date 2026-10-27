@@ -55,6 +55,17 @@ describe('confirmations', () => {
     expect(toasts.value).toHaveLength(1)
   })
 
+  it('identifies same-title packages in blocked-request toasts', async () => {
+    for (const [widgetId, packageId] of [['w1', 'dev.a.hello'], ['w2', 'dev.b.hello']] as const) {
+      for (let i = 0; i < 3; i++) {
+        const result = requestConfirmation({ widgetId, packageId, version: '1.0.0', title: 'Hello', op: 'notifications.send', input: note })
+        confirmations.value[0]!.decline()
+        expect(await result).toBe('declined')
+      }
+    }
+    expect(toasts.value.map(toast => toast.source)).toEqual(['Hello · dev.a.hello', 'Hello · dev.b.hello'])
+  })
+
   it('does not count teardown cancels or expirations', async () => {
     for (let i = 0; i < 3; i++) {
       const cancelled = ask('w1')
@@ -103,7 +114,11 @@ describe('confirmations', () => {
     const entry = confirmations.value[0]!
     entry.decline(); entry.decline()
     expect(await first).toBe('declined')
+    await decline()
+    // Two distinct declines must still leave the third dialog available, before any approval resets the count.
     const second = ask('w1')
+    expect(queued()).toEqual(['w1'])
+    expect(toasts.value).toHaveLength(0)
     const approved = confirmations.value[0]!
     approved.answer('approved'); approved.decline()
     expect(await second).toBe('approved')

@@ -60,7 +60,7 @@ export function requestConfirmation(request: ConfirmationRequest): Promise<Confi
       state.declines++
       if (state.declines === DECLINES_BEFORE_BLOCK) {
         state.blockedUntil = Date.now() + BLOCK_MS
-        showToast({ source: request.title, title: `Widget «${request.title}» requests are blocked for 5 minutes`, body: '' })
+        showToast({ source: request.packageId ? `${request.title} · ${request.packageId}` : request.title, title: `Widget «${request.title}» requests are blocked for 5 minutes`, body: '' })
       }
       widgetDeclines.set(request.widgetId, state)
       answer('declined')

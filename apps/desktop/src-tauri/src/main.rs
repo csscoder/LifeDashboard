@@ -68,12 +68,14 @@ fn main() {
         .manage(Sidecar::default())
         .setup(|app| {
             if let Err(error) = start(app.handle()) {
+                let handle = app.handle().clone();
+                // Setup runs on the main thread: let the event loop show the dialog,
+                // then exit only after it is dismissed. No window is opened on this path.
                 app.dialog()
                     .message(format!("{error}"))
                     .title("LifeDashboard could not start")
                     .kind(MessageDialogKind::Error)
-                    .blocking_show();
-                return Err(error);
+                    .show(move |_| handle.exit(1));
             }
             Ok(())
         })
