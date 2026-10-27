@@ -122,8 +122,7 @@ export function afterSave(outcome: SaveOutcome): Reaction {
     case 'skipped':
       return {}
     case 'conflict':
-      // Leaving the mode first makes the reload apply.
-      return { leaveMode: true, notice: 'The board changed in another tab. Press «Cancel» and try again', reload: true }
+      return afterStaySave('conflict')
     case 'unauthorized':
       return { leaveMode: true, app: 'pairing' }
     case 'invalid':

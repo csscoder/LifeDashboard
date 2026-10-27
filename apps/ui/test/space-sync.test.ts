@@ -369,12 +369,18 @@ describe('reactions', () => {
   it.each([
     ['saved', { leaveMode: true, notice: null, api: 'ok' }],
     ['skipped', {}],
-    ['conflict', { leaveMode: true, notice: 'The board changed in another tab. Press «Cancel» and try again', reload: true }],
+    ['conflict', { notice: 'The board changed in another tab. Press «Cancel» and try again' }],
     ['unauthorized', { leaveMode: true, app: 'pairing' }],
     // The mode and the working copy stay so the user can retry or cancel (DATA-05).
     ['invalid', { notice: 'Could not save: data rejected' }],
     ['unavailable', { notice: 'Could not save, try again', api: 'down' }],
   ] as const)('after a %s save: %o', (outcome, reaction) => {
     expect(afterSave(outcome)).toEqual(reaction)
+  })
+
+  it('repeats the conflict notice on a second Done without leaving the mode', () => {
+    expect(afterSave('conflict')).toEqual(afterStaySave('conflict'))
+    expect(afterSave('conflict')).not.toHaveProperty('leaveMode')
+    expect(afterSave('conflict')).not.toHaveProperty('reload')
   })
 })
