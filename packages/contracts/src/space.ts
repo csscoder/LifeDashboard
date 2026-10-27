@@ -65,7 +65,7 @@ export function parseSpacePatch(raw: unknown): ParseResult<SpacePatch> {
     const title = raw.title.trim()
     const length = [...title].length
     if (length < 1 || length > SPACE_LIMITS.title) return fail(`title must be 1..${SPACE_LIMITS.title} characters`)
-    if (HIDDEN_TEXT.test(title)) return fail('title must not contain hidden control characters')
+    if (/[\u0000-\u001f\u007f]/.test(title) || HIDDEN_TEXT.test(title)) return fail('title must not contain control or hidden characters')
     patch.title = title
   }
   if (raw.icon !== undefined) {

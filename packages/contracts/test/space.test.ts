@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { SPACE_ICONS, nextColor, parseSpacePatch, type SpaceColor } from '../src/space.ts'
 
 describe('parseSpacePatch', () => {
-  it.each(['   ', '\u0085', 'a\u200bb', 'a\u200eb', 'a\u202eb', 'a\u2066b', 'a\u2028b'])('rejects blank or hidden title %j', (title) => {
+  it.each(['   ', '\u0085', 'a\u200bb', 'a\u200eb', 'a\u202eb', 'a\u2066b', 'a\u2028b', 'a\u0000b', 'a\tb', 'a\nb', 'a\u001fb', 'a\u007fb'])('rejects blank, control or hidden title %j', (title) => {
     expect(parseSpacePatch({ title }).ok).toBe(false)
   })
 
