@@ -233,6 +233,10 @@ describe('GatewayFailure', () => {
 })
 
 describe('checkGatewayCall', () => {
+  it('rejects headers outside Latin-1 before fetching', () => {
+    expect(checkGatewayCall('http.get', { url: 'https://example.com', headers: { accept: 'text/€' } }, new Set(['network']))).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
+  })
+
   it('rejects unknown operations before checking permissions or input', () => {
     expect(checkGatewayCall('nope', {}, new Set())).toEqual({ ok: false, code: 'UNKNOWN_OP', message: 'Unknown operation "nope"' })
     const op = 'x'.repeat(101)

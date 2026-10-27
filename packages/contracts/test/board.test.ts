@@ -67,6 +67,12 @@ describe('parseScreenBoard', () => {
     expect(parseScreenBoard(mutated((d) => { d.instances[0].source.type = 'weather' })).ok).toBe(true)
   })
 
+  it('accepts a legacy package version with leading zeros', () => {
+    const source = { kind: 'package', packageId: 'dev.alex.pomodoro', version: '01.0.0' }
+    const result = parseScreenBoard(mutated((d) => { d.instances[0].source = source }))
+    expect(result.ok && result.value.instances[0]!.source).toEqual(source)
+  })
+
   it('accepts a package source', () => {
     const source = { kind: 'package', packageId: 'dev.alex.pomodoro', version: '1.2.0' }
     const result = parseScreenBoard(mutated((d) => { d.instances[0].source = { ...source, extra: 1 } }))

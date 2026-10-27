@@ -38,8 +38,8 @@ function parseModal(input: unknown, allowTitle: boolean): ParseResult<ModalOpenI
   if (unknownKey(input, allowTitle ? ['view', 'title', 'props'] : ['view', 'props']) !== undefined) return fail('unknown modal input key')
   const { view, title } = input
   if (typeof view !== 'string' || !MODAL_VIEW_PATTERN.test(view) || view === 'constructor') return fail('invalid modal view')
-  if (Object.hasOwn(input, 'title') && !isPlainText(title, MODAL_LIMITS.titleLength)) return fail('title must be 1–80 characters of plain text')
-  const props = Object.hasOwn(input, 'props') ? input.props : {}
+  if (title !== undefined && !isPlainText(title, MODAL_LIMITS.titleLength)) return fail('title must be 1–80 characters of plain text')
+  const props = input.props !== undefined ? input.props : {}
   if (!isRecord(props) || !isJson(props, 1, new Set())) return fail('props must be a finite JSON object of depth at most 32')
   if (byteLength(JSON.stringify(props)) > MODAL_LIMITS.propsBytes) return fail('props must be at most 65536 bytes as JSON')
   return { ok: true, value: { view, ...(typeof title === 'string' ? { title } : {}), props } }

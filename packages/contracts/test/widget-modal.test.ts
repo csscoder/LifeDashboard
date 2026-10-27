@@ -15,6 +15,10 @@ function nested(depth: number): Record<string, unknown> {
 }
 
 describe('parseModalOpen', () => {
+  it.each([{ title: undefined }, { props: undefined }])('accepts undefined optional fields %j', (options) => {
+    expect(parseModalOpen({ view: 'v', ...options })).toEqual({ ok: true, value: { view: 'v', props: {} } })
+  })
+
   it('defaults props to an empty object', () => {
     expect(parseModalOpen({ view: 'workspace' })).toEqual({ ok: true, value: { view: 'workspace', props: {} } })
   })
@@ -65,7 +69,7 @@ describe('parseModalOpen', () => {
     cycle.self = cycle
     const unsupported = [NaN, Infinity, undefined, () => {}, new Date(), new Map(), Object.create({ inherited: true }), cycle, 1n]
     for (const value of unsupported) rejects(parseModalOpen({ view: 'workspace', props: { value } }))
-    for (const props of [...unsupported, [], null]) rejects(parseModalOpen({ view: 'workspace', props }))
+    for (const props of [...unsupported.filter((value) => value !== undefined), [], null]) rejects(parseModalOpen({ view: 'workspace', props }))
     rejects(parseModalOpen({ view: 'workspace', props: { toJSON() { throw new Error('must not stringify') } } }))
   })
 

@@ -73,6 +73,18 @@ async function pairAgain(): Promise<string> {
 }
 
 describe('POST /widget-sessions', () => {
+  it('creates a session for an installed legacy leading-zero version', async () => {
+    const row = t.db.prepare('SELECT manifest FROM widget_package_versions WHERE package_id = ? AND version = ?').get('dev.test.hello', '1.0.0') as { manifest: string }
+    const manifest = { ...JSON.parse(row.manifest), version: '01.0.0' }
+    t.db.prepare(`INSERT INTO widget_package_versions (package_id, version, hash, manifest, installed_at)
+      SELECT package_id, ?, ?, ?, installed_at FROM widget_package_versions WHERE package_id = ? AND version = ?`)
+      .run('01.0.0', 'a'.repeat(64), JSON.stringify(manifest), 'dev.test.hello', '1.0.0')
+    t.db.prepare('UPDATE widgets SET source_version = ? WHERE id = ?').run('01.0.0', PKG_WIDGET)
+    const response = await createSession(PKG_WIDGET)
+    expect(response.statusCode).toBe(200)
+    expect(response.json().data.widgetSession).toEqual(expect.any(String))
+  })
+
   it('serves two concurrent sessions of one widget with shared state and rate limit', async () => {
     const a = await openSession(PKG_WIDGET)
     const b = await openSession(PKG_WIDGET)

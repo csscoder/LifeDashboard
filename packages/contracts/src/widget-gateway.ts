@@ -175,7 +175,7 @@ function parseHttpHeaders(raw: unknown, allowed: readonly string[]): ParseResult
   const headers: Record<string, string> = {}
   for (const [name, value] of Object.entries(raw)) {
     if (!allowed.includes(name)) return fail(`headers may name only ${allowed.join(' and ')}`)
-    if (typeof value !== 'string' || value.length > HTTP_LIMITS.headerValueLength || CONTROL.test(value)) {
+    if (typeof value !== 'string' || value.length > HTTP_LIMITS.headerValueLength || CONTROL.test(value) || /[^\u0000-ÿ]/.test(value)) {
       return fail(`headers.${name} must be at most ${HTTP_LIMITS.headerValueLength} characters without control characters`)
     }
     headers[name] = value

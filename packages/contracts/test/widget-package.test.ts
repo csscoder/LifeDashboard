@@ -35,6 +35,14 @@ function mutatedManifest(change: (manifest: any) => void): unknown {
 }
 
 describe('manifest field rules', () => {
+  it.each(['01.0.0', '1.00.0', '1.0.00', '1000000000.0.0'])('rejects new noncanonical version %s', (version) => {
+    expect(parseWidgetManifest(mutatedManifest((m) => { m.version = version })).ok).toBe(false)
+  })
+
+  it.each(['0.1.0', '10.0.0', '999999999.0.0'])('accepts canonical version %s', (version) => {
+    expect(parseWidgetManifest(mutatedManifest((m) => { m.version = version })).ok).toBe(true)
+  })
+
   it('accepts an entry other than index.js, no styles and no permissions', () => {
     const result = parseWidgetManifest(mutatedManifest((m) => {
       m.entry = 'main.js'

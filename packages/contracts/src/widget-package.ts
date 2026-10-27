@@ -90,6 +90,7 @@ export interface WidgetFolder {
 const SEGMENT_PATTERN = /^[A-Za-z0-9._-]+$/
 
 const ID_PATTERN = /^[a-z0-9]+(\.[a-z0-9-]+)+$/
+const STRICT_VERSION_PATTERN = /^(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})$/
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/
 
 const MANIFEST_KEYS = ['id', 'version', 'title', 'author', 'sdk', 'entry', 'styles', 'sizing', 'permissions', 'network', 'settings', 'frame']
@@ -223,7 +224,7 @@ function parseManifest(raw: unknown): ParseResult<WidgetPackageManifest> {
   if (!isPackageId(raw.id)) {
     return fail('manifest.id must match ^[a-z0-9]+(\\.[a-z0-9-]+)+$ and be at most 100 characters')
   }
-  if (!isPackageVersion(raw.version)) return fail('manifest.version must be MAJOR.MINOR.PATCH')
+  if (typeof raw.version !== 'string' || !STRICT_VERSION_PATTERN.test(raw.version)) return fail('manifest.version must be MAJOR.MINOR.PATCH')
   if (!isPlainText(raw.title)) return fail('manifest.title must be 1–60 characters of plain text')
   if (!isPlainText(raw.author)) return fail('manifest.author must be 1–60 characters of plain text')
   if (Object.hasOwn(raw, 'settings') && sdk === 1) return fail('manifest.settings needs sdk 2')
