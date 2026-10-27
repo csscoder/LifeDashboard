@@ -206,9 +206,12 @@ export function registerWidgetGateway(app: FastifyInstance, { db, now }: WidgetG
       if (needsConfirmation(confirm, grantMode(session, permission))) {
         confirmCall(session, checkedOp, call.input, request.headers['x-widget-confirmation'])
       } else {
-        // An approval repeat spends its id even if the mode flipped to allow mid-dialog.
-        if (session.confirmation?.id === request.headers['x-widget-confirmation']) session.confirmation = null
-        rateLimit(session.widgetId, checkedOp)
+        // Issuance already spent the quota, even if the mode flipped to allow mid-dialog.
+        if (session.confirmation !== null && session.confirmation.id === request.headers['x-widget-confirmation']) {
+          confirmCall(session, checkedOp, call.input, request.headers['x-widget-confirmation'])
+        } else {
+          rateLimit(session.widgetId, checkedOp)
+        }
       }
       const handler = handlers[checkedOp] as (context: GatewayContext, input: unknown) => unknown
       // Awaited inside try: an HTTP handler is asynchronous, and catch and audit must see its end.

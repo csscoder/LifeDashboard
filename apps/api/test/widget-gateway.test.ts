@@ -603,6 +603,19 @@ describe('confirmation', () => {
     ])
   })
 
+  it('allows an approval after switching to allow when the quota filled after issuance', async () => {
+    const token = await openSession(PKG_WIDGET)
+    const id = await issue(token)
+    expect((await setMode('allow')).statusCode).toBe(200)
+    for (let i = 0; i < RATE_LIMITS['notifications.send'].max - 1; i++) {
+      expect((await send(token)).statusCode).toBe(200)
+    }
+    expect(errorCode(await send(token))).toBe('RATE_LIMITED')
+    expect((await send(token, id)).statusCode).toBe(200)
+    expect(errorCode(await send(token, id))).toBe('RATE_LIMITED')
+    expect(outcomes()).toEqual(['CONFIRMATION_REQUIRED', ...Array<string>(10).fill('ok')])
+  })
+
   it('spends the rate limit once per confirmed call', async () => {
     const token = await openSession(PKG_WIDGET)
     for (let index = 0; index < 10; index++) {
