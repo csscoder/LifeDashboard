@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { showToast } from './toasts'
+import { showToast } from './toasts.js'
 import { CONFIRMATION_DIALOG_MS, type GatewayOp } from '@lifedashboard/contracts/widget-gateway'
 
 export type ConfirmationAnswer = 'approved' | 'declined' | 'expired'
