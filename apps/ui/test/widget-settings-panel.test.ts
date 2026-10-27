@@ -33,6 +33,11 @@ function mount(editor?: Vue.Component, overrides: Record<string, unknown> = {}) 
 }
 
 describe('widget settings panel', () => {
+  it('takes the focus of a click on its text, so the board main never gets it and closes the panel', () => {
+    const panel = mount().nodes().find((el) => el.props.role === 'dialog')!
+    expect(panel.props.tabindex).toBe('-1')
+  })
+
   it('uses the generic form when the widget has no editor of its own', () => {
     const ui = mount()
     expect(ui.nodes().some((el) => el.tag === 'generic-form')).toBe(true)

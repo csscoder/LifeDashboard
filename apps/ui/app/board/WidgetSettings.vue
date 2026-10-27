@@ -76,7 +76,8 @@ function close() {
 }
 
 // Focus moved to another element: the board keyboard would stay locked out while the panel is open. A null
-// relatedTarget (a native colour or select popup, the window losing focus) keeps the panel open.
+// relatedTarget (a native colour or select popup, the window losing focus) keeps the panel open. The panel's
+// tabindex takes the focus of a click on its text; else the board's <main tabindex="-1"> would, closing it.
 function onFocusOut(event: FocusEvent) {
   const next = event.relatedTarget
   if (next instanceof Element && !panel.value?.contains(next)) close()
@@ -111,6 +112,7 @@ defineExpose({ open, close, isOpen })
     popover="auto"
     role="dialog"
     aria-label="Widget settings"
+    tabindex="-1"
     class="settings"
     @toggle="onToggle"
     @focusout="onFocusOut"
