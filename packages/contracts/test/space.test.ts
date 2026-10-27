@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { SPACE_ICONS, nextColor, parseSpacePatch, type SpaceColor } from '../src/space.ts'
 
 describe('parseSpacePatch', () => {
+  it.each(['   ', '\u0085', 'a\u200bb', 'a\u200eb', 'a\u202eb', 'a\u2066b', 'a\u2028b'])('rejects blank or hidden title %j', (title) => {
+    expect(parseSpacePatch({ title }).ok).toBe(false)
+  })
+
+  it.each(['Weather', 'Météo de Paris', '\u{1F468}\u200d\u{1F469}\u200d\u{1F467}', 'می\u200cخواهم'])('accepts readable international title %j', (title) => {
+    expect(parseSpacePatch({ title })).toEqual({ ok: true, value: { title } })
+  })
+
   it('trims the title', () => {
     expect(parseSpacePatch({ title: '  Home  ' })).toEqual({ ok: true, value: { title: 'Home' } })
   })

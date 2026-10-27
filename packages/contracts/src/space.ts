@@ -1,5 +1,5 @@
 import { BARE_THEME_ID, isThemeId } from './board.ts'
-import { fail, isRecord, unknownKey, type ParseResult } from './parse.ts'
+import { HIDDEN_TEXT, fail, isRecord, unknownKey, type ParseResult } from './parse.ts'
 
 export const SPACE_LIMITS = { spaces: 20, screens: 20, title: 40 } as const
 export const NEW_SPACE_TITLE = 'New space'
@@ -65,6 +65,7 @@ export function parseSpacePatch(raw: unknown): ParseResult<SpacePatch> {
     const title = raw.title.trim()
     const length = [...title].length
     if (length < 1 || length > SPACE_LIMITS.title) return fail(`title must be 1..${SPACE_LIMITS.title} characters`)
+    if (HIDDEN_TEXT.test(title)) return fail('title must not contain hidden control characters')
     patch.title = title
   }
   if (raw.icon !== undefined) {

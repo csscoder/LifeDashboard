@@ -11,8 +11,10 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 /** Maximum length, in UTF-16 code units, of plain-text fields such as manifest title and author. */
 export const PLAIN_TEXT_MAX = 60
 
+export const HIDDEN_TEXT = /[\u0080-\u009f\u200b\u200e\u200f\u202a-\u202e\u2066-\u2069\u2028\u2029]/
+
 export function isPlainText(value: unknown, maxLength = PLAIN_TEXT_MAX): value is string {
-  return typeof value === 'string' && value.length >= 1 && value.length <= maxLength && !/[\u0000-\u001f\u007f]/.test(value)
+  return typeof value === 'string' && value.trim() !== '' && value.length <= maxLength && !/[\u0000-\u001f\u007f]/.test(value) && !HIDDEN_TEXT.test(value)
 }
 
 /** The first key of `record` outside `allowed`, or undefined. */
