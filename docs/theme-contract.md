@@ -1,7 +1,7 @@
 # Theme contract (version 1)
 
 The rules a LifeDashboard theme must satisfy. `apps/ui/app/theme/contract.ts` is the canonical
-token list; `validateThemeCss()` in `apps/ui/app/theme/validate-theme.ts` enforces this document.
+token list; `validateThemeCss()` in `apps/ui/app/theme/validate-theme.ts` enforces this document for the built-in themes in the test suite; a runtime check for user themes comes with user themes.
 The AI theme skill writes themes against it. Design: [archived theme-engine design](../.project-history/features/2026-10-09-theme-engine/spec.md).
 
 ## Assignment and inheritance

@@ -33,7 +33,7 @@ it('releases the slot and the quota when mount rejects', async () => {
  await host.open(owner(), input)
 })
 it('closes an errored modal and refreshes the caller', async () => {
- const { host, deps, current } = setup(); await host.open(owner(), input); host.fail(current().id, 'x'); expect(current().state).toBe('error'); await host.close(current().id); expect(deps.refresh).toHaveBeenCalledTimes(1)
+ const { host, deps, current } = setup(); await host.open(owner(), input); host.fail(current().id); expect(current().state).toBe('error'); await host.close(current().id); expect(deps.refresh).toHaveBeenCalledTimes(1)
 })
 it('allows 10 accepted opens per widget per minute across remounts', async () => {
  const { host, deps, current } = setup(); deps.mount.mockRejectedValueOnce(new Error('failed'))

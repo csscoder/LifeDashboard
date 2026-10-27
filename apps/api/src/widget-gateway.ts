@@ -24,8 +24,6 @@ import { ApiError, ok } from './errors.ts'
 import { grantsOf, originsOf } from './widget-packages.ts'
 import { secretValues } from './widget-secrets.ts'
 
-export { RATE_LIMITS } from '@lifedashboard/contracts/widget-gateway'
-
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR

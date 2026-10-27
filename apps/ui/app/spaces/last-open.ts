@@ -51,13 +51,3 @@ export function resolveLastOpen(stored: LastOpen, spaces: readonly SpaceSummary[
   const listed = spaces.some((space) => space.id === stored.spaceId)
   return listed ? stored.spaceId : (spaces[0]?.id ?? null)
 }
-
-export function screenFor(
-  stored: LastOpen,
-  spaceId: string,
-  screenIds: readonly string[],
-): string | null {
-  const remembered = stored.screens[spaceId]
-  if (remembered !== undefined && screenIds.includes(remembered)) return remembered
-  return screenIds[0] ?? null
-}

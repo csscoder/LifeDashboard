@@ -342,11 +342,6 @@ export const SDK_LEVELS = [1, 2, 3, 4] as const
 export type SdkLevel = (typeof SDK_LEVELS)[number]
 export const SDK_TARGET_LEVEL: SdkLevel = 4
 
-export interface HelloMessage {
-  t: 'ld:hello'
-  sdk: number
-}
-
 export interface InitMessage {
   t: 'ld:init'
   context: WidgetContext

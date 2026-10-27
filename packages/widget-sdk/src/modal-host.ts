@@ -46,7 +46,7 @@ export function createModalHost(deps: { mount(record: ModalRecord): Promise<void
     throw unavailable()
    }
   },
-  fail(surfaceId: string, _message: string): void {
+  fail(surfaceId: string): void {
    if (current?.record.id === surfaceId && current.record.state === 'open') { current.record.state = 'error'; deps.onChange(current.record) }
   },
   close(surfaceId: string): Promise<void> {

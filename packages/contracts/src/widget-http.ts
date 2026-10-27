@@ -1,6 +1,7 @@
 import { lookup as dnsLookup, type LookupAddress } from 'node:dns'
 import { isIP, type LookupFunction } from 'node:net'
 import { Agent, fetch, type Response } from 'undici'
+import { byteLength } from './parse.ts'
 import { isPublicAddress } from './address.ts'
 import { GatewayFailure, HTTP_LIMITS, type HttpOutput, type HttpSendMethod } from './widget-gateway.ts'
 import { injectSecret, redactSecrets, type BoundSecret } from './widget-secrets.ts'
@@ -81,7 +82,7 @@ export async function proxyHttp(
       contentType: response.headers.get('content-type'),
       body: await readText(response),
     }
-    if (new TextEncoder().encode(JSON.stringify(output)).byteLength > HTTP_LIMITS.answerBytes) throw new GatewayFailure('UPSTREAM_ERROR', 'The response is too large')
+    if (byteLength(JSON.stringify(output)) > HTTP_LIMITS.answerBytes) throw new GatewayFailure('UPSTREAM_ERROR', 'The response is too large')
     return output
   } catch (error) {
     if (error instanceof GatewayFailure) throw error

@@ -101,7 +101,7 @@ function openBridge(target: Window, surfaceId: string, isModal: boolean) {
       }
       return gatewayCall(op, input)
     }),
-    onError(message) { report('error', message); if (isModal) { modalError.value = message; controller.fail(surfaceId, message) } },
+    onError(message) { report('error', message); if (isModal) { modalError.value = message; controller.fail(surfaceId) } },
     onClose() { report('error', 'bridge closed') },
     onModalClose() { if (isModal) void controller.close(surfaceId) },
   })

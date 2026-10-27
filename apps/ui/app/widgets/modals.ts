@@ -99,7 +99,7 @@ export function createDashboardModals() {
     },
     close: controller.close,
     track: controller.track,
-    fail(id: string, message: string) { if (activeModal.value?.id === id) { error.value = message; controller.fail(id, message) } },
+    fail(id: string, message: string) { if (activeModal.value?.id === id) { error.value = message; controller.fail(id) } },
     retry(id: string) { if (activeModal.value?.id === id && activeModal.value.state === 'error' && error.value !== null) { error.value = null; retryVersion.value++ } },
     cancelAll() { for (const id of callers.keys()) controller.removeCaller(id) },
     dispose() { controller.dispose(); callers.clear(); surfaces.clear(); visibilityDocument?.removeEventListener('visibilitychange', updateVisibility) },

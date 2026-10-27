@@ -5,7 +5,6 @@ import {
   loadLastOpen,
   resolveLastOpen,
   saveLastOpen,
-  screenFor,
 } from '../app/spaces/last-open'
 
 const DEFAULTS = { schemaVersion: 1, spaceId: null, screens: {} }
@@ -105,25 +104,5 @@ describe('resolveLastOpen', () => {
   it('returns null when there are no spaces', () => {
     const stored = { schemaVersion: 1 as const, spaceId: 'a', screens: {} }
     expect(resolveLastOpen(stored, [])).toBeNull()
-  })
-})
-
-describe('screenFor', () => {
-  const stored = { schemaVersion: 1 as const, spaceId: 'sp1', screens: { sp1: 's2' } }
-
-  it('keeps the stored screen when it is present', () => {
-    expect(screenFor(stored, 'sp1', ['s1', 's2'])).toBe('s2')
-  })
-
-  it('falls back to the first screen when the stored one is stale', () => {
-    expect(screenFor(stored, 'sp1', ['s1', 's3'])).toBe('s1')
-  })
-
-  it('falls back to the first screen when nothing is stored for the space', () => {
-    expect(screenFor(stored, 'sp9', ['s1', 's2'])).toBe('s1')
-  })
-
-  it('returns null when the space has no screens', () => {
-    expect(screenFor(stored, 'sp1', [])).toBeNull()
   })
 })
