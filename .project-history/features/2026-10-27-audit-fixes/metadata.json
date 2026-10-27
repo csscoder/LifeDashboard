@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "feature": {
+    "id": "audit-fixes",
+    "name": "Audit fixes",
+    "slug": "audit-fixes"
+  },
+  "status": "complete",
+  "completedAt": "2026-10-27",
+  "git": {
+    "repositoryRoot": ".",
+    "branch": "fix/audit-findings",
+    "commit": "5313c676eb67c8c8f9e7f95b9c083c6fefe9dd84",
+    "headDescribe": "5313c67"
+  },
+  "artifacts": {
+    "spec": {
+      "sourcePath": "docs/superpowers/specs/2026-10-27-audit-fixes-design.md",
+      "archivePath": "spec.md",
+      "sha256": "a7813d1e17f0b9a84bff72d1ea85b8e116d2acdbfae7b56178b77a9b4b723a21"
+    },
+    "plan": {
+      "sourcePath": "docs/superpowers/plans/2026-10-27-audit-fixes.md",
+      "archivePath": "plan.md",
+      "sha256": "cb019e06fdb5109cfd5c57fbaabf83b29a4a23b4662b32fe1294a31e1b34b490"
+    },
+    "outcome": {
+      "archivePath": "outcome.md",
+      "sha256": "92d6937f0e1366722dcccb5c2f2c143dfbd0108cf1c654aa3abb9d1f2eea2732"
+    }
+  },
+  "implementation": {
+    "status": "completed"
+  },
+  "review": {
+    "status": "completed"
+  },
+  "verification": {
+    "status": "verified"
+  },
+  "archivedAt": "2026-10-27",
+  "revision": 1,
+  "supersedes": null
+}
