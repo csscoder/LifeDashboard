@@ -71,12 +71,15 @@ In `apps/api/src/widget-gateway.ts:189-222`, a call rejected by `checkGatewayCal
 
 Design:
 - A call rejected by `checkGatewayCall` spends one unit of its operation's limit; an unknown operation spends from a shared `rejected` bucket of 60 calls per minute. The rate-limiter key widens from `GatewayOp` to `GatewayOp | 'rejected'`.
-- Calls whose outcome is `RATE_LIMITED` write no audit row. Audit rows per minute are then bounded by the sum of the limits.
+- A call rejected by `confirmCall` with `CONFIRMATION_INVALID` (a confirmation header that does not match the pending confirmation) also spends one unit of its operation's limit. Today it throws before any limit is spent (`widget-gateway.ts:107-109`).
+- Calls whose outcome is `RATE_LIMITED` write no audit row. Every other audited outcome has spent a limit unit, except the single-use approval repeat that completes a confirmation (its unit was spent when the confirmation was issued). A confirmed call therefore writes two rows, `CONFIRMATION_REQUIRED` and its result, so audit rows per widget per minute are bounded by twice the sum of the limits.
 - The audit purge also runs hourly from an `unref()` timer, as in `background-media.ts:115`.
 - A new migration adds `CREATE INDEX widget_audit_at ON widget_audit(at)`.
 
 Tests:
 - 2000 invalid calls write at most 60 audit rows; the rest answer `RATE_LIMITED`.
+- 2000 calls with a wrong confirmation id write at most 60 audit rows; the rest answer `RATE_LIMITED`.
+- A full confirmation cycle (428, then the approval repeat) writes two rows and spends one unit; a declined confirmation writes the `CONFIRMATION_REQUIRED` row and spends one unit.
 - The purge removes old rows after the timer fires (fake timers).
 - The migration creates the index.
 - `widget-gateway.test.ts:282` keeps asserting that rejected calls are audited, within the limit.
@@ -86,11 +89,12 @@ Tests:
 After «Decline» a widget can repeat the call at once; for `http.send` that is up to 60 modal dialogs a minute, and the page under the modal is inert.
 
 Design (`apps/ui/app/confirmations.ts`):
-- After 3 declines in a row from one `widgetId`, further requests from that widget answer `declined` for 5 minutes without entering the queue.
+- Only user declines count: the Decline button and Esc in the dialog. Teardown cancels (`cancelConfirmations`, `cancelSurfaceConfirmations`, which today also answer `declined`) and expired dialogs do not count. The confirmation entry therefore records whether a `declined` answer came from the user.
+- After 3 user declines in a row from one `widgetId`, further requests from that widget answer `declined` for 5 minutes without entering the queue.
 - One toast at the start of the block: «Widget «title» requests are blocked for 5 minutes».
 - An approval resets the counter; so does the end of the block.
 
-Tests: three declines → the fourth request resolves `declined` and the queue stays empty; after 5 minutes (fake timers) the dialog shows again; an approval resets the count; the toast appears once per block.
+Tests: three user declines → the fourth request resolves `declined` and the queue stays empty; three teardown cancels or expirations do not start a block; after 5 minutes (fake timers) the dialog shows again; an approval resets the count; the toast appears once per block.
 
 ### B6. Confirmation shows only the widget title (finding 6)
 
@@ -144,7 +148,13 @@ Test (`apps/api`): spawn the server with the variable and a temporary data dir, 
 
 ### C14. Package versions with leading zeros (finding 14)
 
-`packages/contracts/src/widget-package.ts:93` accepts `01.0.0`, which compares equal to `1.0.0`. Design: `^(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})$`. Installed versions are not re-validated. Test: `01.0.0` and `1.00.0` are rejected; `0.1.0` and `10.0.0` pass.
+`packages/contracts/src/widget-package.ts:93` accepts `01.0.0`, which compares equal to `1.0.0`.
+
+Design:
+- The strict format `^(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})$` applies only where a new manifest is parsed (`parseWidgetManifest`, `widget-package.ts:226`).
+- `isPackageVersion` keeps the current permissive format. It validates references to installed versions: board sources (`board.ts:175`, `parseWidgetSource`), widget-session creation (`apps/api/src/widget-gateway.ts:160`) and version switching. A version installed before this change, such as `01.0.0`, keeps working.
+
+Tests: a new manifest with `01.0.0` or `1.00.0` is rejected, `0.1.0` and `10.0.0` pass; a board with a source on an installed `01.0.0` still saves; a widget session for it is still created.
 
 ### C15. `create-widget` gives the wrong reason (finding 15)
 
@@ -179,7 +189,7 @@ Tests:
 Design:
 - Delete `validate-theme.ts` and its tests; keep the token-contract tests in `theme-contract.test.ts`.
 - Remove `postcss` from `apps/ui/package.json` after checking that no Nuxt or UnoCSS config needs it as a direct dependency.
-- `docs/theme-contract.md` gets one line: CSS validation returns together with user themes.
+- `docs/theme-contract.md`: replace the statement that `validateThemeCss()` enforces the document (line 4) with one saying that no validator runs today and that CSS validation returns together with user themes; mark the validator sections («Contrast» procedure, «Error messages») as requirements for that future validator, not current behavior.
 
 ### D18. Dead code (finding 18)
 
