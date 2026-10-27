@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 2,
+  "feature": {
+    "id": "widget-modals",
+    "name": "Widget modal applications",
+    "slug": "widget-modals"
+  },
+  "status": "incomplete-evidence",
+  "completedAt": null,
+  "git": {
+    "repositoryRoot": ".",
+    "branch": "main",
+    "commit": "9dbda55da9b00f72a8050ad9b08f34bd8160efcc",
+    "headDescribe": "9dbda55",
+    "workingTree": "clean",
+    "statusSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contentStateSha256": "5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456",
+    "treeStateSha256": "0ff4c9d712cbdb1027855ad8f9a500a59fac2d4f5aa564d2ffe11384a42d15b9",
+    "indexStateSha256": "1b493a0ffeb9b49844dee05663c6d17168ad55e2234e839bb32bee9078587315",
+    "tags": []
+  },
+  "artifacts": {
+    "spec": {
+      "sourcePath": "docs/superpowers/specs/2026-10-23-widget-modals-design.md",
+      "archivePath": "spec.md",
+      "sha256": "015d6b57d2f0da03ba67118dd740a3270f9bd56e8e8151469537e5b79752ac7a",
+      "provenance": {
+        "kind": "git",
+        "external": false,
+        "commit": "1edb493213662a0fb3e94a3113b4287401302087"
+      }
+    },
+    "plan": {
+      "sourcePath": "docs/superpowers/plans/2026-10-23-widget-modals.md",
+      "archivePath": "plan.md",
+      "sha256": "a2c854d2d62803015b71356aebc1b4388cdcc97d6455ec0ed9140fc94a5663fe",
+      "provenance": {
+        "kind": "git",
+        "external": false,
+        "commit": "1edb493213662a0fb3e94a3113b4287401302087"
+      }
+    },
+    "outcome": {
+      "archivePath": "outcome.md",
+      "sha256": "b7d18dd29168cb3bcebf558f95f4b839984f443556594630df819f09525195ec"
+    }
+  },
+  "areas": [],
+  "tags": [],
+  "assessment": {
+    "sourcesRead": true,
+    "finalArtifacts": true,
+    "featureMatch": true,
+    "evidenceReviewed": true,
+    "secretsReviewed": true,
+    "basis": "Revision of the 2026-10-27 widget-modals archive. Sources are read from 1edb493, where they are byte-identical to the archived revision 1 copies; they were removed from docs/superpowers in a6f39a3. New evidence: the owner manual checklist in this session covers native typing, Tab, Escape inside the iframe and the installed-example save flow. The consumed-Escape case is not exercised by the example and remains unverified.",
+    "evidence": [
+      "ev-plan",
+      "ev-head",
+      "ev-owner-check"
+    ]
+  },
+  "evidence": [
+    {
+      "id": "ev-plan",
+      "kind": "session",
+      "inspected": true,
+      "reference": "Claude Code session 0b36365d-4e7b-42e2-b09b-91be1298a885 (2026-10-27), Bash tool results: sed of docs/superpowers/plans/2026-10-23-widget-modals.md (lines 286-342) at 1edb493, before the source was removed in a6f39a3",
+      "summary": "Tasks 1-8 implemented with RED/GREEN (recorded process deviations in Task 6); workspace tests 2168 passed, typecheck, SDK build and example build/check passed. Live Orca evidence covers persistence and remount, two instances, busy slot, nested rejection, error/retry, pending-write drain, source change/removal, confirmation stacking, themes and 1280x420. Final review Approved. Native opaque-iframe input/Escape/Tab and the uninstrumented installed-example save flow remain unverified; both live checkboxes are unchecked.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    },
+    {
+      "id": "ev-head",
+      "kind": "session",
+      "inspected": true,
+      "reference": "Claude Code session 0b36365d-4e7b-42e2-b09b-91be1298a885 (2026-10-27), Bash tool results: ls apps/ui/app/widgets/WidgetModal.vue packages/widget-sdk/src/modal-host.ts examples/widgets/showcase-counter/src/CounterWorkspace.vue; git grep SDK_TARGET_LEVEL",
+      "summary": "Modal host, dashboard modal and the counter workspace example exist at HEAD 1edb493; SDK_TARGET_LEVEL is 4; the work landed in 9562ed3.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    },
+    {
+      "id": "ev-owner-check",
+      "kind": "session",
+      "inspected": true,
+      "reference": "Claude Code session 0b36365d-4e7b-42e2-b09b-91be1298a885 (2026-10-27): owner message after the seven-step manual checklist (\"все работает\")",
+      "summary": "The owner ran the manual checklist on the installed showcase-counter in the dashboard: typing a number into the modal field, Tab between the modal controls, Escape inside the iframe closing the modal, and Save progress then close showing the saved count on the board. The owner reported that everything works. The step \"Escape consumed by an in-modal control does not close\" does not apply to this example: CounterWorkspace.vue has only a number input and two buttons. During the check the owner found that clicking text in the widget settings panel closed it; that was a separate bug in WidgetSettings.vue, fixed in 9dbda55.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    }
+  ],
+  "implementation": {
+    "status": "completed",
+    "evidence": [
+      "ev-head",
+      "ev-plan"
+    ]
+  },
+  "review": {
+    "status": "approved",
+    "evidence": [
+      "ev-plan"
+    ]
+  },
+  "verification": {
+    "status": "unverified",
+    "evidence": [
+      "ev-plan",
+      "ev-owner-check"
+    ],
+    "checks": [
+      {
+        "command": "pnpm typecheck && pnpm test",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "command": "pnpm -C packages/widget-sdk build; showcase-counter test/typecheck/check/build",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "command": "Orca live matrix with an instrumented package: remount, busy slot, error/retry, drain, source change, confirmations, themes, short viewport",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "command": "Owner manual check on the installed showcase-counter: typing, Tab, Escape inside the iframe, Save progress then close shows the saved count",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-owner-check"
+        ]
+      },
+      {
+        "command": "Escape consumed by an in-modal control does not close the modal (no such control in the example)",
+        "result": "not-run",
+        "exitCode": null,
+        "evidence": [
+          "ev-owner-check"
+        ]
+      }
+    ]
+  },
+  "outcomeRecord": {
+    "excludedScope": [],
+    "followUps": [
+      {
+        "text": "Check live that Escape consumed by an in-modal control (an open menu or listbox) does not close the modal, with a widget that has such a control.",
+        "evidence": [
+          "ev-owner-check"
+        ]
+      }
+    ],
+    "risks": [
+      {
+        "text": "Only the consumed-Escape case remains unverified live; the example has no control that consumes Escape.",
+        "evidence": [
+          "ev-owner-check"
+        ]
+      }
+    ],
+    "decisions": [
+      {
+        "text": "A second sandbox with a separate Vue application, not an expanded single sandbox; no shared reactive store.",
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "text": "Every completed close restarts the caller after known requests settle; local caller memory may reset, API data and widget.state survive.",
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ],
+    "deviations": {
+      "status": "recorded",
+      "evidence": [
+        "ev-plan"
+      ],
+      "items": [
+        {
+          "change": "Task 6 tests were first added after implementation, then deleted and redone with genuine RED",
+          "reason": "Controller required TDD order",
+          "effect": null,
+          "evidence": [
+            "ev-plan"
+          ]
+        }
+      ]
+    },
+    "scope": [
+      {
+        "text": "Installed widgets open named Vue modal screens in a second sandbox sharing the widget identity, state and permissions; every close remounts the caller; SDK level 4; counter example with a modal editor (9562ed3).",
+        "evidence": [
+          "ev-plan",
+          "ev-head"
+        ]
+      }
+    ]
+  },
+  "archiveStatus": "complete",
+  "skill": {
+    "name": "archive-plan",
+    "version": "1.1.1"
+  },
+  "archiveRoot": ".project-history/features",
+  "incompleteReason": "Owner requested a widget-modals revision on 2026-10-27 after passing the manual checklist; incomplete-evidence stays approved because the consumed-Escape live check does not apply to the example",
+  "warnings": [
+    "Explicit incomplete-evidence archive. Unsupported gates: verification, verification checks.",
+    "Completion date not recorded; completedAt remains null.",
+    "URL/session evidence is agent-attested; the helper does not fetch or independently verify it."
+  ],
+  "requestFingerprint": "17c6122fa6632863ed5430abc37cc50464862546ed5c3879abf54d0e966bfbb9",
+  "archivedAt": "2026-10-27T16:59:29Z",
+  "revision": 2,
+  "supersedes": {
+    "archivePath": "2026-10-27-widget-modals",
+    "metadataSha256": "ef2543a2d70024a3c879c34d5fecc0a7448e43af1ed49c21ca615dc783b4ca11",
+    "requestFingerprint": "8be24ef34b2dfc060ee0a02a5947a1a7e0415d35246c1cd5bea62d2cca2d1f42"
+  },
+  "revisionReason": "Owner requested a widget-modals revision on 2026-10-27 after passing the manual checklist; incomplete-evidence stays approved because the consumed-Escape live check does not apply to the example",
+  "integrity": {
+    "algorithm": "sha256",
+    "metadataSha256": "3adaba26dacd5afed9ef61a3685a9abca8b5086feb2882343b202daa0dc195e3"
+  }
+}
