@@ -216,4 +216,5 @@ WHERE CASE WHEN json_valid(background)
   THEN json_type(background, '$.videoId') = 'text' AND json_type(background, '$.mediaId') IS NULL
   ELSE 0 END;
 `,
+  `CREATE INDEX widget_audit_at ON widget_audit(at);`,
 ]

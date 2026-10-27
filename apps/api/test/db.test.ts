@@ -32,6 +32,7 @@ describe('openDatabase', () => {
   it('creates the schema and the seed space with one screen', async () => {
     const db = await openDatabase(':memory:', ctx())
     expect(userVersion(db)).toBe(MIGRATIONS.length)
+    expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'widget_audit_at'").all()).toEqual([{ name: 'widget_audit_at' }])
     expect(tables(db)).toEqual([
       'background_media',
       'background_media_leases',

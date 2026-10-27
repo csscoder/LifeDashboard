@@ -318,6 +318,22 @@ describe('gateway pipeline', () => {
     expect((await gateway('state.get', token)).statusCode).toBe(200)
   })
 
+  it('purges expired audit rows hourly while retaining fresh rows', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const running = await testApp(t)
+    try {
+      const insert = t.db.prepare('INSERT INTO widget_audit (at, widget_id, op, outcome) VALUES (?, ?, ?, ?)')
+      insert.run(new Date(T0 - 31 * DAY).toISOString(), 'old', 'state.get', 'ok')
+      insert.run(new Date(T0).toISOString(), 'fresh', 'state.get', 'ok')
+      running.clock.now += HOUR
+      await vi.advanceTimersByTimeAsync(HOUR)
+      expect(t.db.prepare('SELECT widget_id FROM widget_audit').all()).toEqual([{ widget_id: 'fresh' }])
+    } finally {
+      await running.close()
+      vi.useRealTimers()
+    }
+  })
+
   it('deletes audit rows older than 30 days at start', async () => {
     t.db.exec(`
       INSERT INTO widget_audit (at, widget_id, package_id, op, outcome) VALUES ('${new Date(T0 - 31 * DAY).toISOString()}', 'w', NULL, 'state.get', 'ok');

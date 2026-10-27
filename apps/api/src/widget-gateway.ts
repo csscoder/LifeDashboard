@@ -86,7 +86,13 @@ export interface WidgetGatewayDeps {
 
 // Spec «Widget sessions» and «Gateway pipeline»: the widget never states who it is.
 export function registerWidgetGateway(app: FastifyInstance, { db, now }: WidgetGatewayDeps): (widgetIds: readonly string[]) => void {
-  db.prepare('DELETE FROM widget_audit WHERE at < ?').run(new Date(now().getTime() - AUDIT_TTL_MS).toISOString())
+  function purgeAudit(): void {
+    db.prepare('DELETE FROM widget_audit WHERE at < ?').run(new Date(now().getTime() - AUDIT_TTL_MS).toISOString())
+  }
+  purgeAudit()
+  const auditTimer = setInterval(purgeAudit, HOUR)
+  auditTimer.unref()
+  app.addHook('onClose', async () => { clearInterval(auditTimer) })
   // ponytail: sessions and rate counters are in memory; a restart drops them and the host renews the session.
   const sessions = new Map<string, WidgetSession>()
   const allowCall = createRateLimiter(() => now().getTime())
