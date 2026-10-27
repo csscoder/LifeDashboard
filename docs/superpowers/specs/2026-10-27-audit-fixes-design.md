@@ -4,7 +4,7 @@ Date: 2026-10-27. Branch: `fix/audit-findings` (from `feat/clock-timezone-englis
 
 ## Goal
 
-Close the 18 findings of the 2026-10-27 repository audit, in order of risk: the authentication bypass and lost user data first, then hardening against malicious widget packages, then SDK, contracts and desktop correctness, then the SSRF gap and dead code.
+Close the findings of the 2026-10-27 repository audit (18 found; finding 17 withdrawn during planning), in order of risk: the authentication bypass and lost user data first, then hardening against malicious widget packages, then SDK, contracts and desktop correctness, then the SSRF gap and dead code.
 
 Expected load stays the same: one person on their own computer, a few tabs, third-party widget packages that may be malicious.
 
@@ -182,14 +182,13 @@ Tests:
 - `performHttp` with an injected lookup: a name resolving to `127.0.0.1` is rejected; a name resolving to a public address passes; the literal `127.0.0.1` origin passes; `localhost` passes.
 - The existing redirect test still passes.
 
-### D17. Remove the unused theme validator (finding 17)
+### D17. Theme validator: keep it, correct the document (finding 17, withdrawn)
 
-`apps/ui/app/theme/validate-theme.ts` (259 lines) runs only in `apps/ui/test/theme-contract.test.ts`; `postcss` in `apps/ui/package.json` exists for it.
+Planning showed the audit finding was wrong. `validateThemeCss` (`apps/ui/app/theme/validate-theme.ts`) is a test-time guard: `apps/ui/test/theme-contract.test.ts:15-19` checks every built-in theme against the contract, including WCAG contrast, on each `pnpm test`. `postcss` is a devDependency that the stylesheet tests in `theme-contract.test.ts` and `apps/ui/test/vocabulary.test.ts` also use; it is not in the app bundle. The owner decided (2026-10-27) to keep both.
 
 Design:
-- Delete `validate-theme.ts` and its tests; keep the token-contract tests in `theme-contract.test.ts`.
-- Remove `postcss` from `apps/ui/package.json` after checking that no Nuxt or UnoCSS config needs it as a direct dependency.
-- `docs/theme-contract.md`: replace the statement that `validateThemeCss()` enforces the document (line 4) with one saying that no validator runs today and that CSS validation returns together with user themes; mark the validator sections («Contrast» procedure, «Error messages») as requirements for that future validator, not current behavior.
+- No code change to the validator, its tests or `postcss`.
+- `docs/theme-contract.md` line 4: say that `validateThemeCss()` enforces this document for the built-in themes in the test suite, and that a runtime check for user themes will come with user themes.
 
 ### D18. Dead code (finding 18)
 
