@@ -20,7 +20,7 @@ export async function createWidgetProject(options: {
   }
   const slug = options.slug ?? slugFromTitle(title)
   if (slug === null) {
-    throw new Error(`Cannot derive a Latin name from "${title}". Fix: give one with --slug, for example --slug my-clock.`)
+    throw new Error(`Cannot derive a Latin name from "${title}": it has no Latin letters or starts with a digit. Fix: give one with --slug, for example --slug my-clock.`)
   }
   if (!SLUG_PATTERN.test(slug)) {
     throw new Error(`Invalid slug "${slug}". Fix: use lowercase letters, digits and dashes, starting with a letter.`)

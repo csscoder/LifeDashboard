@@ -143,10 +143,10 @@ describe('createWidgetProject', () => {
     },
   )
 
-  it('rejects a title with no Latin name and no slug, without creating files', async () => {
+  it.each(['時計', '2048 Game'])('explains why title %j needs an explicit slug without creating files', async (title) => {
     const parentDir = await temporaryDirectory()
-    await expect(createWidgetProject({ title: '時計', parentDir })).rejects.toThrow(
-      'Cannot derive a Latin name from "時計". Fix: give one with --slug, for example --slug my-clock.',
+    await expect(createWidgetProject({ title, parentDir })).rejects.toThrow(
+      `Cannot derive a Latin name from "${title}": it has no Latin letters or starts with a digit. Fix: give one with --slug, for example --slug my-clock.`,
     )
     expect(await readdir(parentDir)).toEqual([])
   })
