@@ -234,7 +234,10 @@ describe('GatewayFailure', () => {
 
 describe('checkGatewayCall', () => {
   it('rejects headers outside Latin-1 before fetching', () => {
-    expect(checkGatewayCall('http.get', { url: 'https://example.com', headers: { accept: 'text/€' } }, new Set(['network']))).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
+    expect(checkGatewayCall('http.get', { url: 'https://example.com', headers: { accept: 'text/€' } }, new Set(['network']))).toEqual({
+      ok: false, code: 'INVALID_INPUT', message: 'headers.accept must be at most 200 Latin-1 characters without control characters',
+    })
+    expect(checkGatewayCall('http.get', { url: 'https://example.com', headers: { accept: 'text/ÿé' } }, new Set(['network']))).toMatchObject({ ok: true })
   })
 
   it('rejects unknown operations before checking permissions or input', () => {
