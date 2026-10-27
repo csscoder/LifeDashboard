@@ -32,8 +32,8 @@ describe('WidgetModal', () => {
   })
   it('emits close once from the close button and from Escape', async () => {
     const ui = mount(); await nextTick()
-    ui.button('Закрыть').props.onClick()
-    ui.button('Закрыть').props.onClick()
+    ui.button('Close').props.onClick()
+    ui.button('Close').props.onClick()
     expect(ui.events).toEqual([['close', 'modal-1']])
     const other = mount(); await nextTick()
     const cancel = new Event('cancel', { cancelable: true })
@@ -58,20 +58,20 @@ describe('WidgetModal', () => {
   })
   it('shows loading, then error with retry and close', async () => {
     const ui = mount(); await nextTick()
-    expect(ui.text()).toContain('Загрузка')
+    expect(ui.text()).toContain('Loading')
     ui.props.error = 'Connection failed'; await nextTick()
     expect(ui.text()).toContain('Connection failed')
-    expect(ui.text()).not.toContain('Загрузка')
-    ui.button('Повторить').props.onClick()
+    expect(ui.text()).not.toContain('Loading')
+    ui.button('Retry').props.onClick()
     expect(ui.events).toEqual([['retry', 'modal-1']])
-    ui.button('Закрыть').props.onClick()
+    ui.button('Close').props.onClick()
     expect(ui.events).toContainEqual(['close', 'modal-1'])
   })
   it('removes loading when the slotted sandbox reports ready', async () => {
     const ui = mountComponent({ render: () => h(WidgetModal, { record: record(), error: null }, { default: ({ ready }: { ready(): void }) => h('button', { onClick: ready }, 'Ready') }) }, {}, [])
     await nextTick()
     ui.button('Ready').props.onClick(); await nextTick()
-    expect(ui.text()).not.toContain('Загрузка')
+    expect(ui.text()).not.toContain('Loading')
   })
   it('shows loading again when retrying a previously ready sandbox', async () => {
     const failure = ref<string | null>(null)
@@ -80,9 +80,9 @@ describe('WidgetModal', () => {
     await nextTick()
     ui.button('Ready').props.onClick(); await nextTick()
     failure.value = 'Failed'; await nextTick()
-    ui.button('Повторить').props.onClick()
+    ui.button('Retry').props.onClick()
     failure.value = null; await nextTick()
-    expect(ui.text()).toContain('Загрузка')
+    expect(ui.text()).toContain('Loading')
   })
   it('marks the board inert while open and restores it on close', async () => {
     // showModal is the browser inertness boundary; this host only models openness.
@@ -99,7 +99,7 @@ describe('WidgetModal', () => {
     const doc = { activeElement: { isConnected: false }, querySelector: vi.fn(() => fallback) }
     vi.stubGlobal('document', doc)
     const ui = mount(); await nextTick()
-    expect(doc.activeElement).toBe(ui.button('Закрыть'))
+    expect(doc.activeElement).toBe(ui.button('Close'))
     ui.props.record = null; await nextTick()
     expect(doc.querySelector).toHaveBeenCalledWith('[data-board-focus]')
     expect(fallback.focus).toHaveBeenCalledOnce()
@@ -107,10 +107,10 @@ describe('WidgetModal', () => {
 })
 it('disables error retry during closing and refreshing including already queued handlers', async () => {
  const ui = mount(record()); ui.props.error = 'Failed'; await nextTick()
- const retry = ui.button('Повторить')
+ const retry = ui.button('Retry')
  for (const state of ['closing', 'refreshing'] as const) {
   ui.props.record = { ...record(), state }; await nextTick()
-  const buttons = ui.nodes().filter(node => node.tag === 'button' && node.text === 'Повторить')
+  const buttons = ui.nodes().filter(node => node.tag === 'button' && node.text === 'Retry')
   expect(buttons.every(button => button.props.disabled === true)).toBe(true)
   retry.props.onClick()
   expect(ui.events).toEqual([])

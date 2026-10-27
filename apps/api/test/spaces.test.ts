@@ -87,7 +87,7 @@ describe('GET /api/v1/spaces', () => {
   it('lists the seed space', async () => {
     const response = await call(t.app, { url: '/api/v1/spaces', cookie })
     expect(response.statusCode).toBe(200)
-    expect(response.json().data).toEqual([{ id: SEED_SPACE_ID, title: 'Главная', icon: '🏠', color: 'violet', themeId: null, position: 0, revision: 1 }])
+    expect(response.json().data).toEqual([{ id: SEED_SPACE_ID, title: 'Home', icon: '🏠', color: 'violet', themeId: null, position: 0, revision: 1 }])
   })
 })
 
@@ -95,8 +95,8 @@ describe('POST /api/v1/spaces', () => {
   it('creates spaces with the next colour, the next position and one empty screen', async () => {
     const first = (await create()).json().data as SpaceSummary
     const second = (await create()).json().data as SpaceSummary
-    expect(first).toEqual({ id: expect.any(String), title: 'Новое пространство', icon: '⭐', color: 'blue', themeId: null, position: 1, revision: 1 })
-    expect(second).toEqual({ id: expect.any(String), title: 'Новое пространство', icon: '⭐', color: 'teal', themeId: null, position: 2, revision: 1 })
+    expect(first).toEqual({ id: expect.any(String), title: 'New space', icon: '⭐', color: 'blue', themeId: null, position: 1, revision: 1 })
+    expect(second).toEqual({ id: expect.any(String), title: 'New space', icon: '⭐', color: 'teal', themeId: null, position: 2, revision: 1 })
     expect((await listSpaces()).map((space) => [space.id, space.position])).toEqual([
       [SEED_SPACE_ID, 0],
       [first.id, 1],
@@ -124,9 +124,9 @@ describe('POST /api/v1/spaces', () => {
 
 describe('PATCH /api/v1/spaces/:spaceId', () => {
   it('updates title, icon and colour, keeps the revision', async () => {
-    const response = await patch(SEED_SPACE_ID, { title: '  Дом ', icon: '💼', color: 'pink' })
+    const response = await patch(SEED_SPACE_ID, { title: '  House ', icon: '💼', color: 'pink' })
     expect(response.statusCode).toBe(200)
-    const expected = { id: SEED_SPACE_ID, title: 'Дом', icon: '💼', color: 'pink', themeId: null, position: 0, revision: 1 }
+    const expected = { id: SEED_SPACE_ID, title: 'House', icon: '💼', color: 'pink', themeId: null, position: 0, revision: 1 }
     expect(response.json().data).toEqual(expected)
     expect(await listSpaces()).toEqual([expected])
   })
@@ -140,7 +140,7 @@ describe('PATCH /api/v1/spaces/:spaceId', () => {
   })
 
   it('answers 404 for an unknown space', async () => {
-    const response = await patch('00000000-0000-4000-8000-000000000000', { title: 'Дом' })
+    const response = await patch('00000000-0000-4000-8000-000000000000', { title: 'House' })
     expect(response.statusCode).toBe(404)
     expect(errorCode(response)).toBe('NOT_FOUND')
   })
@@ -200,7 +200,7 @@ describe('DELETE /api/v1/spaces/:spaceId', () => {
 describe('space mutations without a session', () => {
   it('answers 401 for create, update and delete', async () => {
     expect((await call(t.app, { method: 'POST', url: SPACES, payload: {} })).statusCode).toBe(401)
-    expect((await call(t.app, { method: 'PATCH', url: `${SPACES}/${SEED_SPACE_ID}`, payload: { title: 'Дом' } })).statusCode).toBe(401)
+    expect((await call(t.app, { method: 'PATCH', url: `${SPACES}/${SEED_SPACE_ID}`, payload: { title: 'House' } })).statusCode).toBe(401)
     expect((await call(t.app, { method: 'DELETE', url: `${SPACES}/${SEED_SPACE_ID}`, payload: { expectedRevision: 1 } })).statusCode).toBe(401)
   })
 

@@ -42,18 +42,18 @@ const mount = (background: unknown = old) => mountComponent(component, { backgro
 const control = (ui: ReturnType<typeof mount>, label: string) => ui.nodes().find(el => el.props['aria-label'] === label)!
 async function settle() { for (let i = 0; i < 12; i++) await Promise.resolve(); await nextTick() }
 function choose(ui: ReturnType<typeof mount>, name = 'new.mp4') {
-  return control(ui, 'Файл фона').props.onChange({ target: { files: [new File(['video'], name)], value: name } })
+  return control(ui, 'Background file').props.onChange({ target: { files: [new File(['video'], name)], value: name } })
 }
 
 describe('screen background editor', () => {
   it('emits separate video/pattern opacity and dim settings preserving other background properties', async () => {
     const ui = mount(); await settle()
-    control(ui, 'Прозрачность видео').props.onInput({ target: { value: '0' } })
-    control(ui, 'Прозрачность сетки').props.onInput({ target: { value: '100' } })
-    control(ui, 'Затемнение').props.onInput({ target: { value: '100' } })
-    control(ui, 'Форма сетки').props.onChange({ target: { value: 'crosses' } })
-    control(ui, 'Цвет сетки').props.onInput({ target: { value: '#ff0000' } })
-    control(ui, 'Увеличение сетки').props.onInput({ target: { value: '4' } })
+    control(ui, 'Video opacity').props.onInput({ target: { value: '0' } })
+    control(ui, 'Pattern opacity').props.onInput({ target: { value: '100' } })
+    control(ui, 'Dimming').props.onInput({ target: { value: '100' } })
+    control(ui, 'Pattern shape').props.onChange({ target: { value: 'crosses' } })
+    control(ui, 'Pattern color').props.onInput({ target: { value: '#ff0000' } })
+    control(ui, 'Pattern scale').props.onInput({ target: { value: '4' } })
     expect(ui.events).toEqual([
       ['change', { ...old, opacity: 0 }],
       ['change', { ...old, pattern: { ...old.pattern, opacity: 1 } }],
@@ -65,7 +65,7 @@ describe('screen background editor', () => {
   })
   it('stores integer grid magnification and displays the actual intrinsic cell dimensions', async () => {
     const ui = mount(); await settle()
-    const size = control(ui, 'Увеличение сетки')
+    const size = control(ui, 'Pattern scale')
     expect(size.props).toMatchObject({ min: '1', max: '4', step: '1', value: 1 })
     expect(ui.text()).toContain('6×6 px')
     size.props.onInput({ target: { value: '3' } })
@@ -79,52 +79,52 @@ describe('screen background editor', () => {
   ])('shows the renderer cell size for %s at scale %s', async (shape, scale, effective, expected) => {
     const ui = mount({ ...old, pattern: { ...old.pattern, shape, scale } }); await settle()
     expect(ui.text()).toContain(expected)
-    expect(control(ui, 'Увеличение сетки').props.value).toBe(effective)
+    expect(control(ui, 'Pattern scale').props.value).toBe(effective)
   })
-  it.each([['diagonal', 'Диагональ'], ['triangles', 'Треугольники']])('offers %s and preserves independent settings when selected', async (shape, label) => {
+  it.each([['diagonal', 'Diagonal'], ['triangles', 'Triangles']])('offers %s and preserves independent settings when selected', async (shape, label) => {
     const ui = mount(); await settle()
     expect(ui.nodes().some(node => node.tag === 'option' && node.props.value === shape && node.text === label)).toBe(true)
-    control(ui, 'Форма сетки').props.onChange({ target: { value: shape } })
+    control(ui, 'Pattern shape').props.onChange({ target: { value: shape } })
     expect(ui.events.at(-1)).toEqual(['change', { ...old, pattern: { ...old.pattern, shape } }])
   })
   it('toggles the micro grid and restores its shape without changing color, opacity, cell size or video settings', async () => {
     const background = { ...old, pattern: { shape: 'diamonds', color: '#446688', opacity: 0.45, scale: 2 } }
     const ui = mount(background); await settle()
-    expect(control(ui, 'Сетка поверх фона').props.checked).toBe(true)
-    control(ui, 'Сетка поверх фона').props.onChange({ target: { checked: false } })
+    expect(control(ui, 'Pattern over the background').props.checked).toBe(true)
+    control(ui, 'Pattern over the background').props.onChange({ target: { checked: false } })
     const off = { ...background, pattern: { ...background.pattern, shape: 'none' } }
     expect(ui.events.at(-1)).toEqual(['change', off])
     ui.props.background = off; await nextTick()
-    for (const name of ['Форма сетки', 'Цвет сетки', 'Увеличение сетки', 'Прозрачность сетки'])
+    for (const name of ['Pattern shape', 'Pattern color', 'Pattern scale', 'Pattern opacity'])
       expect(control(ui, name)).toBeUndefined()
-    expect(control(ui, 'Сетка поверх фона').props.checked).toBe(false)
-    expect(control(ui, 'Прозрачность видео')).toBeDefined()
-    expect(control(ui, 'Затемнение')).toBeDefined()
-    control(ui, 'Сетка поверх фона').props.onChange({ target: { checked: true } })
+    expect(control(ui, 'Pattern over the background').props.checked).toBe(false)
+    expect(control(ui, 'Video opacity')).toBeDefined()
+    expect(control(ui, 'Dimming')).toBeDefined()
+    control(ui, 'Pattern over the background').props.onChange({ target: { checked: true } })
     expect(ui.events.at(-1)).toEqual(['change', background])
   })
   it('enables initially disabled grid with diagonal and blocks changes when the editor is disabled', async () => {
     const off = { ...old, pattern: { ...old.pattern, shape: 'none' } }
     const ui = mount(off); await settle()
-    control(ui, 'Сетка поверх фона').props.onChange({ target: { checked: true } })
+    control(ui, 'Pattern over the background').props.onChange({ target: { checked: true } })
     expect(ui.events.at(-1)).toEqual(['change', { ...old, pattern: { ...old.pattern, shape: 'diagonal' } }])
     ui.props.disabled = true; await nextTick()
-    expect(control(ui, 'Сетка поверх фона').props.disabled).toBe(true)
-    control(ui, 'Сетка поверх фона').props.onChange({ target: { checked: true } })
+    expect(control(ui, 'Pattern over the background').props.disabled).toBe(true)
+    control(ui, 'Pattern over the background').props.onChange({ target: { checked: true } })
     expect(ui.events).toHaveLength(1)
   })
   it('preserves old background during import and on upload failure with a visible error', async () => {
     upload = async () => new Response(JSON.stringify({ error: { code: 'INVALID', message: 'invalid bytes' } }), { status: 400 })
     const ui = mount(); await settle(); await choose(ui); await settle()
     expect(ui.events).toEqual([])
-    expect(ui.text()).toContain('Не удалось импортировать фон')
+    expect(ui.text()).toContain('Could not import the background')
     expect(ui.text()).toContain('old.mp4')
   })
   it('imports a playable replacement, shows filename, then removes only through a draft event', async () => {
     const ui = mount(); await settle(); await choose(ui); await settle()
     expect(ui.events).toEqual([['change', { mediaId: 'new', kind: 'video', opacity: 1, dim: 0.35, pattern: { shape: 'diagonal', color: '#000000', opacity: 0.25, scale: 1 } }]])
     expect(ui.text()).toContain('new.mp4')
-    ui.button('Убрать фон').props.onClick()
+    ui.button('Remove background').props.onClick()
     expect(ui.events.at(-1)).toEqual(['change', null])
     expect(requests.filter(r => r.init.method === 'PUT')).toEqual([])
   })
@@ -133,15 +133,15 @@ describe('screen background editor', () => {
     const ui = mount(); await settle(); await choose(ui, 'photo.png'); await settle()
     expect(ui.events.at(-1)).toEqual(['change', { mediaId: 'photo', kind: 'image', opacity: 1, dim: 0.35, pattern: { shape: 'diagonal', color: '#000000', opacity: 0.25, scale: 1 } }])
     ui.props.background = ui.events.at(-1)![1]; await nextTick()
-    expect(control(ui, 'Прозрачность видео')).toBeUndefined()
-    control(ui, 'Прозрачность изображения').props.onInput({ target: { value: '40' } })
+    expect(control(ui, 'Video opacity')).toBeUndefined()
+    control(ui, 'Image opacity').props.onInput({ target: { value: '40' } })
     expect(ui.events.at(-1)?.[1]).toMatchObject({ kind: 'image', opacity: 0.4, pattern: { opacity: 0.25 }, dim: 0.35 })
   })
   it('preserves the previous background when an image fails to decode', async () => {
     vi.stubGlobal('document', { createElement: () => ({ ...image(), decode: async () => { throw new Error('decode') } }) })
     const ui = mount(); await settle(); await choose(ui, 'broken.png'); await settle()
     expect(ui.events).toEqual([])
-    expect(ui.text()).toContain('изображение')
+    expect(ui.text()).toContain('image')
     expect(ui.text()).toContain('old.mp4')
     expect(requests.some(request => request.init.method === 'POST')).toBe(false)
   })
@@ -171,7 +171,7 @@ describe('screen background editor', () => {
     expect(uploadRequest).toBeDefined()
     if (reason === 'unmount') unmountComponents()
     if (reason === 'disable') { ui.props.disabled = true; await nextTick() }
-    if (reason === 'cancel') ui.button('Отменить импорт').props.onClick()
+    if (reason === 'cancel') ui.button('Cancel import').props.onClick()
     expect(uploadRequest.init.signal?.aborted).toBe(true)
     // Complete the old request even though transport cancellation raced with a server success.
     finish(response(media('late'))); await settle(); await pending

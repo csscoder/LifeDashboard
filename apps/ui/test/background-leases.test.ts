@@ -43,7 +43,7 @@ describe('background media leases', () => {
   })
   it('renews every minute and retries failed acquire before clearing only its lease notice on success', async () => {
     const ui = mounted(['a']); await settle(); await complete(0, 500)
-    expect(ui.notices.at(-1)).toMatch(/защитить/)
+    expect(ui.notices.at(-1)).toMatch(/protect/)
     await vi.advanceTimersByTimeAsync(60000); await settle()
     expect(calls).toHaveLength(2)
     await complete(1)

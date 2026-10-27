@@ -92,7 +92,7 @@ The output is `dist/<id>-<version>/`. It contains the code, `assets/`, and `sour
 
 ## Handover
 
-Give the user the folder `dist/<id>-<version>/`. The user imports it in the dashboard with «Виджеты → Выбрать папку».
+Give the user the folder `dist/<id>-<version>/`. The user imports it in the dashboard with «Widgets → Choose folder».
 
 - A built folder is portable and carries no credentials. Share it as it is.
 - Sharing the project means sharing the source. Do not share `node_modules/`, `dist/` or `.ld-widget/`.

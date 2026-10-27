@@ -6,7 +6,7 @@ defineProps<{ tasks: Tasks }>()
 </script>
 
 <template>
-  <nav class="rail" aria-label="Списки">
+  <nav class="rail" aria-label="Lists">
     <button
       v-for="item in VIEWS"
       :key="item.id"
@@ -18,7 +18,7 @@ defineProps<{ tasks: Tasks }>()
     >
       {{ item.label }}
     </button>
-    <p v-if="tasks.tags.length > 0" class="rail__section">Теги</p>
+    <p v-if="tasks.tags.length > 0" class="rail__section">Tags</p>
     <button
       v-for="item in tasks.tags"
       :key="item.name"

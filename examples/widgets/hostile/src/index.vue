@@ -50,8 +50,8 @@ onMounted(async () => {
       <li v-for="item in results" :key="item.name" :data-probe="item.name">{{ item.name }} → {{ item.result }}</li>
     </ul>
     <div class="hostile__actions">
-      <button type="button" class="hostile__button" @click="fail">Ошибка</button>
-      <button type="button" class="hostile__button" @click="leave">Уйти</button>
+      <button type="button" class="hostile__button" @click="fail">Fail</button>
+      <button type="button" class="hostile__button" @click="leave">Leave</button>
     </div>
   </div>
 </template>

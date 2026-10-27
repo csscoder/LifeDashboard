@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { isSecretOriginAllowed, isValidSettingValue, normalizeConfig, parseSettingsSchema, type PlainSetting, type SettingsSchema } from '../src/widget-settings.ts'
 
-const city = { type: 'string', title: 'Город', default: 'Москва' }
+const city = { type: 'string', title: 'City', default: 'Moscow' }
 const origin = 'https://a.example'
-const secret = { type: 'secret', title: 'Ключ', bind: { origin, header: 'Authorization', prefix: 'Bearer ' } }
+const secret = { type: 'secret', title: 'Key', bind: { origin, header: 'Authorization', prefix: 'Bearer ' } }
 
 function schema(setting: unknown, key = 'key') {
   return { type: 'object', properties: { [key]: setting } }
@@ -22,7 +22,7 @@ describe('parseSettingsSchema', () => {
   it('accepts a string setting without an explicit length limit', () => {
     expect(parseSettingsSchema({ type: 'object', properties: { city } }, [])).toEqual({
       ok: true,
-      value: { type: 'object', properties: { city: { type: 'string', title: 'Город', default: 'Москва' } } },
+      value: { type: 'object', properties: { city: { type: 'string', title: 'City', default: 'Moscow' } } },
     })
   })
 
@@ -30,7 +30,7 @@ describe('parseSettingsSchema', () => {
     const raw = {
       type: 'object',
       properties: {
-        city: { ...city, description: 'Where to show weather', enum: ['Москва', 'Пермь'], maxLength: 10 },
+        city: { ...city, description: 'Where to show weather', enum: ['Moscow', 'Perm'], maxLength: 10 },
         count: { type: 'integer', title: 'Count', default: 2, minimum: 1, maximum: 3 },
         scale: { type: 'number', title: 'Scale', default: 1.5, minimum: 0, maximum: 2 },
         enabled: { type: 'boolean', title: 'Enabled', default: false },
@@ -91,7 +91,7 @@ describe('parseSettingsSchema', () => {
       ok: false, error: 'settings.n.default must satisfy its own type and constraints',
     })
     for (const setting of [
-      { ...city, enum: ['Пермь'] }, { ...city, maxLength: 2 },
+      { ...city, enum: ['Perm'] }, { ...city, maxLength: 2 },
       { type: 'number', title: 'N', default: -1, minimum: 0 },
     ]) expectInvalid(schema(setting), 'key.default')
   })
@@ -101,7 +101,7 @@ describe('parseSettingsSchema', () => {
   })
 
   it('requires enums to contain 1–50 distinct strings', () => {
-    for (const values of [[], ['Москва', 'Москва'], ['Москва', 1], 'Москва', Array.from({ length: 51 }, (_, i) => `${i}`)]) {
+    for (const values of [[], ['Moscow', 'Moscow'], ['Moscow', 1], 'Moscow', Array.from({ length: 51 }, (_, i) => `${i}`)]) {
       expectInvalid(schema({ ...city, enum: values }), 'key.enum')
     }
     expect(parseSettingsSchema(schema({ ...city, default: '0', enum: Array.from({ length: 50 }, (_, i) => `${i}`) }), []).ok).toBe(true)
@@ -154,7 +154,7 @@ describe('parseSettingsSchema', () => {
 
   it('accepts header and query secret bindings with optional header prefix', () => {
     for (const bind of [{ origin, header: 'Authorization', prefix: 'Bearer ' }, { origin, header: 'X-Api-Key' }, { origin, query: 'api.key_1-v2' }]) {
-      const raw = schema({ type: 'secret', title: 'Ключ', description: 'API key', bind })
+      const raw = schema({ type: 'secret', title: 'Key', description: 'API key', bind })
       expect(parseSettingsSchema(raw, [origin])).toEqual({ ok: true, value: raw })
     }
   })
@@ -268,17 +268,17 @@ describe('isValidSettingValue', () => {
 
 describe('normalizeConfig', () => {
   const settings: SettingsSchema = { type: 'object', properties: {
-    city: { type: 'string', title: 'Город', default: 'Москва', maxLength: 40 },
-    days: { type: 'integer', title: 'Дни', default: 3, minimum: 1, maximum: 7 },
-    key: { type: 'secret', title: 'Ключ', bind: { origin: 'https://a.example', header: 'Authorization' } },
+    city: { type: 'string', title: 'City', default: 'Moscow', maxLength: 40 },
+    days: { type: 'integer', title: 'Days', default: 3, minimum: 1, maximum: 7 },
+    key: { type: 'secret', title: 'Key', bind: { origin: 'https://a.example', header: 'Authorization' } },
   } }
 
   it('keeps valid values, defaults invalid values and removes unknown keys and raw secrets', () => {
-    expect(normalizeConfig(settings, { city: 'Казань', days: 9, legacy: true, key: 'leak' }, new Set())).toEqual({ city: 'Казань', days: 3, key: false })
+    expect(normalizeConfig(settings, { city: 'Kazan', days: 9, legacy: true, key: 'leak' }, new Set())).toEqual({ city: 'Kazan', days: 3, key: false })
   })
 
   it('uses defaults for missing values and exposes secret presence as a boolean', () => {
-    expect(normalizeConfig(settings, {}, new Set(['key']))).toEqual({ city: 'Москва', days: 3, key: true })
+    expect(normalizeConfig(settings, {}, new Set(['key']))).toEqual({ city: 'Moscow', days: 3, key: true })
   })
 
   it('returns an empty config without a schema', () => {

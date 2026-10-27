@@ -26,16 +26,16 @@ import {
 const open = defineModel<boolean>('open', { required: true })
 
 const PERMISSIONS: Record<WidgetPermission, string> = {
-  state: 'Хранить собственные данные виджета',
-  notifications: 'Показывать уведомления',
-  network: 'Доступ к сети',
+  state: 'Store its own data',
+  notifications: 'Show notifications',
+  network: 'Network access',
 }
 const MODES: Record<GrantMode, string> = {
-  ask: 'Спрашивать каждый раз',
-  allow: 'Разрешить',
+  ask: 'Ask every time',
+  allow: 'Allow',
 }
-const VERSION_CONFLICT = 'Эта версия уже установлена с другим содержимым'
-const TOO_MANY_UPLOADS = 'Слишком много незавершённых установок, повторите позже'
+const VERSION_CONFLICT = 'This version is already installed with different contents'
+const TOO_MANY_UPLOADS = 'Too many unfinished installs, try again later'
 
 // Template ref keys differ from setup bindings (see WidgetBoard.vue).
 const dialog = useTemplateRef<HTMLDialogElement>('dialogBox')
@@ -65,9 +65,9 @@ function permissionList(permissions: readonly WidgetPermission[]): string {
 }
 
 function failureText(failure: ApiFailure, conflict: string): string {
-  if (failure.kind === 'invalid') return `Пакет отклонён: ${failure.message}`
+  if (failure.kind === 'invalid') return `Package rejected: ${failure.message}`
   if (failure.kind === 'conflict') return conflict
-  return 'Не удалось связаться с API'
+  return 'Could not reach the API'
 }
 
 watch(
@@ -129,7 +129,7 @@ async function dropFolder(event: DragEvent) {
   if (busy.value) return
   const entry = event.dataTransfer?.items[0]?.webkitGetAsEntry()
   if (!entry?.isDirectory) {
-    message.value = 'Перетащите папку виджета'
+    message.value = 'Drop a widget folder'
     return
   }
   await start(await filesFromEntry(entry as FileSystemDirectoryEntry))
@@ -149,7 +149,7 @@ async function install() {
     remaining.value = remaining.value.filter((item) => item !== file)
     progress.value = { sent: progress.value!.sent + file.file.size, total }
   })
-  // «Отмена» already reset the screen.
+  // «Cancel» already reset the screen.
   if (own.signal.aborted) return
   if (!sent.ok) {
     busy.value = false
@@ -173,7 +173,7 @@ async function install() {
   busy.value = false
   pending.value = null
   progress.value = null
-  message.value = saved.every((item) => item.ok) ? 'Виджет установлен' : 'Виджет установлен, но режим «Разрешить» не сохранён'
+  message.value = saved.every((item) => item.ok) ? 'Widget installed' : 'Widget installed, but the «Allow» mode was not saved'
   await loadPackages(api)
 }
 
@@ -205,7 +205,7 @@ async function remove(id: string) {
   const result = await api.deletePackage(id)
   busy.value = false
   if (!result.ok) {
-    message.value = failureText(result, 'Виджет размещён на доске, сначала уберите его с доски')
+    message.value = failureText(result, 'The widget is on a board; remove it from the board first')
     return
   }
   message.value = null
@@ -222,7 +222,7 @@ async function changeMode(packageId: string, grant: Grant, event: Event) {
   } else {
     // The list keeps showing the saved mode.
     select.value = grant.mode
-    message.value = 'Не удалось сохранить режим'
+    message.value = 'Could not save the mode'
   }
   busy.value = false
   // The select was disabled during the request; give keyboard focus back once it is enabled.
@@ -234,26 +234,26 @@ async function changeMode(packageId: string, grant: Grant, event: Event) {
 <template>
   <dialog ref="dialogBox" class="packages" aria-labelledby="packages-title" @close="open = false" @dragover.prevent @drop.prevent="dropFolder">
     <template v-if="pending && manifest">
-      <h2 id="packages-title" class="packages__title">Установка виджета</h2>
+      <h2 id="packages-title" class="packages__title">Install widget</h2>
       <dl class="packages__facts">
-        <dt>Название</dt>
+        <dt>Name</dt>
         <dd>{{ manifest.title }}</dd>
-        <dt>Автор</dt>
+        <dt>Author</dt>
         <dd>{{ manifest.author }}</dd>
-        <dt>Версия</dt>
+        <dt>Version</dt>
         <dd>{{ manifest.version }}</dd>
-        <dt>Размер</dt>
+        <dt>Size</dt>
         <dd>
-          от {{ manifest.sizing.min.w }}×{{ manifest.sizing.min.h }} до {{ manifest.sizing.max.w }}×{{ manifest.sizing.max.h }}
+          from {{ manifest.sizing.min.w }}×{{ manifest.sizing.min.h }} to {{ manifest.sizing.max.w }}×{{ manifest.sizing.max.h }}
         </dd>
-        <dt>Размер файлов</dt>
+        <dt>File size</dt>
         <dd>
-          Код {{ formatBytes(pending.inspection.sizes.code) }}, медиа {{ formatBytes(pending.inspection.sizes.assets) }},
-          исходники {{ formatBytes(pending.inspection.sizes.source) }}
+          Code {{ formatBytes(pending.inspection.sizes.code) }}, media {{ formatBytes(pending.inspection.sizes.assets) }},
+          source {{ formatBytes(pending.inspection.sizes.source) }}
         </dd>
       </dl>
-      <p class="packages__warning">Это код стороннего автора</p>
-      <h3 class="packages__subtitle">Разрешения</h3>
+      <p class="packages__warning">This is third-party code</p>
+      <h3 class="packages__subtitle">Permissions</h3>
       <ul class="packages__permissions">
         <li v-for="permission in manifest.permissions" :key="permission" class="packages__grant">
           {{ PERMISSIONS[permission] }}<template v-if="permission === 'network'">: {{ (manifest.network ?? []).join(', ') }}</template>
@@ -261,25 +261,25 @@ async function changeMode(packageId: string, grant: Grant, event: Event) {
             v-if="modes[permission]"
             v-model="modes[permission]"
             class="packages__select"
-            :aria-label="`${PERMISSIONS[permission]}: режим`"
+            :aria-label="`${PERMISSIONS[permission]}: mode`"
           >
             <option value="ask">{{ MODES.ask }}</option>
             <option value="allow">{{ MODES.allow }}</option>
           </select>
           <span v-else-if="savedMode(heldGrants, permission)" class="packages__hint">
-            {{ MODES[savedMode(heldGrants, permission)!] }} — меняется в списке виджетов
+            {{ MODES[savedMode(heldGrants, permission)!] }} — change it in the widget list
           </span>
         </li>
-        <li v-if="manifest.permissions.length === 0">Без разрешений</li>
+        <li v-if="manifest.permissions.length === 0">No permissions</li>
       </ul>
       <p v-if="isUpdate && pending.inspection.newPermissions.length > 0" class="packages__warning">
-        Новые разрешения: {{ permissionList(pending.inspection.newPermissions) }}
+        New permissions: {{ permissionList(pending.inspection.newPermissions) }}
       </p>
       <p v-if="isUpdate && pending.inspection.newOrigins.length > 0" class="packages__warning">
-        Новые адреса: {{ pending.inspection.newOrigins.join(', ') }}
+        New origins: {{ pending.inspection.newOrigins.join(', ') }}
       </p>
       <template v-if="secretBindings.length > 0">
-        <h3 class="packages__subtitle">Секреты</h3>
+        <h3 class="packages__subtitle">Secrets</h3>
         <ul class="packages__permissions">
           <li
             v-for="secret in secretBindings"
@@ -289,33 +289,33 @@ async function changeMode(packageId: string, grant: Grant, event: Event) {
             {{ bindingLine(secret) }}
           </li>
         </ul>
-        <p>Сервер может вернуть ключ в ответе; LifeDashboard заменяет точные и URL-кодированные копии на [REDACTED], но изменённые копии скрыть не может</p>
+        <p>The server may echo the key in its response; LifeDashboard replaces exact and URL-encoded copies with [REDACTED] but cannot hide altered copies</p>
       </template>
-      <p v-if="pending.inspection.installed">Эта версия уже установлена и не может быть заменена. Увеличьте version в widget.json, соберите виджет заново и импортируйте новую папку. Затем выберите новую версию в настройках размещённого виджета.</p>
+      <p v-if="pending.inspection.installed">This version is already installed and cannot be replaced. Bump version in widget.json, rebuild the widget and import the new folder. Then pick the new version in the settings of the placed widget.</p>
       <progress v-if="progress" class="packages__progress" :value="progress.sent" :max="progress.total" />
       <div class="packages__actions">
         <button type="button" class="packages__button" :disabled="busy || pending.inspection.installed" @click="install">
-          {{ failedPath ? 'Повторить' : 'Установить' }}
+          {{ failedPath ? 'Retry' : 'Install' }}
         </button>
-        <button type="button" class="packages__button" @click="cancel">Отмена</button>
+        <button type="button" class="packages__button" @click="cancel">Cancel</button>
       </div>
     </template>
     <template v-else>
-      <h2 id="packages-title" class="packages__title">Виджеты</h2>
-      <p v-if="installedPackages.length === 0">Пакеты не установлены</p>
+      <h2 id="packages-title" class="packages__title">Widgets</h2>
+      <p v-if="installedPackages.length === 0">No packages installed</p>
       <ul v-else class="packages__list">
         <li v-for="pkg in installedPackages" :key="pkg.id" class="packages__item">
           <span class="packages__name">{{ pkg.title }}</span>
           <span>{{ pkg.author }}</span>
           <span>{{ pkg.versions.map((item) => item.version).join(', ') }}</span>
           <span class="packages__grants">
-            <template v-if="pkg.grants.length === 0">Без разрешений</template>
+            <template v-if="pkg.grants.length === 0">No permissions</template>
             <span v-for="grant in pkg.grants" :key="grant.permission" class="packages__grant">
               {{ PERMISSIONS[grant.permission] }}<template v-if="grant.permission === 'network'">: {{ pkg.origins.join(', ') }}</template>
               <select
                 v-if="CONFIRMABLE_PERMISSIONS.has(grant.permission)"
                 class="packages__select"
-                :aria-label="`${PERMISSIONS[grant.permission]}: режим`"
+                :aria-label="`${PERMISSIONS[grant.permission]}: mode`"
                 :value="grant.mode"
                 :disabled="busy"
                 @change="changeMode(pkg.id, grant, $event)"
@@ -325,42 +325,42 @@ async function changeMode(packageId: string, grant: Grant, event: Event) {
               </select>
             </span>
           </span>
-          <button type="button" class="packages__button" :disabled="busy" @click="remove(pkg.id)">Удалить</button>
+          <button type="button" class="packages__button" :disabled="busy" @click="remove(pkg.id)">Delete</button>
           <ul class="packages__sources">
             <li v-for="version in pkg.versions" :key="version.version">
-              {{ version.version }} · Исходники:
+              {{ version.version }} · Source:
               <template v-if="version.paths.source">
                 <code class="packages__path">{{ version.paths.source }}</code>
-                <button type="button" class="packages__button" @click="copy(version.paths.source)">Копировать</button>
+                <button type="button" class="packages__button" @click="copy(version.paths.source)">Copy</button>
               </template>
-              <template v-else>Исходники не включены</template>
+              <template v-else>Source not included</template>
               <template v-if="version.paths.assets">
-                · Медиа: <code class="packages__path">{{ version.paths.assets }}</code>
-                <button type="button" class="packages__button" @click="copy(version.paths.assets)">Копировать</button>
+                · Media: <code class="packages__path">{{ version.paths.assets }}</code>
+                <button type="button" class="packages__button" @click="copy(version.paths.assets)">Copy</button>
               </template>
             </li>
           </ul>
           <p v-if="confirmDelete === pkg.id" class="packages__warning">
-            Исходники и медиа в userwidgets/{{ pkg.id }}/ тоже будут удалены
-            <button type="button" class="packages__button" :disabled="busy" @click="remove(pkg.id)">Удалить</button>
-            <button type="button" class="packages__button" @click="confirmDelete = null">Отмена</button>
+            Source and media in userwidgets/{{ pkg.id }}/ will be deleted too
+            <button type="button" class="packages__button" :disabled="busy" @click="remove(pkg.id)">Delete</button>
+            <button type="button" class="packages__button" @click="confirmDelete = null">Cancel</button>
           </p>
         </li>
       </ul>
-      <h3 class="packages__subtitle">Создать свой виджет</h3>
-      <p>1. Создайте проект:</p>
+      <h3 class="packages__subtitle">Create your own widget</h3>
+      <p>1. Create a project:</p>
       <p>
         <code class="packages__path">{{ CREATE_COMMAND }}</code>
-        <button type="button" class="packages__button" @click="copy(CREATE_COMMAND)">Копировать</button>
+        <button type="button" class="packages__button" @click="copy(CREATE_COMMAND)">Copy</button>
       </p>
-      <p>2. Откройте папку в Claude Code или Codex и напишите:</p>
+      <p>2. Open the folder in Claude Code or Codex and write:</p>
       <p>
         <code class="packages__path">{{ AGENT_TASK }}</code>
-        <button type="button" class="packages__button" @click="copy(AGENT_TASK)">Копировать</button>
+        <button type="button" class="packages__button" @click="copy(AGENT_TASK)">Copy</button>
       </p>
       <div class="packages__actions">
-        <button type="button" class="packages__button" :disabled="busy" @click="folderInput?.click()">Выбрать папку</button>
-        <button type="button" class="packages__button" @click="open = false">Закрыть</button>
+        <button type="button" class="packages__button" :disabled="busy" @click="folderInput?.click()">Choose folder</button>
+        <button type="button" class="packages__button" @click="open = false">Close</button>
       </div>
       <input ref="folderBox" type="file" webkitdirectory hidden @change="chooseFolder" />
     </template>

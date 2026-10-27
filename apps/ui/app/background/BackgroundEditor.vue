@@ -32,7 +32,7 @@ watch(() => props.background?.mediaId, async id => {
   const result = await mediaInfo(id)
   if (!active || ticket !== metadataGeneration || props.background?.mediaId !== id) return
   if (result.ok) filename.value = result.data.name
-  else error.value = 'Не удалось получить сведения о фоне. Файл может быть недоступен.'
+  else error.value = 'Could not read the background details. The file may be unavailable.'
 }, { immediate: true })
 
 function cancel() {
@@ -66,14 +66,14 @@ async function choose(event: Event) {
       return
     }
     if (!result.ok) {
-      error.value = 'Не удалось импортировать фон. Проверьте соединение и формат файла.'
+      error.value = 'Could not import the background. Check the connection and the file format.'
       return
     }
     metadataGeneration++
     filename.value = result.data.name
     emit('change', defaultBackground(result.data.id, result.data.mime.startsWith('image/') ? 'image' : 'video'))
   } catch (cause) {
-    if (current()) error.value = cause instanceof Error ? cause.message : 'Не удалось проверить файл фона.'
+    if (current()) error.value = cause instanceof Error ? cause.message : 'Could not check the background file.'
   } finally {
     if (ticket === generation) {
       phase.value = null
@@ -112,56 +112,56 @@ function pattern(field: keyof ScreenBackground['pattern'], event: Event) {
 </script>
 
 <template>
-  <section class="background-editor" aria-label="Фон экрана">
-    <h4>Фон экрана</h4>
+  <section class="background-editor" aria-label="Screen background">
+    <h4>Screen background</h4>
     <label class="background-editor__field">
-      {{ background ? 'Заменить фон' : 'Добавить фон' }}
-      <input aria-label="Файл фона" type="file" accept="video/*,image/png,image/jpeg,image/webp,image/avif,.mp4,.m4v,.mov,.webm,.png,.jpg,.jpeg,.webp,.avif" :disabled="disabled" @change="choose">
+      {{ background ? 'Replace background' : 'Add background' }}
+      <input aria-label="Background file" type="file" accept="video/*,image/png,image/jpeg,image/webp,image/avif,.mp4,.m4v,.mov,.webm,.png,.jpg,.jpeg,.webp,.avif" :disabled="disabled" @change="choose">
     </label>
     <p v-if="filename" class="background-editor__filename" :title="filename">{{ filename }}</p>
-    <p v-if="phase" role="status" aria-live="polite" class="background-editor__hint">{{ phase === 'checking' ? 'Проверка файла…' : 'Импорт фона…' }}</p>
-    <button v-if="phase" type="button" :disabled="disabled" @click="cancel">Отменить импорт</button>
+    <p v-if="phase" role="status" aria-live="polite" class="background-editor__hint">{{ phase === 'checking' ? 'Checking the file…' : 'Importing the background…' }}</p>
+    <button v-if="phase" type="button" :disabled="disabled" @click="cancel">Cancel import</button>
     <p v-if="error" role="alert" class="background-editor__error">{{ error }}</p>
-    <p class="background-editor__hint">Видео: MP4, M4V, MOV, WebM. Изображения: PNG, JPEG, WebP, AVIF. Копия сохранится в приложении. Видео без звука.</p>
+    <p class="background-editor__hint">Video: MP4, M4V, MOV, WebM. Images: PNG, JPEG, WebP, AVIF. A copy is kept in the app. Video plays muted.</p>
     <template v-if="background">
       <label class="background-editor__field">
-        <span>{{ background.kind === 'image' ? 'Прозрачность изображения' : 'Прозрачность видео' }} <output>{{ Math.round(background.opacity * 100) }}%</output></span>
-        <input :aria-label="background.kind === 'image' ? 'Прозрачность изображения' : 'Прозрачность видео'" type="range" min="0" max="100" step="1" :value="background.opacity * 100" :disabled="disabled" @input="set('opacity', $event)">
+        <span>{{ background.kind === 'image' ? 'Image opacity' : 'Video opacity' }} <output>{{ Math.round(background.opacity * 100) }}%</output></span>
+        <input :aria-label="background.kind === 'image' ? 'Image opacity' : 'Video opacity'" type="range" min="0" max="100" step="1" :value="background.opacity * 100" :disabled="disabled" @input="set('opacity', $event)">
       </label>
       <label class="background-editor__field">
-        <span>Затемнение <output>{{ Math.round(background.dim * 100) }}%</output></span>
-        <input aria-label="Затемнение" type="range" min="0" max="100" step="1" :value="background.dim * 100" :disabled="disabled" @input="set('dim', $event)">
+        <span>Dimming <output>{{ Math.round(background.dim * 100) }}%</output></span>
+        <input aria-label="Dimming" type="range" min="0" max="100" step="1" :value="background.dim * 100" :disabled="disabled" @input="set('dim', $event)">
       </label>
       <label class="background-editor__toggle">
-        <input aria-label="Сетка поверх фона" type="checkbox" :checked="background.pattern.shape !== 'none'" :disabled="disabled" @change="togglePattern">
-        Сетка поверх фона
+        <input aria-label="Pattern over the background" type="checkbox" :checked="background.pattern.shape !== 'none'" :disabled="disabled" @change="togglePattern">
+        Pattern over the background
       </label>
       <template v-if="background.pattern.shape !== 'none'">
         <label class="background-editor__field">
-          Форма сетки
-          <select aria-label="Форма сетки" :value="background.pattern.shape" :disabled="disabled" @change="pattern('shape', $event)">
-            <option value="diagonal">Диагональ</option>
-            <option value="circles">Круги</option>
-            <option value="squares">Квадраты</option>
-            <option value="triangles">Треугольники</option>
-            <option value="diamonds">Ромбы</option>
-            <option value="crosses">Крестики</option>
+          Pattern shape
+          <select aria-label="Pattern shape" :value="background.pattern.shape" :disabled="disabled" @change="pattern('shape', $event)">
+            <option value="diagonal">Diagonal</option>
+            <option value="circles">Circles</option>
+            <option value="squares">Squares</option>
+            <option value="triangles">Triangles</option>
+            <option value="diamonds">Diamonds</option>
+            <option value="crosses">Crosses</option>
           </select>
         </label>
         <label class="background-editor__color">
-          Цвет сетки
-          <input aria-label="Цвет сетки" type="color" :value="background.pattern.color" :disabled="disabled" @input="pattern('color', $event)">
+          Pattern color
+          <input aria-label="Pattern color" type="color" :value="background.pattern.color" :disabled="disabled" @input="pattern('color', $event)">
         </label>
         <label class="background-editor__field">
-          <span>Прозрачность сетки <output>{{ Math.round(background.pattern.opacity * 100) }}%</output></span>
-          <input aria-label="Прозрачность сетки" type="range" min="0" max="100" step="1" :value="background.pattern.opacity * 100" :disabled="disabled" @input="pattern('opacity', $event)">
+          <span>Pattern opacity <output>{{ Math.round(background.pattern.opacity * 100) }}%</output></span>
+          <input aria-label="Pattern opacity" type="range" min="0" max="100" step="1" :value="background.pattern.opacity * 100" :disabled="disabled" @input="pattern('opacity', $event)">
         </label>
         <label class="background-editor__field">
-          <span>Увеличение сетки <output>{{ patternSize }}</output></span>
-          <input aria-label="Увеличение сетки" type="range" min="1" max="4" step="1" :value="patternScale" :disabled="disabled" @input="pattern('scale', $event)">
+          <span>Pattern scale <output>{{ patternSize }}</output></span>
+          <input aria-label="Pattern scale" type="range" min="1" max="4" step="1" :value="patternScale" :disabled="disabled" @input="pattern('scale', $event)">
         </label>
       </template>
-      <button type="button" :disabled="disabled" @click="remove">Убрать фон</button>
+      <button type="button" :disabled="disabled" @click="remove">Remove background</button>
     </template>
   </section>
 </template>

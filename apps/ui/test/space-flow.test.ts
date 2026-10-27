@@ -11,7 +11,7 @@ import {
   runEditSpace,
 } from '../app/spaces/space-flow'
 
-const SPACE: SpaceSummary = { id: 's-new', title: 'Новое пространство', icon: '⭐', color: 'violet', themeId: null, position: 1, revision: 1 }
+const SPACE: SpaceSummary = { id: 's-new', title: 'New space', icon: '⭐', color: 'violet', themeId: null, position: 1, revision: 1 }
 const ok = <T>(data: T): ApiResult<T> => ({ ok: true, data })
 const conflict = { ok: false, kind: 'conflict' } as const
 
@@ -31,12 +31,12 @@ describe('canRemoveScreen', () => {
 
 describe('renameTo', () => {
   it('returns the trimmed title when it changed', () => {
-    expect(renameTo('Дом', '  Работа ')).toBe('Работа')
+    expect(renameTo('Home', '  Work ')).toBe('Work')
   })
 
   it.each([
-    ['unchanged after trimming', 'Дом', '  Дом  '],
-    ['empty', 'Дом', '   '],
+    ['unchanged after trimming', 'Home', '  Home  '],
+    ['empty', 'Home', '   '],
   ])('returns null when the title is %s', (_name, current, draft) => {
     expect(renameTo(current, draft)).toBeNull()
   })
@@ -44,7 +44,7 @@ describe('renameTo', () => {
 
 describe('deleteSpaceMessage', () => {
   it('names the space', () => {
-    expect(deleteSpaceMessage('Дом')).toBe('Удалить пространство «Дом» вместе с экраном и виджетами?')
+    expect(deleteSpaceMessage('Home')).toBe('Delete the space «Home» with its screen and widgets?')
   })
 })
 
@@ -84,7 +84,7 @@ describe('runCreateSpace', () => {
 
 describe('runEditSpace', () => {
   it('returns the server summary on success', async () => {
-    const renamed = { ...SPACE, title: 'Работа' }
+    const renamed = { ...SPACE, title: 'Work' }
     expect(await runEditSpace(async () => ok(renamed))).toEqual({ kind: 'updated', space: renamed })
   })
 
@@ -95,7 +95,7 @@ describe('runEditSpace', () => {
 
 describe('runDeleteSpace', () => {
   const ids = ['a', 'b', 'c']
-  const at = (id: string) => ({ id, title: 'Дом' })
+  const at = (id: string) => ({ id, title: 'Home' })
 
   const deps = () => ({
     ask: vi.fn().mockResolvedValue(true),

@@ -24,7 +24,7 @@ const emit = defineEmits<{
 // The fan closes this long after the pointer leaves it (spec «Fan»).
 const CLOSE_DELAY_MS = 300
 const CORNER = { x: 2, y: 1.75 }
-const LIMIT_TITLE = `Не больше ${SPACE_LIMITS.spaces} пространств`
+const LIMIT_TITLE = `No more than ${SPACE_LIMITS.spaces} spaces`
 
 const root = useTemplateRef<HTMLElement>('root')
 const trigger = useTemplateRef<HTMLButtonElement>('trigger')
@@ -131,7 +131,7 @@ function onPickerClose() {
   scheduleClose()
 }
 
-// Esc closes the picker first, then the fan. Handled here, so the board does not take Esc as «Отмена».
+// Esc closes the picker first, then the fan. Handled here, so the board does not take Esc as «Cancel».
 function onKeydown(event: KeyboardEvent) {
   if (event.key !== 'Escape' || !open.value) return
   event.stopPropagation()
@@ -186,7 +186,7 @@ onUnmounted(() => {
       ref="trigger"
       type="button"
       class="space-switcher__trigger"
-      aria-label="Пространства"
+      aria-label="Spaces"
       aria-haspopup="true"
       :aria-expanded="open"
       :disabled="disabled"
@@ -220,8 +220,8 @@ onUnmounted(() => {
         v-if="editing"
         type="button"
         class="space-switcher__edit"
-        :aria-label="`Иконка и тема: ${space.title}`"
-        title="Иконка и тема"
+        :aria-label="`Icon and theme: ${space.title}`"
+        title="Icon and theme"
         :disabled="disabled"
         @click="openPicker(space.id)"
       >
@@ -232,14 +232,14 @@ onUnmounted(() => {
       <button
         type="button"
         class="space-switcher__bubble space-switcher__bubble--add"
-        aria-label="Новое пространство"
+        aria-label="New space"
         :title="canAdd ? undefined : LIMIT_TITLE"
         :disabled="disabled || !canAdd"
         @click="create"
       >
         <span aria-hidden="true">+</span>
       </button>
-      <span class="space-switcher__label" aria-hidden="true">Новое пространство</span>
+      <span class="space-switcher__label" aria-hidden="true">New space</span>
     </div>
     <div v-if="pickerSpace" class="space-switcher__picker">
       <SpacePicker :space="pickerSpace" :disabled="disabled" @pick="onPickerPick" @close="onPickerClose" />

@@ -5,7 +5,7 @@ const widget = useWidget()
 </script>
 
 <template>
-  <div class="widget">Размер виджета: {{ widget.context.sizeClass }}</div>
+  <div class="widget">Widget size: {{ widget.context.sizeClass }}</div>
 </template>
 
 <style scoped>

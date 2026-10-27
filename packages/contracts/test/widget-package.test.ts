@@ -191,7 +191,7 @@ describe('parseWidgetManifest', () => {
 })
 
 describe('manifest settings', () => {
-  const settings = { type: 'object', properties: { city: { type: 'string', title: 'Город', default: 'Москва' } } }
+  const settings = { type: 'object', properties: { city: { type: 'string', title: 'City', default: 'Moscow' } } }
 
   it('requires sdk 2 when settings is present', () => {
     expect(parseWidgetManifest({ ...manifestV2, settings })).toEqual({ ok: false, error: 'manifest.settings needs sdk 2' })

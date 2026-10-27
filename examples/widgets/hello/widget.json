@@ -1,7 +1,7 @@
 {
   "id": "dev.lifedashboard.hello",
   "version": "1.0.4",
-  "title": "Привет",
+  "title": "Hello",
   "author": "LifeDashboard",
   "sdk": 2,
   "entry": "index.js",

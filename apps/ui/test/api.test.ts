@@ -57,12 +57,12 @@ describe('apiRequest', () => {
   it('updates a space with PATCH and the JSON patch', async () => {
     const fetchMock = respond(200, { data: null, meta: { requestId: 'x' } })
     vi.stubGlobal('fetch', fetchMock)
-    await api.updateSpace('space 1', { title: 'Дом', color: 'teal' })
+    await api.updateSpace('space 1', { title: 'Home', color: 'teal' })
     const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe('/api/v1/spaces/space%201')
     expect(init?.method).toBe('PATCH')
     expect(init?.headers).toEqual({ 'Content-Type': 'application/json' })
-    expect(init?.body).toBe('{"title":"Дом","color":"teal"}')
+    expect(init?.body).toBe('{"title":"Home","color":"teal"}')
   })
 
   it('deletes a screen with its revision', async () => {

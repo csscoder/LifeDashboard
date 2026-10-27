@@ -48,7 +48,7 @@ describe('openDatabase', () => {
       'widgets',
     ])
     expect(db.prepare('SELECT id, title, position, revision, icon, color FROM spaces').all()).toEqual([
-      { id: SEED_SPACE_ID, title: 'Главная', position: 0, revision: 1, icon: '🏠', color: 'violet' },
+      { id: SEED_SPACE_ID, title: 'Home', position: 0, revision: 1, icon: '🏠', color: 'violet' },
     ])
     expect(db.prepare('SELECT id, space_id, position, rows FROM screens').all()).toEqual([
       { id: SEED_SCREEN_ID, space_id: SEED_SPACE_ID, position: 0, rows: 12 },
@@ -95,7 +95,7 @@ describe('openDatabase', () => {
       INSERT INTO widgets (id, screen_id, source_kind, source_type, config, config_version, x, y, w, h)
       VALUES ('w1', '${SEED_SCREEN_ID}', 'builtin', 'placeholder', '{}', 1, 0, 0, 2, 2);
       INSERT INTO widget_state (widget_id, data, revision, updated_at) VALUES ('w1', '{}', 1, 'x');
-      INSERT INTO rooms (id, title, position, revision, created_at, updated_at) VALUES ('r2', 'Пустая', 1, 5, 'x', 'x');
+      INSERT INTO rooms (id, title, position, revision, created_at, updated_at) VALUES ('r2', 'Empty', 1, 5, 'x', 'x');
     `)
     v2.close()
 
@@ -199,7 +199,7 @@ describe('openDatabase', () => {
     const check = new DatabaseSync(file)
     expect(userVersion(check)).toBe(1)
     expect(tables(check)).not.toContain('half')
-    expect(check.prepare('SELECT title FROM rooms').all()).toEqual([{ title: 'Главная' }])
+    expect(check.prepare('SELECT title FROM rooms').all()).toEqual([{ title: 'Home' }])
     check.close()
   })
 })
@@ -260,7 +260,7 @@ describe('migration 9: rooms become spaces', () => {
   it('renames rooms to spaces, keeps data and adds icon and colour', async () => {
     const v8 = await openDatabase(file, ctx(), MIGRATIONS.slice(0, 8))
     v8.exec(`
-      INSERT INTO rooms (id, title, position, revision, created_at, updated_at) VALUES ('r2', 'Вторая', 1, 5, 'x', 'x');
+      INSERT INTO rooms (id, title, position, revision, created_at, updated_at) VALUES ('r2', 'Second', 1, 5, 'x', 'x');
       INSERT INTO screens (id, room_id, position) VALUES ('s2', 'r2', 0);
       INSERT INTO widgets (id, screen_id, source_kind, source_type, config, config_version, x, y, w, h)
       VALUES ('w1', 's2', 'builtin', 'placeholder', '{}', 1, 0, 0, 2, 2);
@@ -270,8 +270,8 @@ describe('migration 9: rooms become spaces', () => {
     expect(tables(db)).toContain('spaces')
     expect(tables(db)).not.toContain('rooms')
     expect(db.prepare('SELECT id, title, revision, icon, color FROM spaces ORDER BY position').all()).toEqual([
-      { id: SEED_SPACE_ID, title: 'Главная', revision: 1, icon: '🏠', color: 'violet' },
-      { id: 'r2', title: 'Вторая', revision: 5, icon: '🏠', color: 'violet' },
+      { id: SEED_SPACE_ID, title: 'Home', revision: 1, icon: '🏠', color: 'violet' },
+      { id: 'r2', title: 'Second', revision: 5, icon: '🏠', color: 'violet' },
     ])
     expect(db.prepare('SELECT id, space_id FROM screens WHERE id = ?').get('s2')).toEqual({ id: 's2', space_id: 'r2' })
     db.exec("DELETE FROM spaces WHERE id = 'r2'")

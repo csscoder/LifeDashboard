@@ -34,8 +34,8 @@ function update(key: string, setting: PlainSetting, event: Event) {
       <small v-if="invalid[key]" role="alert">Invalid value. Fix: follow this setting's type and constraints.</small>
     </div>
     <div v-for="secret in secrets" :key="secret.key" class="shell-setting">
-      <span>{{ secret.title }}: {{ props.secrets[secret.key] ? 'задан' : 'не задан' }}</span>
-      <small>LD_SECRET_{{ secret.key }} в .env.local</small>
+      <span>{{ secret.title }}: {{ props.secrets[secret.key] ? 'set' : 'not set' }}</span>
+      <small>LD_SECRET_{{ secret.key }} in .env.local</small>
     </div>
     <p v-for="problem in problems" :key="problem" role="alert">{{ problem }}</p>
   </section>

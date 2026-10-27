@@ -18,7 +18,7 @@ const props = defineProps<{
   screenKey: string
 }>()
 // With one screen, deletion removes the whole space after its confirmation.
-const removeLabel = computed(() => (props.count > 1 ? 'Удалить экран' : 'Удалить пространство'))
+const removeLabel = computed(() => (props.count > 1 ? 'Delete screen' : 'Delete space'))
 
 // The list scrolls inside its capped column; the active dot is kept in view when it moves.
 const list = useTemplateRef<HTMLElement>('listBox')
@@ -96,14 +96,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <nav v-if="count > 1 || editing" class="dots" :class="{ 'dots--edit': editing }" aria-label="Экраны" @keydown="open && $event.stopPropagation()">
+  <nav v-if="count > 1 || editing" class="dots" :class="{ 'dots--edit': editing }" aria-label="Screens" @keydown="open && $event.stopPropagation()">
     <div ref="listBox" class="dots__list">
       <span v-for="position in count" :key="position" class="dots__item" :class="{ 'dots__item--on': position - 1 === index }">
         <button
           type="button"
           class="dots__dot"
           :class="{ 'dots__dot--on': position - 1 === index }"
-          :aria-label="`Экран ${position}`"
+          :aria-label="`Screen ${position}`"
           :aria-current="position - 1 === index ? 'true' : undefined"
           :disabled="disabled"
           @click="emit('go', position - 1)"
@@ -112,8 +112,8 @@ onUnmounted(() => {
           v-if="editing && position - 1 === index"
           type="button"
           class="dots__settings"
-          :aria-label="`Настройки экрана ${position}`"
-          title="Настройки экрана"
+          :aria-label="`Screen ${position} settings`"
+          title="Screen settings"
           aria-haspopup="dialog"
           :aria-expanded="open"
           :popovertarget="panelId"
@@ -130,8 +130,8 @@ onUnmounted(() => {
       v-if="editing"
       type="button"
       class="dots__add"
-      aria-label="Новый экран"
-      :title="canAdd ? 'Новый экран' : 'Не больше 20 экранов'"
+      aria-label="New screen"
+      :title="canAdd ? 'New screen' : 'At most 20 screens'"
       :disabled="disabled || !canAdd"
       @click="emit('add')"
     >
@@ -143,25 +143,25 @@ onUnmounted(() => {
       ref="panelBox"
       popover="auto"
       role="dialog"
-      :aria-label="`Настройки экрана ${index + 1}`"
+      :aria-label="`Screen ${index + 1} settings`"
       class="dots__panel"
       @toggle="onToggle"
       @keydown.stop
     >
       <header class="dots__panel-header">
-        <h3>Экран {{ index + 1 }}</h3>
-        <button type="button" class="dots__close" aria-label="Закрыть настройки экрана" @click="close">×</button>
+        <h3>Screen {{ index + 1 }}</h3>
+        <button type="button" class="dots__close" aria-label="Close screen settings" @click="close">×</button>
       </header>
       <label class="dots__theme">
-        Тема экрана
-        <select aria-label="Тема экрана" :value="themeId ?? ''" :disabled="disabled"
+        Screen theme
+        <select aria-label="Screen theme" :value="themeId ?? ''" :disabled="disabled"
           @change="emit('theme', ($event.target as HTMLSelectElement).value || null)">
-          <option value="">Наследовать тему пространства</option>
-          <option v-if="themeId && !BUILTIN_THEMES.some(theme => theme.id === themeId)" :value="themeId" disabled>Тема недоступна — наследуется</option>
+          <option value="">Inherit the space theme</option>
+          <option v-if="themeId && !BUILTIN_THEMES.some(theme => theme.id === themeId)" :value="themeId" disabled>Theme unavailable — inherited</option>
           <option v-for="theme in BUILTIN_THEMES" :key="theme.id" :value="theme.id">{{ theme.name }}</option>
         </select>
       </label>
-      <p class="dots__hint">Сохранится вместе с изменениями доски</p>
+      <p class="dots__hint">Saved with the board changes</p>
       <BackgroundEditor :key="screenKey" :background="background" :disabled="disabled" @change="emit('background', $event)" />
       <button type="button" class="dots__delete" :disabled="disabled || !canRemove"
         :title="canRemove ? undefined : removeTitle" @click="remove">{{ removeLabel }}</button>

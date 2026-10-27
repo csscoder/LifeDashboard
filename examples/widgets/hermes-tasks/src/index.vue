@@ -20,8 +20,8 @@ const layout = computed(() => layoutFor(widget.context.size))
     <main v-else class="tasks__main">
       <ViewTabs v-if="layout === 'stacked'" :tasks="tasks" />
       <p v-if="tasks.unavailable" class="tasks__banner" role="alert">
-        Hermes Tasks недоступен
-        <button type="button" class="tasks__retry" @click="tasks.retry()">Повторить</button>
+        Hermes Tasks is unavailable
+        <button type="button" class="tasks__retry" @click="tasks.retry()">Retry</button>
       </p>
       <TaskList :tasks="tasks" />
     </main>

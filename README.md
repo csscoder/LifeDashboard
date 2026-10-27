@@ -105,7 +105,7 @@ my-widget/
 
 Reference media by URL, for example `<video src="assets/bg.mp4">` or `fetch('assets/model.glb')`; importing a video, audio or a media file over 100 KB into code fails the build. Template `src` attributes are never bundled (`transformAssetUrls: false`), so an image used as `<img src="./x.png">` must live in `assets/` and be referenced by URL. Workers start from a `blob:` URL. A widget loads files only from its own folder; network requests go through `http.get` and `http.send`.
 
-To rebuild an installed widget, copy its `source/` and `assets/` (paths are shown in «Виджеты») into `examples/widgets/<name>/` of a LifeDashboard checkout and run `pnpm -C examples/widgets/<name> build`.
+To rebuild an installed widget, copy its `source/` and `assets/` (paths are shown in «Widget library») into `examples/widgets/<name>/` of a LifeDashboard checkout and run `pnpm -C examples/widgets/<name> build`.
 
 **Existing examples:**
 
@@ -123,11 +123,11 @@ pnpm -C examples/widgets/hello build
 # examples/widgets/hello/dist/dev.lifedashboard.hello-1.0.4/
 ```
 
-Then start LifeDashboard and select **«Виджеты» → «Выбрать папку»**, pick that folder (or drop it on the dialog), review the permissions and sizes, install the widget, and place it using **«Добавить виджет…»**.
+Then start LifeDashboard and select **«Board settings» → «Widget library» → «Choose folder»**, pick that folder (or drop it on the dialog), review the permissions and sizes, install the widget, and place it using **«Add widget…»**.
 
 A package already used by a board cannot be removed until its widget instances are removed. Installed versions are immutable: increment `widget.json.version` before importing changed code. Placed instances remain associated with their selected version.
 
-To update or roll back an instance, enter edit mode, open its settings, select an installed **«Версия»** and press **«Применить версию»**. This saves the board's pending edits, keeps the instance ID, persisted state, appearance and compatible settings, and fits its size to the new limits if there is room. Secret values are kept only when the setting key and network binding are unchanged; changed bindings need a new value. Widget authors remain responsible for reading or migrating their own persisted state format across versions.
+To update or roll back an instance, enter edit mode, open its settings, select an installed **«Version»** and press **«Apply version»**. This saves the board's pending edits, keeps the instance ID, persisted state, appearance and compatible settings, and fits its size to the new limits if there is room. Secret values are kept only when the setting key and network binding are unchanged; changed bindings need a new value. Widget authors remain responsible for reading or migrating their own persisted state format across versions.
 
 ### Creating widgets with Claude Code, Codex, or other AI tools
 
@@ -157,7 +157,7 @@ npm create @lifedashboard/widget "<title>"
 
 1. Open the created `lifedashboard-<slug>/` folder in Claude Code or Codex. The project's `AGENTS.md` tells the agent how to build the widget.
 2. Describe the widget in one sentence, for example: "A responsive analog clock with a transparent background and subtle animations." The agent builds it into `dist/<id>-<version>/`.
-3. Import that folder through **«Виджеты» → «Выбрать папку»**, then place the widget with **«Добавить виджет…»**.
+3. Import that folder through **«Board settings» → «Widget library» → «Choose folder»**, then place the widget with **«Add widget…»**.
 
 The SDK reference is [`packages/widget-sdk/docs/index.md`](packages/widget-sdk/docs/index.md). The `npm create` command works after `@lifedashboard/create-widget` is published; before that, use the contributor steps below.
 
@@ -305,7 +305,7 @@ pnpm -C apps/desktop run package
 open apps/desktop/src-tauri/target/release/bundle/dmg/
 ```
 
-Drag **LifeDashboard** from the `.dmg` to `/Applications` and start it. The app shows the pairing code in a dialog on first start. It uses port `3101` and its own data directory, `~/Library/Application Support/LifeDashboard Desktop` (separate from `pnpm dev`), and writes the API log to `logs/api.log` there. Install widgets again in the app through **«Виджеты» → «Выбрать папку»**.
+Drag **LifeDashboard** from the `.dmg` to `/Applications` and start it. The app shows the pairing code in a dialog on first start. It uses port `3101` and its own data directory, `~/Library/Application Support/LifeDashboard Desktop` (separate from `pnpm dev`), and writes the API log to `logs/api.log` there. Install widgets again in the app through **«Board settings» → «Widget library» → «Choose folder»**.
 
 The build is ad-hoc signed and not notarized; it is meant for the machine that built it.
 

@@ -27,15 +27,15 @@ function setup() {
   return { state, answers, prepare, send, onSaved, autosave }
 }
 
-const task = { title: 'Сервер', description: null, priority: 'none' as const, tags: ['a'], projectId: null }
+const task = { title: 'Server', description: null, priority: 'none' as const, tags: ['a'], projectId: null }
 
 describe('createAutosave', () => {
   it('sends one write at a time; an edit made meanwhile goes next with the returned version', async () => {
     const { state, answers, send, autosave } = setup()
-    const first = autosave.edit('title', 'Новое')
+    const first = autosave.edit('title', 'New')
     void autosave.edit('priority', 'high')
     expect(send).toHaveBeenCalledTimes(1)
-    expect(send.mock.calls[0]![0].body).toMatchObject({ title: 'Новое', expectedVersion: 3 })
+    expect(send.mock.calls[0]![0].body).toMatchObject({ title: 'New', expectedVersion: 3 })
     answers[0]!.resolve({ task: { version: 4 } })
     await first
     expect(send).toHaveBeenCalledTimes(2)
@@ -48,25 +48,25 @@ describe('createAutosave', () => {
 
   it('keeps a field typed again during its own save', async () => {
     const { state, answers, send, autosave } = setup()
-    const first = autosave.edit('title', 'Один')
-    void autosave.edit('title', 'Два')
+    const first = autosave.edit('title', 'One')
+    void autosave.edit('title', 'Two')
     answers[0]!.resolve({ task: { version: 4 } })
     await first
-    expect(send.mock.calls[1]![0].body).toMatchObject({ title: 'Два', expectedVersion: 4 })
-    expect(state.dirty).toEqual({ title: 'Два' })
+    expect(send.mock.calls[1]![0].body).toMatchObject({ title: 'Two', expectedVersion: 4 })
+    expect(state.dirty).toEqual({ title: 'Two' })
   })
 
   it('does not send a draft, but keeps it dirty', async () => {
     const { state, send, autosave } = setup()
-    autosave.draft('title', 'Пишу…')
+    autosave.draft('title', 'Typing…')
     void autosave.edit('priority', 'low')
     expect(send.mock.calls[0]![0].body).toEqual({ priority: 'low', expectedVersion: 3, idempotencyKey: 'k1' })
-    expect(state.dirty).toEqual({ title: 'Пишу…', priority: 'low' })
+    expect(state.dirty).toEqual({ title: 'Typing…', priority: 'low' })
   })
 
   it('stops after a lost answer and resends the same attempt before later edits', async () => {
     const { state, answers, send, autosave } = setup()
-    const first = autosave.edit('title', 'Новое')
+    const first = autosave.edit('title', 'New')
     void autosave.edit('priority', 'high')
     answers[0]!.reject(new TasksError('UNAVAILABLE', 'The service is unreachable', true))
     await first
@@ -84,22 +84,22 @@ describe('createAutosave', () => {
 
   it('after a conflict sends every dirty field as a new attempt from the re-read version', async () => {
     const { state, answers, send, prepare, autosave } = setup()
-    const first = autosave.edit('title', 'Новое')
+    const first = autosave.edit('title', 'New')
     answers[0]!.reject(new TasksError('VERSION_CONFLICT', 'changed', false))
     await first
-    expect(state.dirty).toEqual({ title: 'Новое' })
+    expect(state.dirty).toEqual({ title: 'New' })
     state.version = 9
     void autosave.retry()
-    expect(prepare).toHaveBeenLastCalledWith({ title: 'Новое' }, 9)
+    expect(prepare).toHaveBeenLastCalledWith({ title: 'New' }, 9)
     expect(send.mock.calls[1]![0].body.idempotencyKey).toBe('k2')
   })
 
   it('keeps the typed value after DECLINED and sends nothing on its own', async () => {
     const { state, answers, send, autosave } = setup()
-    const first = autosave.edit('title', 'Новое')
+    const first = autosave.edit('title', 'New')
     answers[0]!.reject(new TasksError('DECLINED', 'The user declined the call', false))
     await first
-    expect([state.failed?.code, state.dirty]).toEqual(['DECLINED', { title: 'Новое' }])
+    expect([state.failed?.code, state.dirty]).toEqual(['DECLINED', { title: 'New' }])
     void autosave.edit('priority', 'low')
     expect(send).toHaveBeenCalledTimes(1)
   })
@@ -107,6 +107,6 @@ describe('createAutosave', () => {
 
 describe('shown', () => {
   it('shows dirty fields over the server values and the server values elsewhere', () => {
-    expect(shown({ ...task, priority: 'high' }, { title: 'Моё' })).toEqual({ ...task, priority: 'high', title: 'Моё' })
+    expect(shown({ ...task, priority: 'high' }, { title: 'Mine' })).toEqual({ ...task, priority: 'high', title: 'Mine' })
   })
 })

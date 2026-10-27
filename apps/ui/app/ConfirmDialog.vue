@@ -3,15 +3,15 @@ import { computed, nextTick, onUnmounted, ref, useTemplateRef, watch } from 'vue
 import type { GatewayOp, HttpSendInput, NotificationInput } from '@lifedashboard/contracts/widget-gateway'
 import { confirmations, type Confirmation } from './confirmations'
 
-// «Виджет «…» хочет …»; a Record so a new op cannot reach the dialog without its text.
+// «Widget «…» wants to …»; a Record so a new op cannot reach the dialog without its text.
 const props = defineProps<{ applicationModalId?: string }>()
 
 const ACTIONS: Record<GatewayOp, string> = {
-  'state.get': 'прочитать свои данные',
-  'state.set': 'сохранить свои данные',
-  'notifications.send': 'показать уведомление',
-  'http.get': 'прочитать данные из сети',
-  'http.send': 'отправить запрос в сеть',
+  'state.get': 'read its own data',
+  'state.set': 'save its own data',
+  'notifications.send': 'show a notification',
+  'http.get': 'read data from the network',
+  'http.send': 'send a network request',
 }
 // A double click on the previous entry must not approve the next one.
 const ARM_MS = 500
@@ -85,7 +85,7 @@ onUnmounted(() => clearTimeout(armTimer))
 <template>
   <dialog ref="dialogBox" class="confirm" aria-labelledby="confirm-title" @close="onClose" @cancel="onCancel" @keydown.esc.stop.prevent="current?.answer('declined')">
     <template v-if="current">
-      <h2 id="confirm-title" class="confirm__title">Виджет «{{ current.title }}» хочет {{ ACTIONS[current.op] }}</h2>
+      <h2 id="confirm-title" class="confirm__title">Widget «{{ current.title }}» wants to {{ ACTIONS[current.op] }}</h2>
       <div v-if="notification" class="confirm__preview">
         <p class="confirm__preview-title">{{ notification.title }}</p>
         <p v-if="notification.body">{{ notification.body }}</p>
@@ -94,8 +94,8 @@ onUnmounted(() => clearTimeout(armTimer))
         <p class="confirm__preview-title">{{ request.method }} {{ request.url }}</p>
       </div>
       <div class="confirm__actions">
-        <button type="button" class="confirm__button" :disabled="!armed" @click="current.answer('approved')">Разрешить один раз</button>
-        <button ref="declineBox" type="button" class="confirm__button" @click="current.answer('declined')">Отклонить</button>
+        <button type="button" class="confirm__button" :disabled="!armed" @click="current.answer('approved')">Allow once</button>
+        <button ref="declineBox" type="button" class="confirm__button" @click="current.answer('declined')">Decline</button>
       </div>
     </template>
   </dialog>

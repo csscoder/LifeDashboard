@@ -122,7 +122,7 @@ it('invalidates the modal before dev reset clears gateway state', async () => {
  await expanded.call('state.set', { data: { count: 9 }, expectedRevision: 0 })
  let modalAtReset = true
  t.onReset(() => { modalAtReset = t.frames().some(frame => frame.props.title === 'Widget modal') })
- t.ui.button('Сбросить состояние').props.onClick(); await settle()
+ t.ui.button('Reset state').props.onClick(); await settle()
  expect(modalAtReset).toBe(false)
  expect(expanded.received).toContainEqual({ t: 'close' })
  expect(t.frames()).toHaveLength(1)
@@ -248,7 +248,7 @@ it('keeps late dispatched-call completion from creating effects after unmount', 
 })
 it('rejects a removed modal source before Vue detaches the old iframe', async () => {
  const t = await setup(); const expanded = await open(t)
- t.ui.button('Сбросить состояние').props.onClick()
+ t.ui.button('Reset state').props.onClick()
  t.message(expanded.source, { t: 'ld:hello', sdk: SDK_VERSION })
  await settle()
  expect(t.compact.received.filter(data => data.t === 'ld:init')).toHaveLength(1)
@@ -260,7 +260,7 @@ it('restores a fresh compact preview after a rejected reset without restoring it
  await expanded.call('state.set', { data: { count: 9 }, expectedRevision: 0 })
  const old = t.frames()[0]!
  t.onReset(() => { throw new Error('Reset offline') })
- t.ui.button('Сбросить состояние').props.onClick(); await settle()
+ t.ui.button('Reset state').props.onClick(); await settle()
  expect(t.ui.text()).toContain('Reset offline')
  expect(t.frames()).toHaveLength(1)
  expect(t.frames()[0] === old).toBe(false)

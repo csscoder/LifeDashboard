@@ -7,7 +7,7 @@ export interface QuickAdd {
   date: string | null
 }
 
-/** «Купить молоко #дом завтра» → title, tags and date; null when no title is left. */
+/** «Buy milk #home tomorrow» → title, tags and date; null when no title is left. */
 export function parseQuickAdd(text: string, context: { today: string; view: View; tag: string | null }): QuickAdd | null {
   const tags = new Set<string>(context.tag === null ? [] : [context.tag])
   let date: string | undefined
@@ -15,8 +15,8 @@ export function parseQuickAdd(text: string, context: { today: string; view: View
   for (const word of text.trim().split(/\s+/)) {
     const lower = word.toLowerCase()
     if (word.length > 1 && word.startsWith('#')) tags.add(lower.slice(1))
-    else if (lower === 'сегодня') date = context.today
-    else if (lower === 'завтра') date = addDays(context.today, 1)
+    else if (lower === 'today') date = context.today
+    else if (lower === 'tomorrow') date = addDays(context.today, 1)
     else if (word !== '') words.push(word)
   }
   const title = words.join(' ')

@@ -52,7 +52,7 @@ export function useTasks(widget: Widget) {
   const openTaskId = ref<string | null>(null)
   const detail = ref<TaskDetail | null>(null)
   const projects = ref<Project[]>([])
-  // A write lost to UNAVAILABLE; the banner's «Повторить» sends it again with the same key.
+  // A write lost to UNAVAILABLE; the banner's «Retry» sends it again with the same key.
   let retryAction: (() => Promise<unknown>) | null = null
   let refreshing = false
   let queued = false
@@ -133,14 +133,14 @@ export function useTasks(widget: Widget) {
       case 'DECLINED':
         return
       case 'VERSION_CONFLICT':
-        toast('Задача изменилась в Hermes, данные обновлены')
+        toast('Task changed in Hermes, data refreshed')
         return
       case 'WORKSPACE_EPOCH_MISMATCH':
-        toast('Данные Hermes Tasks могли быть восстановлены из резервной копии')
+        toast('Hermes Tasks data may have been restored from a backup')
         return
       case 'RATE_LIMITED':
         pausedUntil = Date.now() + RATE_PAUSE_MS
-        toast('Слишком много запросов, повторите позже')
+        toast('Too many requests, try again later')
         return
     }
     if (failure.retryable) {
@@ -192,8 +192,8 @@ export function useTasks(widget: Widget) {
       onDone: ({ closedOccurrence }) => {
         hide(occurrenceId)
         // Reopen needs the closed occurrence's new version, so the undo starts only after the answer.
-        toast(action === 'complete' ? 'Выполнено' : 'Пропущено', {
-          label: 'Вернуть',
+        toast(action === 'complete' ? 'Completed' : 'Skipped', {
+          label: 'Undo',
           run: () => void mutate(api.occurrenceAction('reopen', closedOccurrence.id, closedOccurrence.version)),
         })
       },

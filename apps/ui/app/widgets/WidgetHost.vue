@@ -33,7 +33,7 @@ const props = defineProps<{
 
 const frame = useTemplateRef<{ $el: Element }>('frameBox')
 const info = computed(() => describeSource(props.source))
-const title = computed(() => info.value?.title ?? 'Неизвестный виджет')
+const title = computed(() => info.value?.title ?? 'Unknown widget')
 const renderer = computed(() => (props.source.kind === 'builtin' ? builtinWidgetRenderers.get(props.source.type) : undefined))
 const flags = useSecretFlags(() => props.widgetId)
 const context = useWidgetContext({
@@ -89,6 +89,6 @@ if (props.widgetId && props.source.kind === 'builtin') {
     <div v-if="!widgetId" class="grid place-items-center h-full text-center text-base font-strong text-secondary">{{ title }}</div>
     <component :is="renderer" v-else-if="renderer" />
     <SandboxWidget v-else-if="info?.hash && source.kind === 'package'" :key="`${info.hash}:${widgetModals.runtimeVersion(widgetId)}`" :surface-id="runtimeId" :widget-id="widgetId" :hash="info.hash" :title="title" :package-id="source.packageId" :version="source.version" :context="context" />
-    <div v-else class="grid place-items-center h-full text-center text-sm text-muted">Неизвестный виджет</div>
+    <div v-else class="grid place-items-center h-full text-center text-sm text-muted">Unknown widget</div>
   </WidgetFrame>
 </template>

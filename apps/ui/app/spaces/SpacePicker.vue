@@ -19,8 +19,8 @@ onUnmounted(() => document.removeEventListener('pointerdown', onPointerDown))
 </script>
 
 <template>
-  <div class="space-picker" role="group" :aria-label="`Иконка и тема: ${space.title}`">
-    <h4 class="space-picker__heading">Иконка</h4>
+  <div class="space-picker" role="group" :aria-label="`Icon and theme: ${space.title}`">
+    <h4 class="space-picker__heading">Icon</h4>
     <div class="space-picker__icons">
       <button
         v-for="icon in SPACE_ICONS"
@@ -36,15 +36,15 @@ onUnmounted(() => document.removeEventListener('pointerdown', onPointerDown))
       </button>
     </div>
     <label class="space-picker__heading space-picker__theme">
-      Тема пространства
+      Space theme
       <select
-        aria-label="Тема пространства"
+        aria-label="Space theme"
         :value="space.themeId ?? ''"
         :disabled="disabled"
         @change="emit('pick', { themeId: ($event.target as HTMLSelectElement).value || null })"
       >
-        <option value="">Наследовать тему дашборда</option>
-        <option v-if="space.themeId && !BUILTIN_THEMES.some(theme => theme.id === space.themeId)" :value="space.themeId" disabled>Тема недоступна — наследуется</option>
+        <option value="">Inherit the dashboard theme</option>
+        <option v-if="space.themeId && !BUILTIN_THEMES.some(theme => theme.id === space.themeId)" :value="space.themeId" disabled>Theme unavailable — inherited</option>
         <option v-for="theme in BUILTIN_THEMES" :key="theme.id" :value="theme.id">{{ theme.name }}</option>
       </select>
     </label>

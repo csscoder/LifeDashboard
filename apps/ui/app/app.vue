@@ -53,7 +53,7 @@ const mode = ref<BoardMode>('view')
 const notice = ref<string | null>(null)
 const boardRef = useTemplateRef<InstanceType<typeof WidgetBoard>>('board')
 
-// The widget the next build draft places; set by the «Добавить виджет» picker.
+// The widget the next build draft places; set by the «Add widget» picker.
 const draftSource = ref<WidgetSource>({ kind: 'builtin', type: 'placeholder' })
 const packagesOpen = ref(false)
 const entries = computed(() => pickerEntries(installedPackages.value))
@@ -190,8 +190,8 @@ function applyReaction(reaction: Reaction) {
 }
 
 const apiLabel = computed(() => {
-  if (state.value === 'unavailable' || apiDown.value) return 'API: недоступен'
-  return state.value === 'checking' ? 'API: проверка…' : 'API: работает'
+  if (state.value === 'unavailable' || apiDown.value) return 'API: unavailable'
+  return state.value === 'checking' ? 'API: checking…' : 'API: running'
 })
 
 // The dashboard default is independent of the theme resolved for the displayed screen.
@@ -205,7 +205,7 @@ const themeId = computed<string>(() => resolveThemeId([
 // An unknown stored id (deleted theme) is kept as it is; the default theme is shown meanwhile.
 const backgroundNotice = ref<string | null>(null)
 const themeNotice = ref<string | null>(
-  storedThemeId !== null && !BUILTIN_THEME_IDS.has(storedThemeId) ? 'Тема не найдена, показана тема по умолчанию' : null,
+  storedThemeId !== null && !BUILTIN_THEME_IDS.has(storedThemeId) ? 'Theme not found, showing the default theme' : null,
 )
 const headerNotice = computed(() => [notice.value, themeNotice.value, backgroundNotice.value, boardRef.value?.backgroundLeaseError].filter(Boolean).join(' · ') || null)
 const statusText = computed(() => [apiDown.value ? apiLabel.value : null, headerNotice.value].filter(Boolean).join(' · '))
@@ -213,7 +213,7 @@ const statusText = computed(() => [apiDown.value ? apiLabel.value : null, header
 function selectTheme(id: string) {
   dashboardThemeId.value = resolveThemeId([id], BUILTIN_THEME_IDS)
   // A failed save keeps the theme applied for this session.
-  themeNotice.value = saveAppearance({ schemaVersion: 1, themeId: dashboardThemeId.value }) ? null : 'Не удалось сохранить тему'
+  themeNotice.value = saveAppearance({ schemaVersion: 1, themeId: dashboardThemeId.value }) ? null : 'Could not save the theme'
 }
 
 const rootClass = computed(() => [
@@ -286,11 +286,11 @@ onMounted(check)
         />
       </header>
       <main class="app__main" data-board-focus tabindex="-1">
-        <p v-if="state === 'checking'" class="app__status">Подключение…</p>
+        <p v-if="state === 'checking'" class="app__status">Connecting…</p>
         <PairingForm v-else-if="state === 'pairing'" @paired="check" />
         <div v-else-if="state === 'unavailable'" class="app__status">
-          <p>API: недоступен</p>
-          <button type="button" class="app__button" @click="check">Повторить</button>
+          <p>API: unavailable</p>
+          <button type="button" class="app__button" @click="check">Retry</button>
         </div>
         <WidgetBoard
           v-else-if="spaceId"
@@ -324,14 +324,14 @@ onMounted(check)
           @theme="boardRef?.setScreenTheme($event)"
           @background="boardRef?.setBackground($event)"
         />
-        <div v-if="mode !== 'view'" class="app__edit-controls" role="group" aria-label="Редактирование доски">
+        <div v-if="mode !== 'view'" class="app__edit-controls" role="group" aria-label="Board editing">
           <label v-if="mode === 'edit'" class="app__theme">
-            Ряды
+            Rows
             <input class="app__select app__rows" type="number" required :min="ROWS.min" :max="ROWS.max" step="1"
               :value="boardRef?.rows" :disabled="boardRef?.saving" @input="setRows" />
           </label>
-          <button type="button" class="app__button app__button--primary" :disabled="boardRef?.saving" @click="boardRef?.confirm()">Готово</button>
-          <button type="button" class="app__button" :disabled="boardRef?.saving" @click="boardRef?.cancel()">Отмена</button>
+          <button type="button" class="app__button app__button--primary" :disabled="boardRef?.saving" @click="boardRef?.confirm()">Done</button>
+          <button type="button" class="app__button" :disabled="boardRef?.saving" @click="boardRef?.cancel()">Cancel</button>
         </div>
       </footer>
       <SettingsPanel
@@ -374,7 +374,7 @@ onMounted(check)
         <p v-if="toast.body" class="app__toast-body">{{ toast.body }}</p>
       </li>
     </ul>
-    <p class="app__narrow">Окно слишком узкое</p>
+    <p class="app__narrow">The window is too narrow</p>
   </div>
 </template>
 

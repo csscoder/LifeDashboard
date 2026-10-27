@@ -3,12 +3,12 @@ import { afterDelete, headerTitle } from '../app/spaces/nav'
 
 describe('headerTitle', () => {
   it('omits the index for a single screen', () => {
-    expect(headerTitle('Дом', 0, 1)).toBe('Дом')
+    expect(headerTitle('Home', 0, 1)).toBe('Home')
   })
 
   it('adds the 1-based index when there are several screens', () => {
-    expect(headerTitle('Дом', 1, 3)).toBe('Дом (2)')
-    expect(headerTitle('Дом', 0, 2)).toBe('Дом (1)')
+    expect(headerTitle('Home', 1, 3)).toBe('Home (2)')
+    expect(headerTitle('Home', 0, 2)).toBe('Home (1)')
   })
 })
 

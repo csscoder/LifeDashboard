@@ -1,7 +1,7 @@
 {
   "id": "dev.lifedashboard.hermes-tasks",
   "version": "1.0.2",
-  "title": "Задачи Hermes",
+  "title": "Hermes Tasks",
   "author": "LifeDashboard",
   "sdk": 2,
   "entry": "index.js",

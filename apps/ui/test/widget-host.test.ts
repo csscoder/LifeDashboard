@@ -117,10 +117,10 @@ it('renders and copies an installed widget exception with its exact package vers
   expect(host.text()).toContain('dev.test.probe@1.2.3')
   expect(host.text()).toContain('Error: <script>API schema changed</script>')
   expect(host.nodes().every((el) => el.props.innerHTML === undefined)).toBe(true)
-  const copy = host.nodes().find((el) => el.tag === 'button' && el.text === 'Копировать ошибку')!
+  const copy = host.nodes().find((el) => el.tag === 'button' && el.text === 'Copy error')!
   await copy.props.onClick()
   expect(clipboard.writeText).toHaveBeenCalledWith('dev.test.probe@1.2.3\nError: <script>API schema changed</script>')
-  const retry = host.nodes().find((el) => el.tag === 'button' && el.text === 'Повторить')!
+  const retry = host.nodes().find((el) => el.tag === 'button' && el.text === 'Retry')!
   await retry.props.onClick(); await Vue.nextTick()
   expect(host.text()).not.toContain('API schema changed')
 })
@@ -372,8 +372,8 @@ it('keeps error retry inert through the real dialog and adapter while a modal ca
  await vi.waitFor(() => expect(f.requests).toHaveLength(1))
  f.ports[1]!.postMessage({ t: 'error', message: 'Modal failed' })
  await vi.waitFor(() => expect(f.controller.activeModal.value?.state).toBe('error'))
- const retry = f.mounted.nodes().find(el => el.tag === 'button' && el.text === 'Повторить')!
- const close = f.mounted.nodes().find(el => el.tag === 'button' && el.props['aria-label'] === 'Закрыть')!
+ const retry = f.mounted.nodes().find(el => el.tag === 'button' && el.text === 'Retry')!
+ const close = f.mounted.nodes().find(el => el.tag === 'button' && el.props['aria-label'] === 'Close')!
  const version = f.controller.retryVersion.value
  close.props.onClick(); await Vue.nextTick()
  // A handler already queued before disabling the control must also be harmless.
@@ -382,7 +382,7 @@ it('keeps error retry inert through the real dialog and adapter while a modal ca
  expect(f.controller.retryVersion.value).toBe(version)
  expect(f.sessions).toHaveLength(2); expect(f.ended).toEqual([])
  expect(f.mounted.nodes().filter(el => el.tag === 'iframe')).toEqual([])
- const remaining = f.mounted.nodes().filter(el => el.tag === 'button' && el.text === 'Повторить')
+ const remaining = f.mounted.nodes().filter(el => el.tag === 'button' && el.text === 'Retry')
  expect(remaining.every(el => el.props.disabled === true)).toBe(true)
  complete({ ok: true, data: { revision: 1 } })
  await vi.waitFor(() => { expect(f.controller.activeModal.value).toBeNull(); expect(f.ended).toEqual(['host-secret-1']) })

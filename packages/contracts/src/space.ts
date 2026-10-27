@@ -2,7 +2,7 @@ import { BARE_THEME_ID, isThemeId } from './board.ts'
 import { fail, isRecord, unknownKey, type ParseResult } from './parse.ts'
 
 export const SPACE_LIMITS = { spaces: 20, screens: 20, title: 40 } as const
-export const NEW_SPACE_TITLE = 'Новое пространство'
+export const NEW_SPACE_TITLE = 'New space'
 export const NEW_SPACE_ICON = '⭐'
 
 export const SPACE_ICONS: readonly string[] = [

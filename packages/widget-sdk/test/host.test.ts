@@ -42,7 +42,7 @@ function asked(confirmationId: string): ApiResult<unknown> {
 }
 
 // The real queue and its deadline, as SandboxWidget wires it.
-const askUser: Confirm = (op, input) => requestConfirmation({ widgetId: 'w1', title: 'Привет', op, input })
+const askUser: Confirm = (op, input) => requestConfirmation({ widgetId: 'w1', title: 'Hello', op, input })
 
 describe('createHandshakes', () => {
   const hello = { t: 'ld:hello', sdk: 1 }

@@ -62,14 +62,14 @@ onBeforeUnmount(() => {
           <p class="widget-modal__source">{{ record.owner.title }}</p>
           <h2 id="widget-modal-title">{{ record.input.title ?? record.owner.title }}</h2>
         </div>
-        <button ref="closeBox" type="button" aria-label="Закрыть" @click="close">×</button>
+        <button ref="closeBox" type="button" aria-label="Close" @click="close">×</button>
       </header>
       <div class="widget-modal__body" :aria-busy="loading && !error">
         <div v-if="error" class="widget-modal__status" role="alert">
           <p>{{ error }}</p>
-          <button type="button" :disabled="record.state === 'closing' || record.state === 'refreshing'" @click="retry">Повторить</button>
+          <button type="button" :disabled="record.state === 'closing' || record.state === 'refreshing'" @click="retry">Retry</button>
         </div>
-        <p v-else-if="loading" class="widget-modal__status" role="status">Загрузка…</p>
+        <p v-else-if="loading" class="widget-modal__status" role="status">Loading…</p>
         <slot :ready="() => loading = false" />
       </div>
     </template>

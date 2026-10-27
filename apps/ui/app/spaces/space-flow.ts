@@ -3,7 +3,7 @@ import type { ApiFailure, ApiResult } from '../api'
 import { afterManage, failureOutcome, type Reaction } from '../board/space-sync'
 import { afterDelete } from './nav'
 
-export const LAST_SPACE_HINT = 'Последнее пространство удалить нельзя'
+export const LAST_SPACE_HINT = 'The last space cannot be deleted'
 
 /** ✕ on a screen is refused only for the only screen of the only space: that delete is the space delete. */
 export function canRemoveScreen(spaceCount: number, screenCount: number): boolean {
@@ -17,7 +17,7 @@ export function renameTo(current: string, draft: string): string | null {
 }
 
 export function deleteSpaceMessage(title: string): string {
-  return `Удалить пространство «${title}» вместе с экраном и виджетами?`
+  return `Delete the space «${title}» with its screen and widgets?`
 }
 
 // Management failures keep the current space and working copy; the reaction shows the error.

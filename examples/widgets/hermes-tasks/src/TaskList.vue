@@ -24,16 +24,16 @@ async function add(): Promise<void> {
       <span v-if="tasks.loaded" class="list__count">{{ count }}</span>
     </header>
     <div class="list__scroll">
-      <p v-if="!tasks.loaded" class="list__empty">Загрузка…</p>
+      <p v-if="!tasks.loaded" class="list__empty">Loading…</p>
       <template v-else>
         <template v-if="tasks.list.overdue.length > 0">
-          <h3 class="list__group list__group--late">Просрочено · {{ tasks.list.overdue.length }}</h3>
+          <h3 class="list__group list__group--late">Overdue · {{ tasks.list.overdue.length }}</h3>
           <TaskRow v-for="item in tasks.list.overdue" :key="item.occurrenceId" :item="item" :tasks="tasks" />
-          <h3 v-if="tasks.list.items.length > 0" class="list__group">Сегодня · {{ tasks.list.items.length }}</h3>
+          <h3 v-if="tasks.list.items.length > 0" class="list__group">Today · {{ tasks.list.items.length }}</h3>
         </template>
         <TaskRow v-for="item in tasks.list.items" :key="item.occurrenceId" :item="item" :tasks="tasks" />
-        <p v-if="count === 0" class="list__empty">Задач нет</p>
-        <p v-if="tasks.list.truncated" class="list__note">Показаны первые 1000</p>
+        <p v-if="count === 0" class="list__empty">No tasks</p>
+        <p v-if="tasks.list.truncated" class="list__note">Showing the first 1000</p>
       </template>
     </div>
     <!-- No form: the sandbox omits allow-forms, so submit never fires; Enter is handled on the input. -->
@@ -41,8 +41,8 @@ async function add(): Promise<void> {
       <input
         v-model="text"
         class="list__input"
-        placeholder="Новая задача… #тег завтра"
-        aria-label="Новая задача"
+        placeholder="New task… #tag tomorrow"
+        aria-label="New task"
         enterkeyhint="done"
         @keydown.enter.prevent="add"
       />

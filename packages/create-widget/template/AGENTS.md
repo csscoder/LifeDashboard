@@ -26,4 +26,4 @@ Read it when a rule below is unclear or a task is not covered here.
 2. After each change, read `.ld-widget/dev.log` and fix every entry in it.
 3. `npx ld-widget check`: fix every problem it reports.
 4. `npx ld-widget build`: writes `dist/<id>-<version>/`.
-5. Hand over `dist/<id>-<version>/`. The user imports it with «Виджеты → Выбрать папку».
+5. Hand over `dist/<id>-<version>/`. The user imports it with «Widgets → Choose folder».

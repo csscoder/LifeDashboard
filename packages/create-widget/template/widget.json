@@ -2,7 +2,7 @@
   "id": "dev.local.__SLUG__",
   "version": "0.1.0",
   "title": "__TITLE__",
-  "author": "Автор",
+  "author": "Author",
   "sdk": 4,
   "entry": "index.js",
   "styles": ["style.css"],

@@ -1,7 +1,7 @@
 {
   "id": "dev.lifedashboard.hostile",
   "version": "1.0.2",
-  "title": "Проверка песочницы",
+  "title": "Sandbox check",
   "author": "LifeDashboard",
   "sdk": 2,
   "entry": "index.js",

@@ -90,7 +90,7 @@ CREATE TABLE sessions (
 );
 
 INSERT INTO rooms (id, title, position, revision, created_at, updated_at)
-VALUES ('${SEED_SPACE_ID}', 'Главная', 0, 1, ${NOW}, ${NOW});
+VALUES ('${SEED_SPACE_ID}', 'Home', 0, 1, ${NOW}, ${NOW});
 
 INSERT INTO screens (id, room_id, position) VALUES ('${SEED_SCREEN_ID}', '${SEED_SPACE_ID}', 0);
 `,

@@ -21,26 +21,26 @@ async function increment() {
     status.value = ''
   } catch (error) {
     if (!(error instanceof WidgetError) || error.code !== 'CONFLICT') throw error
-    status.value = 'Изменено в другой вкладке'
+    status.value = 'Changed in another tab'
     await load()
   }
 }
 
 async function remind() {
   try {
-    await widget.notify({ title: 'Напоминание', body: `Счётчик: ${count.value}` })
+    await widget.notify({ title: 'Reminder', body: `Count: ${count.value}` })
     status.value = ''
   } catch (error) {
     // The user declined in the host dialog, or the dialog expired.
     if (!(error instanceof WidgetError) || error.code !== 'DECLINED') throw error
-    status.value = 'Уведомление отклонено'
+    status.value = 'Notification declined'
   }
 }
 
 function seek() {
   if (!video.value) return
   video.value.currentTime = 2
-  status.value = `Видео: ${video.value.currentTime.toFixed(1)} с`
+  status.value = `Video: ${video.value.currentTime.toFixed(1)} s`
 }
 
 onMounted(load)
@@ -55,8 +55,8 @@ onMounted(load)
     <p class="hello__count">{{ count }}</p>
     <div class="hello__actions">
       <button type="button" class="hello__button" @click="increment">+1</button>
-      <button type="button" class="hello__button" @click="remind">Напомнить</button>
-      <button type="button" class="hello__button" @click="seek">Перемотать</button>
+      <button type="button" class="hello__button" @click="remind">Remind me</button>
+      <button type="button" class="hello__button" @click="seek">Seek</button>
     </div>
     <p class="hello__status" role="status">{{ status }}</p>
   </div>

@@ -37,13 +37,13 @@ function open(ui: ReturnType<typeof mount>) {
 describe('screen settings popover', () => {
   it('offers a gear only for the active screen in edit mode', async () => {
     const ui = mount()
-    expect(ui.button('Настройки экрана 2')).toBeDefined()
-    expect(ui.button('Настройки экрана 1')).toBeUndefined()
+    expect(ui.button('Screen 2 settings')).toBeDefined()
+    expect(ui.button('Screen 1 settings')).toBeUndefined()
     ui.props.index = 0; await nextTick()
-    expect(ui.button('Настройки экрана 1')).toBeDefined()
-    expect(ui.button('Настройки экрана 2')).toBeUndefined()
+    expect(ui.button('Screen 1 settings')).toBeDefined()
+    expect(ui.button('Screen 2 settings')).toBeUndefined()
     ui.props.editing = false; await nextTick()
-    expect(ui.button('Настройки экрана 1')).toBeUndefined()
+    expect(ui.button('Screen 1 settings')).toBeUndefined()
   })
 
   it('anchors the panel above the active bullet and focuses its theme selector', () => {
@@ -55,7 +55,7 @@ describe('screen settings popover', () => {
 
   it('selects an explicit theme or inheritance without deleting or navigating', () => {
     const ui = mount({ themeId: 'builtin:paper' })
-    const picker = ui.nodes().find(el => el.props['aria-label'] === 'Тема экрана')
+    const picker = ui.nodes().find(el => el.props['aria-label'] === 'Screen theme')
     expect(picker).toBeDefined()
     expect(picker!.props.value).toBe('builtin:paper')
     picker!.props.onChange({ target: { value: 'builtin:glass' } })
@@ -65,16 +65,16 @@ describe('screen settings popover', () => {
 
   it('closes the shared panel before requesting deletion', () => {
     const ui = mount(), panel = open(ui)
-    ui.button('Удалить экран').props.onClick()
+    ui.button('Delete screen').props.onClick()
     expect(panel.open).toBe(false)
     expect(ui.events).toEqual([['remove']])
   })
 
   it('protects the final space and explains the disabled delete', () => {
-    const ui = mount({ count: 1, index: 0, canRemove: false, removeTitle: 'Последнее пространство удалить нельзя' })
-    expect(ui.button('Настройки экрана 1')).toBeDefined()
-    expect(ui.button('Удалить пространство')?.props.disabled).toBe(true)
-    expect(ui.button('Удалить пространство')?.props.title).toBe('Последнее пространство удалить нельзя')
+    const ui = mount({ count: 1, index: 0, canRemove: false, removeTitle: 'The last space cannot be deleted' })
+    expect(ui.button('Screen 1 settings')).toBeDefined()
+    expect(ui.button('Delete space')?.props.disabled).toBe(true)
+    expect(ui.button('Delete space')?.props.title).toBe('The last space cannot be deleted')
   })
 
   it.each([{ editing: false }, { disabled: true }, { index: 2 }, { count: 4 }])('closes when its screen context changes: %o', async (change) => {
@@ -100,7 +100,7 @@ describe('screen settings popover', () => {
   it('keeps Escape on the gear from cancelling the board while its popover is open', () => {
     const ui = mount(); open(ui)
     const event = { key: 'Escape', cancelBubble: false, stopPropagation() { this.cancelBubble = true } }
-    for (let target = ui.button('Настройки экрана 2'); target && !event.cancelBubble; target = target.parent!)
+    for (let target = ui.button('Screen 2 settings'); target && !event.cancelBubble; target = target.parent!)
       target.props.onKeydown?.(event)
     expect(event.cancelBubble).toBe(true)
   })
@@ -108,7 +108,7 @@ describe('screen settings popover', () => {
   it('routes independent background controls through the same screen panel', () => {
     const background = boardContracts.defaultBackground('00000000-0000-4000-8000-00000000000a')
     const ui = mount({ background })
-    const videoOpacity = ui.nodes().find(el => el.props['aria-label'] === 'Прозрачность видео')
+    const videoOpacity = ui.nodes().find(el => el.props['aria-label'] === 'Video opacity')
     expect(videoOpacity).toBeDefined()
     videoOpacity!.props.onInput({ target: { value: '40' } })
     expect(ui.events).toEqual([['background', { ...background, opacity: 0.4 }]])

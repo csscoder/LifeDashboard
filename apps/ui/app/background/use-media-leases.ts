@@ -33,7 +33,7 @@ export function useBackgroundLeases(videoIds: () => readonly string[], onError: 
         if (stopped) continue
         if (!result.ok) {
           errorShown = true
-          onError('Не удалось защитить фон от удаления. Проверим соединение повторно через минуту.')
+          onError('Could not protect the background from deletion. Will retry in a minute.')
         } else if (errorShown) {
           errorShown = false
           onError(null)

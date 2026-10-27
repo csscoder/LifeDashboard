@@ -18,27 +18,27 @@ async function submit() {
   }
   message.value =
     result.kind === 'unauthorized'
-      ? 'Неверный или истёкший код'
+      ? 'Invalid or expired code'
       : result.kind === 'unavailable'
-        ? 'API: недоступен'
-        : 'Не удалось войти'
+        ? 'API: unavailable'
+        : 'Could not sign in'
 }
 
 async function requestCode() {
   const result = await api.pairCode()
   message.value = result.ok
-    ? 'Новый код выведен в терминал API или в окно приложения'
+    ? 'The new code is shown in the API terminal or the app window'
     : result.kind === 'rate-limited'
-      ? 'Подождите несколько секунд'
-      : 'API: недоступен'
+      ? 'Wait a few seconds'
+      : 'API: unavailable'
 }
 </script>
 
 <template>
   <form class="pairing" @submit.prevent="submit">
-    <h2 class="pairing__title">Подключение к API</h2>
+    <h2 class="pairing__title">Connect to API</h2>
     <label class="pairing__label">
-      Код сопряжения
+      Pairing code
       <input
         v-model="code"
         class="pairing__input"
@@ -50,8 +50,8 @@ async function requestCode() {
       />
     </label>
     <div class="pairing__actions">
-      <button type="submit" class="app__button" :disabled="busy">Войти</button>
-      <button type="button" class="app__button" @click="requestCode">Новый код</button>
+      <button type="submit" class="app__button" :disabled="busy">Pair</button>
+      <button type="button" class="app__button" @click="requestCode">New code</button>
     </div>
     <p class="pairing__message" role="status">{{ message }}</p>
   </form>

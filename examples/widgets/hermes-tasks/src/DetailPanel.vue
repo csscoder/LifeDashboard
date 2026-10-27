@@ -9,13 +9,13 @@ import type { Tasks } from './use-tasks.ts'
 const props = defineProps<{ tasks: Tasks; layout: Layout }>()
 
 const PRIORITIES: readonly { id: Priority; label: string }[] = [
-  { id: 'none', label: 'Нет' },
-  { id: 'low', label: 'Низкий' },
-  { id: 'medium', label: 'Средний' },
-  { id: 'high', label: 'Высокий' },
+  { id: 'none', label: 'None' },
+  { id: 'low', label: 'Low' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'high', label: 'High' },
 ]
-const EVERY = { day: 'ежедневно', week: 'еженедельно', month: 'ежемесячно', year: 'ежегодно' } as const
-const UNITS = { day: 'дн.', week: 'нед.', month: 'мес.', year: 'г.' } as const
+const EVERY = { day: 'daily', week: 'weekly', month: 'monthly', year: 'yearly' } as const
+const UNITS = { day: 'days', week: 'weeks', month: 'months', year: 'years' } as const
 
 // The panel is keyed by task id, so the id never changes for this instance.
 const taskId = props.tasks.openTaskId!
@@ -25,10 +25,10 @@ const autosave = createAutosave(state, {
   send: (attempt) => props.tasks.api.send(attempt),
   onSaved: () => void props.tasks.refresh(),
   onFailed: async (failure) => {
-    // A lost answer keeps its attempt for «Повторить»; anything else re-reads the task first.
+    // A lost answer keeps its attempt for «Retry»; anything else re-reads the task first.
     if (failure.retryable) return
-    if (failure.code === 'VERSION_CONFLICT') props.tasks.toast('Задача изменилась в Hermes. «Повторить» сохранит ваши правки')
-    else if (failure.code === 'WORKSPACE_EPOCH_MISMATCH') props.tasks.toast('Данные Hermes Tasks могли быть восстановлены из резервной копии')
+    if (failure.code === 'VERSION_CONFLICT') props.tasks.toast('Task changed in Hermes. «Retry» will save your edits')
+    else if (failure.code === 'WORKSPACE_EPOCH_MISMATCH') props.tasks.toast('Hermes Tasks data may have been restored from a backup')
     else if (failure.code !== 'DECLINED') props.tasks.toast(failure.message)
     try {
       await props.tasks.loadDetail()
@@ -50,16 +50,16 @@ const quick = computed(() => {
   const today = props.tasks.today
   if (today === null) return []
   return [
-    { label: 'Сегодня', date: today },
-    { label: 'Завтра', date: addDays(today, 1) },
-    { label: 'След. неделя', date: nextMonday(today) },
+    { label: 'Today', date: today },
+    { label: 'Tomorrow', date: addDays(today, 1) },
+    { label: 'Next week', date: nextMonday(today) },
   ]
 })
 
 const rule = computed(() => {
   const value = task.value?.recurrence
   if (!value) return null
-  return value.interval === 1 ? EVERY[value.frequency] : `раз в ${value.interval} ${UNITS[value.frequency]}`
+  return value.interval === 1 ? EVERY[value.frequency] : `every ${value.interval} ${UNITS[value.frequency]}`
 })
 
 watch(
@@ -114,22 +114,22 @@ async function complete(): Promise<void> {
 </script>
 
 <template>
-  <aside class="panel" :class="`panel--${layout}`" aria-label="Задача">
+  <aside class="panel" :class="`panel--${layout}`" aria-label="Task">
     <header class="panel__head">
-      <button type="button" class="panel__link" @click="tasks.closeTask()">← Назад</button>
+      <button type="button" class="panel__link" @click="tasks.closeTask()">← Back</button>
       <span class="panel__status" role="status">
-        <template v-if="state.saving">Сохранение…</template>
+        <template v-if="state.saving">Saving…</template>
         <template v-else-if="state.failed">
-          Не сохранено
-          <button type="button" class="panel__link panel__link--accent" @click="autosave.retry()">Повторить</button>
+          Not saved
+          <button type="button" class="panel__link panel__link--accent" @click="autosave.retry()">Retry</button>
         </template>
       </span>
-      <button v-if="occurrence?.status === 'open'" type="button" class="panel__link panel__link--done" @click="complete">✓ Выполнить</button>
+      <button v-if="occurrence?.status === 'open'" type="button" class="panel__link panel__link--done" @click="complete">✓ Complete</button>
     </header>
 
-    <p v-if="!fields" class="panel__muted">Загрузка…</p>
+    <p v-if="!fields" class="panel__muted">Loading…</p>
     <div v-else class="panel__body">
-      <label class="panel__label" for="task-title">Название</label>
+      <label class="panel__label" for="task-title">Title</label>
       <input
         id="task-title"
         class="panel__field panel__field--title"
@@ -140,7 +140,7 @@ async function complete(): Promise<void> {
 
       <template v-if="occurrence">
         <span class="panel__label">
-          Дата
+          Date
           <span v-if="occurrence.due && tasks.today" class="panel__muted">· {{ formatDue(occurrence.due, tasks.today) }}</span>
         </span>
         <div class="panel__chips">
@@ -154,30 +154,30 @@ async function complete(): Promise<void> {
           >
             {{ item.label }}
           </button>
-          <button v-if="!task?.recurrence" type="button" class="chip" :class="{ 'chip--on': dueDate === '' }" @click="moveTo(null)">Без даты</button>
+          <button v-if="!task?.recurrence" type="button" class="chip" :class="{ 'chip--on': dueDate === '' }" @click="moveTo(null)">No date</button>
         </div>
         <div class="panel__row">
-          <input type="date" class="panel__field" aria-label="Дата" :value="dueDate" @change="moveTo(valueOf($event) || null)" />
-          <input type="time" class="panel__field" aria-label="Время" :value="time" :disabled="!dueDate" @change="changeTime(valueOf($event))" />
+          <input type="date" class="panel__field" aria-label="Date" :value="dueDate" @change="moveTo(valueOf($event) || null)" />
+          <input type="time" class="panel__field" aria-label="Time" :value="time" :disabled="!dueDate" @change="changeTime(valueOf($event))" />
         </div>
       </template>
 
-      <span class="panel__label">Теги</span>
+      <span class="panel__label">Tags</span>
       <div class="panel__chips">
         <span v-for="name in fields.tags" :key="name" class="chip chip--on">
           #{{ name }}
-          <button type="button" class="chip__x" :aria-label="`Убрать тег ${name}`" @click="removeTag(name)">×</button>
+          <button type="button" class="chip__x" :aria-label="`Remove tag ${name}`" @click="removeTag(name)">×</button>
         </span>
         <form class="panel__tag" @submit.prevent="addTag">
-          <input v-model="newTag" class="panel__field" list="task-tags" placeholder="+ тег" aria-label="Новый тег" @change="addTag" />
+          <input v-model="newTag" class="panel__field" list="task-tags" placeholder="+ tag" aria-label="New tag" @change="addTag" />
         </form>
         <datalist id="task-tags">
           <option v-for="item in tasks.tags" :key="item.name" :value="item.name" />
         </datalist>
       </div>
 
-      <span class="panel__label">Приоритет</span>
-      <div class="segment-group" role="group" aria-label="Приоритет">
+      <span class="panel__label">Priority</span>
+      <div class="segment-group" role="group" aria-label="Priority">
         <button
           v-for="item in PRIORITIES"
           :key="item.id"
@@ -191,13 +191,13 @@ async function complete(): Promise<void> {
         </button>
       </div>
 
-      <label class="panel__label" for="task-project">Проект</label>
+      <label class="panel__label" for="task-project">Project</label>
       <select id="task-project" class="panel__field" :value="fields.projectId ?? ''" @change="autosave.edit('projectId', valueOf($event) || null)">
-        <option value="">Входящие</option>
+        <option value="">Inbox</option>
         <option v-for="item in tasks.projects" :key="item.id" :value="item.id">{{ item.name }}</option>
       </select>
 
-      <label class="panel__label" for="task-note">Заметка</label>
+      <label class="panel__label" for="task-note">Note</label>
       <textarea
         id="task-note"
         class="panel__field panel__field--note"
@@ -206,7 +206,7 @@ async function complete(): Promise<void> {
         @change="autosave.edit('description', valueOf($event) || null)"
       />
 
-      <p v-if="rule" class="panel__muted">Повтор: {{ rule }} · меняется через Hermes</p>
+      <p v-if="rule" class="panel__muted">Repeats: {{ rule }} · change it in Hermes</p>
     </div>
   </aside>
 </template>

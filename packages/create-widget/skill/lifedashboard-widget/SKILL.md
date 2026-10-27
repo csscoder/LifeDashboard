@@ -14,7 +14,7 @@ Use this skill in a `lifedashboard-<slug>/` project. `AGENTS.md` holds the rules
 3. After each change, read `.ld-widget/dev.log` and fix every entry it lists.
 4. Run `npx ld-widget check` and fix every reported problem.
 5. Run `npx ld-widget build`. The output is `dist/<id>-<version>/`.
-6. Hand over `dist/<id>-<version>/`. The user imports it with «Виджеты → Выбрать папку».
+6. Hand over `dist/<id>-<version>/`. The user imports it with «Widgets → Choose folder».
 
 ## Docs
 

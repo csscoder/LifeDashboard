@@ -114,7 +114,7 @@ fn start(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             if let Some((code, until)) = lines::pairing_code(line) {
                 dialogs
                     .dialog()
-                    .message(format!("Код сопряжения LifeDashboard: {code} — действует до {until}"))
+                    .message(format!("LifeDashboard pairing code: {code} (valid until {until})"))
                     .title("LifeDashboard")
                     .show(|_| {});
             } else if lines::is_ready(line, PORT) {
@@ -155,16 +155,16 @@ fn supervise(app: AppHandle, events: Receiver<ApiEvent>, log: Log, origin: Strin
         match events.recv_timeout(READY_TIMEOUT) {
             Ok(ApiEvent::Ready) => {}
             Ok(ApiEvent::Exited) | Err(RecvTimeoutError::Disconnected) => {
-                return fail(&app, "API завершился при запуске.", &log)
+                return fail(&app, "The API exited during startup.", &log)
             }
-            Err(RecvTimeoutError::Timeout) => return fail(&app, "API не запустился за 15 секунд.", &log),
+            Err(RecvTimeoutError::Timeout) => return fail(&app, "The API did not start within 15 seconds.", &log),
         }
         if let Err(error) = open_window(&app, &origin) {
-            return fail(&app, &format!("Не удалось открыть окно: {error}"), &log);
+            return fail(&app, &format!("Could not open the window: {error}"), &log);
         }
         // Blocks until the API stops; a stop requested by the app is not an error.
         let _ = events.recv();
-        fail(&app, "API неожиданно остановился.", &log);
+        fail(&app, "The API stopped unexpectedly.", &log);
     });
 }
 
@@ -185,11 +185,11 @@ fn fail(app: &AppHandle, reason: &str, log: &Log) {
     }
     app.dialog()
         .message(format!(
-            "{reason}\n\nПоследние строки лога:\n{}\n\nЛог: {}",
+            "{reason}\n\nLast log lines:\n{}\n\nLog: {}",
             log.tail(),
             log.path.display()
         ))
-        .title("LifeDashboard не работает")
+        .title("LifeDashboard is not working")
         .kind(MessageDialogKind::Error)
         .blocking_show();
     app.exit(1);

@@ -244,7 +244,7 @@ export function createTasksApi(call: Call, base: string = BASE) {
           readAll<ListItem>('/tasks', { status: 'open', due: 'overdue', ...tags }, TASK_PAGES),
           readAll<ListItem>('/tasks', { status: 'open', due: 'today', ...tags }, TASK_PAGES),
         ])
-        // A task timed earlier today is in both answers; it belongs under «Просрочено».
+        // A task timed earlier today is in both answers; it belongs under «Overdue».
         return { overdue: overdue.items, items: today.items.filter((item) => !item.overdue), truncated: overdue.truncated || today.truncated }
       }
       const result = await readAll<ListItem>('/tasks', { ...VIEW_QUERY[view], ...tags }, TASK_PAGES)

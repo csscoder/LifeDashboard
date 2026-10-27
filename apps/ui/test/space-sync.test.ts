@@ -115,7 +115,7 @@ describe('load', () => {
     const late = deferred<unknown>()
     client.board.mockReturnValueOnce(late.promise)
     const pending = sync.load() // the tab became visible in view mode
-    view.idle = false // «Изменить» was pressed before the response
+    view.idle = false // «Edit board» was pressed before the response
     late.resolve(ok(board(2, [A])))
     expect(await pending).toBe('ignored')
     expect(sync.space.value).toEqual(board(1))
@@ -337,10 +337,10 @@ describe('reactions', () => {
     ['saved', { notice: null, api: 'ok' }],
     ['skipped', {}],
     // Stays in edit mode: the working copy is kept for a retry (spec «Revision checks»).
-    ['conflict', { notice: 'Доска изменена в другой вкладке. Нажмите «Отмена» и повторите' }],
+    ['conflict', { notice: 'The board changed in another tab. Press «Cancel» and try again' }],
     ['unauthorized', { leaveMode: true, app: 'pairing' }],
-    ['invalid', { notice: 'Не удалось сохранить: данные отклонены' }],
-    ['unavailable', { notice: 'Не удалось сохранить, повторите', api: 'down' }],
+    ['invalid', { notice: 'Could not save: data rejected' }],
+    ['unavailable', { notice: 'Could not save, try again', api: 'down' }],
   ] as const)('after a %s stay-save: %o', (outcome, reaction) => {
     expect(afterStaySave(outcome)).toEqual(reaction)
   })
@@ -348,10 +348,10 @@ describe('reactions', () => {
   it.each([
     ['saved', { notice: null, api: 'ok' }],
     ['skipped', {}],
-    ['conflict', { notice: 'Пространство изменено в другой вкладке. Нажмите «Отмена» и повторите' }],
+    ['conflict', { notice: 'The space changed in another tab. Press «Cancel» and try again' }],
     ['unauthorized', { leaveMode: true, app: 'pairing' }],
-    ['invalid', { notice: 'Не удалось выполнить действие' }],
-    ['unavailable', { notice: 'Не удалось сохранить, повторите', api: 'down' }],
+    ['invalid', { notice: 'Could not complete the action' }],
+    ['unavailable', { notice: 'Could not save, try again', api: 'down' }],
   ] as const)('after a %s space or screen action: %o', (outcome, reaction) => {
     expect(afterManage(outcome)).toEqual(reaction)
   })
@@ -369,11 +369,11 @@ describe('reactions', () => {
   it.each([
     ['saved', { leaveMode: true, notice: null, api: 'ok' }],
     ['skipped', {}],
-    ['conflict', { leaveMode: true, notice: 'Доска изменена в другой вкладке', reload: true }],
+    ['conflict', { leaveMode: true, notice: 'The board changed in another tab. Press «Cancel» and try again', reload: true }],
     ['unauthorized', { leaveMode: true, app: 'pairing' }],
     // The mode and the working copy stay so the user can retry or cancel (DATA-05).
-    ['invalid', { notice: 'Не удалось сохранить: данные отклонены' }],
-    ['unavailable', { notice: 'Не удалось сохранить, повторите', api: 'down' }],
+    ['invalid', { notice: 'Could not save: data rejected' }],
+    ['unavailable', { notice: 'Could not save, try again', api: 'down' }],
   ] as const)('after a %s save: %o', (outcome, reaction) => {
     expect(afterSave(outcome)).toEqual(reaction)
   })

@@ -92,8 +92,8 @@ export async function createBackgroundRenderer(host: HTMLElement, onError: (mess
     if (destroyed || current !== media) return
     disposeMedia()
     onError(media.video
-      ? 'Не удалось воспроизвести фоновое видео. Выберите другой файл или поддерживаемый кодек.'
-      : 'Не удалось загрузить фоновое изображение. Выберите другой файл.')
+      ? 'Could not play the background video. Choose another file or a supported codec.'
+      : 'Could not load the background image. Choose another file.')
   }
   function render() {
     if (!destroyed && current?.ready && !document.hidden) app.render()

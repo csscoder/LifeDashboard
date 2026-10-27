@@ -6,7 +6,7 @@ defineProps<{ tasks: Tasks }>()
 </script>
 
 <template>
-  <nav class="tabs" aria-label="Списки">
+  <nav class="tabs" aria-label="Lists">
     <div class="segment-group">
       <button
         v-for="item in VIEWS"
@@ -22,7 +22,7 @@ defineProps<{ tasks: Tasks }>()
     </div>
     <div v-if="tasks.tags.length > 0" class="tabs__tags">
       <button type="button" class="chip" :class="{ 'chip--on': tasks.tag === null }" :aria-pressed="tasks.tag === null" @click="tasks.tag = null">
-        все
+        all
       </button>
       <button
         v-for="item in tasks.tags"

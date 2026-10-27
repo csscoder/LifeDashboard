@@ -66,13 +66,13 @@ describe('local background media decode probe', () => {
   it('bounds failed, timed out and aborted image decoding and ignores late decode resolution', async () => {
     const file = new File(['x'], 'photo.avif')
     image.decode = vi.fn(async () => { throw new Error('decode') })
-    await expect(probeMedia(file, new AbortController().signal)).rejects.toThrow(/изображение/)
+    await expect(probeMedia(file, new AbortController().signal)).rejects.toThrow(/image/)
     image = createImage(); image.naturalWidth = 0
-    await expect(probeMedia(file, new AbortController().signal)).rejects.toThrow(/изображение/)
+    await expect(probeMedia(file, new AbortController().signal)).rejects.toThrow(/image/)
     let finish!: () => void
     image = createImage(); image.decode = vi.fn(() => new Promise<void>(resolve => { finish = resolve }))
     let pending = probeMedia(file, new AbortController().signal)
-    let rejected = expect(pending).rejects.toThrow(/время/)
+    let rejected = expect(pending).rejects.toThrow(/timed out/)
     await vi.advanceTimersByTimeAsync(15000); await rejected
     const controller = new AbortController()
     pending = probeMedia(file, controller.signal)
@@ -84,14 +84,14 @@ describe('local background media decode probe', () => {
   it('rejects decode errors, zero dimension frames, timeout and cancellation and always frees resources', async () => {
     const file = new File(['x'], 'clip.webm')
     let pending = probeMedia(file, new AbortController().signal)
-    let rejected = expect(pending).rejects.toThrow(/воспроизвести/)
+    let rejected = expect(pending).rejects.toThrow(/cannot play/)
     video.dispatchEvent(new Event('error')); await rejected
     video = new Video(); video.videoWidth = 0
     pending = probeMedia(file, new AbortController().signal)
-    rejected = expect(pending).rejects.toThrow(/воспроизвести/)
+    rejected = expect(pending).rejects.toThrow(/cannot play/)
     video.dispatchEvent(new Event('loadeddata')); await rejected
     video = new Video(); pending = probeMedia(file, new AbortController().signal)
-    rejected = expect(pending).rejects.toThrow(/время/)
+    rejected = expect(pending).rejects.toThrow(/timed out/)
     await vi.advanceTimersByTimeAsync(15000); await rejected
     const controller = new AbortController(); pending = probeMedia(file, controller.signal)
     rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' })

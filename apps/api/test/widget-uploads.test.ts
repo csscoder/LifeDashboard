@@ -325,7 +325,7 @@ describe('network origins', () => {
 describe('secret bindings', () => {
   const binding: SecretBinding = { origin: 'https://a.example', header: 'Authorization', prefix: 'Bearer ' }
 
-  function secretPackage(version: string, bind: SecretBinding = binding, title = 'Ключ', key = 'apiKey') {
+  function secretPackage(version: string, bind: SecretBinding = binding, title = 'Key', key = 'apiKey') {
     return widgetPackage((pkg) => {
       pkg.manifest.version = version
       pkg.manifest.sdk = 2
@@ -337,7 +337,7 @@ describe('secret bindings', () => {
 
   it('lists a secret on first upload and clears the list after install', async () => {
     const first = await uploadPackage(t, cookie, secretPackage('1.0.0'))
-    expect(first.inspection.newSecretBindings).toEqual([{ key: 'apiKey', title: 'Ключ', bind: binding }])
+    expect(first.inspection.newSecretBindings).toEqual([{ key: 'apiKey', title: 'Key', bind: binding }])
     const installed = await install(first.uploadId)
     expect(installed.statusCode).toBe(200)
     expect(installed.json().data.newSecretBindings).toEqual([])
@@ -347,7 +347,7 @@ describe('secret bindings', () => {
     await installPackage(t, cookie, secretPackage('1.0.0'))
     const same = await uploadPackage(t, cookie, secretPackage('1.1.0'))
     expect(same.inspection.newSecretBindings).toEqual([])
-    const renamed = await uploadPackage(t, cookie, secretPackage('1.2.0', binding, 'Другой ключ'))
+    const renamed = await uploadPackage(t, cookie, secretPackage('1.2.0', binding, 'Other key'))
     expect(renamed.inspection.newSecretBindings).toEqual([])
   })
 
@@ -359,8 +359,8 @@ describe('secret bindings', () => {
     ['key', binding, 'otherKey'],
   ])('re-lists a binding when its %s changes', async (_name, bind, key) => {
     await installPackage(t, cookie, secretPackage('1.0.0'))
-    const changed = await uploadPackage(t, cookie, secretPackage('1.1.0', bind, 'Ключ', key))
-    expect(changed.inspection.newSecretBindings).toEqual([{ key, title: 'Ключ', bind }])
+    const changed = await uploadPackage(t, cookie, secretPackage('1.1.0', bind, 'Key', key))
+    expect(changed.inspection.newSecretBindings).toEqual([{ key, title: 'Key', bind }])
   })
 
   it('compares against every installed version and ignores object key order', async () => {
@@ -379,7 +379,7 @@ describe('secret bindings', () => {
     legacy.sdk = 0
     t.db.prepare('UPDATE widget_package_versions SET manifest = ?').run(JSON.stringify(legacy))
     const first = await uploadPackage(t, cookie, secretPackage('1.1.0'))
-    expect(first.inspection.newSecretBindings).toEqual([{ key: 'apiKey', title: 'Ключ', bind: binding }])
+    expect(first.inspection.newSecretBindings).toEqual([{ key: 'apiKey', title: 'Key', bind: binding }])
   })
 
   it('does not treat another package binding as already installed', async () => {
@@ -387,6 +387,6 @@ describe('secret bindings', () => {
     other.manifest.id = 'dev.test.other'
     await installPackage(t, cookie, other)
     const first = await uploadPackage(t, cookie, secretPackage('1.0.0'))
-    expect(first.inspection.newSecretBindings).toEqual([{ key: 'apiKey', title: 'Ключ', bind: binding }])
+    expect(first.inspection.newSecretBindings).toEqual([{ key: 'apiKey', title: 'Key', bind: binding }])
   })
 })

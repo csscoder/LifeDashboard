@@ -3,7 +3,7 @@ import { SPACE_ICONS, nextColor, parseSpacePatch, type SpaceColor } from '../src
 
 describe('parseSpacePatch', () => {
   it('trims the title', () => {
-    expect(parseSpacePatch({ title: '  Дом  ' })).toEqual({ ok: true, value: { title: 'Дом' } })
+    expect(parseSpacePatch({ title: '  Home  ' })).toEqual({ ok: true, value: { title: 'Home' } })
   })
 
   it('accepts a known icon and colour', () => {
@@ -25,7 +25,7 @@ describe('parseSpacePatch', () => {
     ['an icon outside the list', { icon: '🦄' }],
     ['an unknown colour', { color: 'black' }],
     ['an unknown key', { extra: 1 }],
-    ['a non-object', 'Дом'],
+    ['a non-object', 'Home'],
   ])('rejects %s', (_name, raw) => {
     expect(parseSpacePatch(raw).ok).toBe(false)
   })

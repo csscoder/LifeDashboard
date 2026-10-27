@@ -727,7 +727,7 @@ describe('secrets', () => {
   afterEach(() => vi.restoreAllMocks())
 
   async function installSecrets(properties: SettingsSchema['properties'] = {
-    apiKey: { type: 'secret', title: 'Ключ', bind: { origin, header: 'Authorization', prefix: 'Bearer ' } },
+    apiKey: { type: 'secret', title: 'Key', bind: { origin, header: 'Authorization', prefix: 'Bearer ' } },
     queryKey: { type: 'secret', title: 'Query key', bind: { origin, query: 'apikey' } },
     otherKey: { type: 'secret', title: 'Other key', bind: { origin: otherOrigin, header: 'X-Other-Key' } },
   }) {
@@ -770,7 +770,7 @@ describe('secrets', () => {
     it.each(['http.get', 'http.send'] as const)('rejects %s with the setting title when its secret is missing', async (op) => {
       const response = await request(op, await openSession(PKG_WIDGET))
       expect([response.statusCode, errorCode(response), response.json().error.message])
-        .toEqual([502, 'UPSTREAM_ERROR', 'Secret «Ключ» is not set'])
+        .toEqual([502, 'UPSTREAM_ERROR', 'Secret «Key» is not set'])
       expect(fetch).not.toHaveBeenCalled()
     })
 
@@ -799,7 +799,7 @@ describe('secrets', () => {
       await put('queryKey', QUERY_VALUE)
       const response = await request('http.get', await openSession(PKG_WIDGET), `${origin}/echo?apikey=x`)
       expect([response.statusCode, errorCode(response), response.json().error.message])
-        .toEqual([502, 'UPSTREAM_ERROR', 'Secret «Ключ» is not set'])
+        .toEqual([502, 'UPSTREAM_ERROR', 'Secret «Key» is not set'])
       expect(fetch).not.toHaveBeenCalled()
     })
   })
@@ -928,7 +928,7 @@ describe('secrets', () => {
     it('sends no request when a bound secret is missing', async () => {
       const response = await request('http.get', await openSession(PKG_WIDGET))
       expect([response.statusCode, errorCode(response), response.json().error.message])
-        .toEqual([502, 'UPSTREAM_ERROR', 'Secret «Ключ» is not set'])
+        .toEqual([502, 'UPSTREAM_ERROR', 'Secret «Key» is not set'])
       expect(seen).toHaveLength(0)
     })
 

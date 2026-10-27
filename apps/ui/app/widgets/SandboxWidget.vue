@@ -49,7 +49,7 @@ function teardown() {
   showFrame.value = false
 }
 
-function fail(message = 'Не удалось запустить виджет или потеряно соединение с ним') {
+function fail(message = 'The widget failed to start or lost its connection') {
   failure.value = message.slice(0, 1000)
   if (props.surface === 'modal') {
     pause()
@@ -161,16 +161,16 @@ onUnmounted(() => { unmounted = true; unregisterSurface?.(); teardown() })
       :style="{ colorScheme: context.theme.scheme }"
       @load="onLoad"
     />
-    <p v-if="state === 'loading'" class="sandbox__status">Загрузка…</p>
+    <p v-if="state === 'loading'" class="sandbox__status">Loading…</p>
     <div v-else-if="state === 'error' && surface !== 'modal'" class="sandbox__status sandbox__status--error" role="alert" tabindex="0">
-      <p class="sandbox__text">Ошибка виджета</p>
+      <p class="sandbox__text">Widget error</p>
       <details class="sandbox__details">
-        <summary>Подробности</summary>
+        <summary>Details</summary>
         <p>{{ packageId }}@{{ version }}</p>
         <pre>{{ failure }}</pre>
-        <button type="button" class="sandbox__retry" @click="copyFailure">Копировать ошибку</button>
+        <button type="button" class="sandbox__retry" @click="copyFailure">Copy error</button>
       </details>
-      <button type="button" class="sandbox__retry" @click="start">Повторить</button>
+      <button type="button" class="sandbox__retry" @click="start">Retry</button>
     </div>
   </div>
 </template>

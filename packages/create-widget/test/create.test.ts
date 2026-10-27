@@ -50,7 +50,7 @@ describe('createWidgetProject', () => {
     })
     const manifest = await json(join(project, 'widget.json'))
     expect(manifest).toEqual({
-      id: 'dev.local.moi-superchasy', version: '0.1.0', title: 'Мои суперчасы', author: 'Автор',
+      id: 'dev.local.moi-superchasy', version: '0.1.0', title: 'Мои суперчасы', author: 'Author',
       sdk: 4, entry: 'index.js', styles: ['style.css'],
       sizing: { default: { w: 4, h: 4 }, min: { w: 2, h: 2 }, max: { w: 12, h: 12 } },
       permissions: [],
@@ -78,7 +78,7 @@ describe('createWidgetProject', () => {
       'node_modules/@lifedashboard/widget-sdk/docs/index.md', 'widget.state', 'widget.http.get', 'widget.http.send',
       'network', 'WebM', 'Opus', 'assets/', 'var(--ld-', 'context.size', 'sizeClass', 'context.frame',
       'context.visible', '"frame": "frameless"', 'npx ld-widget dev', 'npx ld-widget check', 'npx ld-widget build',
-      '.ld-widget/dev.log', 'dist/<id>-<version>/', 'Виджеты → Выбрать папку',
+      '.ld-widget/dev.log', 'dist/<id>-<version>/', 'Widgets → Choose folder',
       'Keep `title` and `id`', 'default` size', 'height: 100%', 'compiled files', 'npx ld-widget shot',
     ]) expect(instructions).toContain(rule)
     expect(instructions).not.toContain('dist/types')

@@ -25,14 +25,14 @@ function tomorrow(): void {
       class="row__check"
       :class="`row__check--${item.priority ?? 'none'}`"
       :disabled="busy"
-      :aria-label="`Выполнить: ${item.title}`"
+      :aria-label="`Complete: ${item.title}`"
       @click="tasks.close(item.occurrenceId, item.occurrenceVersion, 'complete')"
     />
-    <button type="button" class="row__body" :aria-label="`Открыть: ${item.title}`" @click="tasks.openTask(item.taskId)">
+    <button type="button" class="row__body" :aria-label="`Open: ${item.title}`" @click="tasks.openTask(item.taskId)">
       <span class="row__title">{{ item.title }}</span>
       <span class="row__meta">
         <span v-if="due" :class="{ 'row__due--late': item.overdue }">{{ due }}</span>
-        <span v-if="item.recurring" title="Повторяется">↻</span>
+        <span v-if="item.recurring" title="Repeats">↻</span>
         <span v-if="item.projectName" class="row__project">{{ item.projectName }}</span>
         <span v-for="name in item.tags ?? []" :key="name" class="row__tag">#{{ name }}</span>
       </span>
@@ -43,13 +43,13 @@ function tomorrow(): void {
         type="button"
         class="row__action"
         :disabled="busy"
-        title="Пропустить"
-        :aria-label="`Пропустить: ${item.title}`"
+        title="Skip"
+        :aria-label="`Skip: ${item.title}`"
         @click="tasks.close(item.occurrenceId, item.occurrenceVersion, 'skip')"
       >
         ⤼
       </button>
-      <button type="button" class="row__action" :disabled="busy" title="На завтра" :aria-label="`Перенести на завтра: ${item.title}`" @click="tomorrow">
+      <button type="button" class="row__action" :disabled="busy" title="Move to tomorrow" :aria-label="`Move to tomorrow: ${item.title}`" @click="tomorrow">
         →
       </button>
     </div>

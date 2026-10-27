@@ -29,12 +29,12 @@ describe('dates', () => {
   })
 
   it('formats due dates relative to the workspace today', () => {
-    expect(formatDue('2026-10-11', today)).toBe('сегодня')
-    expect(formatDue('2026-10-12', today)).toBe('завтра')
-    expect(formatDue('2026-10-10', today)).toBe('вчера')
-    expect(formatDue('2026-10-09', today)).toBe('9 окт')
-    expect(formatDue('2027-03-18', today)).toBe('18 мар 2027')
-    expect(formatDue('2026-10-11T19:00', today)).toBe('сегодня 19:00')
+    expect(formatDue('2026-10-11', today)).toBe('today')
+    expect(formatDue('2026-10-12', today)).toBe('tomorrow')
+    expect(formatDue('2026-10-10', today)).toBe('yesterday')
+    expect(formatDue('2026-10-09', today)).toBe('9 Oct')
+    expect(formatDue('2027-03-18', today)).toBe('18 Mar 2027')
+    expect(formatDue('2026-10-11T19:00', today)).toBe('today 19:00')
   })
 })
 
@@ -42,25 +42,25 @@ describe('parseQuickAdd', () => {
   const context = { today, view: 'today' as const, tag: null }
 
   it('takes #tags and a date word out of the title', () => {
-    expect(parseQuickAdd('Купить молоко #дом завтра', context)).toEqual({ title: 'Купить молоко', tags: ['дом'], date: '2026-10-12' })
-    expect(parseQuickAdd('Позвонить маме Сегодня #Близкие', context)).toEqual({ title: 'Позвонить маме', tags: ['близкие'], date: today })
+    expect(parseQuickAdd('Buy milk #home tomorrow', context)).toEqual({ title: 'Buy milk', tags: ['home'], date: '2026-10-12' })
+    expect(parseQuickAdd('Call mom Today #Family', context)).toEqual({ title: 'Call mom', tags: ['family'], date: today })
   })
 
   it('takes the default date from the view', () => {
-    expect(parseQuickAdd('Задача', context)?.date).toBe(today)
-    expect(parseQuickAdd('Задача', { ...context, view: 'upcoming' })?.date).toBe('2026-10-12')
-    expect(parseQuickAdd('Задача', { ...context, view: 'inbox' })?.date).toBeNull()
-    expect(parseQuickAdd('Задача', { ...context, view: 'all' })?.date).toBeNull()
+    expect(parseQuickAdd('Task', context)?.date).toBe(today)
+    expect(parseQuickAdd('Task', { ...context, view: 'upcoming' })?.date).toBe('2026-10-12')
+    expect(parseQuickAdd('Task', { ...context, view: 'inbox' })?.date).toBeNull()
+    expect(parseQuickAdd('Task', { ...context, view: 'all' })?.date).toBeNull()
   })
 
   it('adds the selected tag once', () => {
-    expect(parseQuickAdd('Фильм #кино', { ...context, tag: 'кино' })?.tags).toEqual(['кино'])
-    expect(parseQuickAdd('Фильм', { ...context, tag: 'кино' })?.tags).toEqual(['кино'])
+    expect(parseQuickAdd('Movie #cinema', { ...context, tag: 'cinema' })?.tags).toEqual(['cinema'])
+    expect(parseQuickAdd('Movie', { ...context, tag: 'cinema' })?.tags).toEqual(['cinema'])
   })
 
   it('keeps emoji and a lone #, and returns null without a title', () => {
-    expect(parseQuickAdd('🎬 Фильм # вечером', context)?.title).toBe('🎬 Фильм # вечером')
-    expect(parseQuickAdd('  #дом завтра ', context)).toBeNull()
+    expect(parseQuickAdd('🎬 Movie # tonight', context)?.title).toBe('🎬 Movie # tonight')
+    expect(parseQuickAdd('  #home tomorrow ', context)).toBeNull()
     expect(parseQuickAdd('', context)).toBeNull()
   })
 })

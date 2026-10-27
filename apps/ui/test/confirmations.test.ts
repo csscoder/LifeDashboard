@@ -9,7 +9,7 @@ import { cancelConfirmations, cancelSurfaceConfirmations, confirmations, request
 const note = { title: 'Hi', body: '' }
 
 function ask(widgetId: string) {
-  return requestConfirmation({ widgetId, title: 'Привет', op: 'notifications.send', input: note })
+  return requestConfirmation({ widgetId, title: 'Hello', op: 'notifications.send', input: note })
 }
 
 function queued(): string[] {
@@ -47,7 +47,7 @@ describe('confirmations', () => {
     const first = ask('a')
     const second = ask('b')
     expect(queued()).toEqual(['a', 'b'])
-    expect(confirmations.value[0]).toMatchObject({ widgetId: 'a', title: 'Привет', op: 'notifications.send', input: note })
+    expect(confirmations.value[0]).toMatchObject({ widgetId: 'a', title: 'Hello', op: 'notifications.send', input: note })
     confirmations.value[0]!.answer('approved')
     expect(await first).toBe('approved')
     expect(queued()).toEqual(['b'])
@@ -112,7 +112,7 @@ describe('ConfirmDialog', () => {
     await nextTick()
     const dialog = ui.nodes().find(node => node.tag === 'dialog')!
     expect(dialog.open).toBe(true)
-    expect(doc.activeElement).toBe(ui.button('Отклонить'))
+    expect(doc.activeElement).toBe(ui.button('Decline'))
     const cancel = new Event('cancel', { cancelable: true, bubbles: true })
     dialog.props.onCancel?.(cancel)
     if (!cancel.cancelBubble) application.props.onCancel(cancel)
@@ -127,7 +127,7 @@ describe('ConfirmDialog', () => {
     const detached = { isConnected: false, focus: vi.fn() }
     const second = requestConfirmation({ widgetId: 'a', title: 'App', op: 'notifications.send', input: note, returnFocus: () => detached as unknown as HTMLElement })
     await nextTick()
-    ui.button('Отклонить').props.onClick()
+    ui.button('Decline').props.onClick()
     await second
     await nextTick()
     expect(doc.activeElement).toBe(origin)
@@ -136,7 +136,7 @@ describe('ConfirmDialog', () => {
     doc.activeElement = detached as any
     const third = requestConfirmation({ widgetId: 'a', title: 'App', op: 'notifications.send', input: note })
     await nextTick()
-    ui.button('Отклонить').props.onClick()
+    ui.button('Decline').props.onClick()
     await third
     await nextTick()
     expect(doc.querySelector).toHaveBeenCalledWith('[data-board-focus]')
@@ -158,8 +158,8 @@ describe('ConfirmDialog', () => {
     expect(await first).toBe('declined')
     await nextTick()
     expect(preferred.focus).not.toHaveBeenCalled()
-    expect(document.activeElement).toBe(ui.button('Отклонить'))
-    ui.button('Отклонить').props.onClick()
+    expect(document.activeElement).toBe(ui.button('Decline'))
+    ui.button('Decline').props.onClick()
     expect(await second).toBe('declined')
   })
 })
@@ -192,20 +192,20 @@ it.each(['application-first', 'confirmation-first', 'same-tick-confirmation-firs
   const second = requestConfirmation({ widgetId: 'b', title: 'Second', op: 'notifications.send', input: note, returnFocus: () => origin as unknown as HTMLElement })
   await nextTick(); await nextTick()
   expect(stack.at(-1) === confirmation).toBe(true)
-  expect(document.activeElement).toBe(ui.button('Отклонить'))
+  expect(document.activeElement).toBe(ui.button('Decline'))
   expect(confirmations.value.map(entry => entry.title)).toEqual(['First', 'Second'])
   // Restacking an already armed head must not restart its approval delay.
-  expect(ui.button('Разрешить один раз').props.disabled).toBe(order === 'confirmation-first' ? false : true)
+  expect(ui.button('Allow once').props.disabled).toBe(order === 'confirmation-first' ? false : true)
   const cancel = new Event('cancel', { cancelable: true, bubbles: true })
   stack.at(-1)!.props.onCancel(cancel)
   expect(await first).toBe('declined'); expect(close).not.toHaveBeenCalled()
   await nextTick()
   expect(application.open).toBe(true)
-  expect(document.activeElement).toBe(ui.button('Отклонить'))
-  expect(ui.button('Разрешить один раз').props.disabled).toBe(true)
+  expect(document.activeElement).toBe(ui.button('Decline'))
+  expect(ui.button('Allow once').props.disabled).toBe(true)
   expect(origin.focus).not.toHaveBeenCalled()
   await vi.advanceTimersByTimeAsync(500)
-  ui.button('Разрешить один раз').props.onClick()
+  ui.button('Allow once').props.onClick()
   expect(await second).toBe('approved'); await nextTick()
   expect(origin.focus).toHaveBeenCalledOnce()
 })

@@ -96,9 +96,9 @@ describe('reading lists', () => {
 
   it('encodes tag names in the query', async () => {
     const { api, http } = fake(() => ok({ items: [], nextCursor: null }))
-    await api.list('all', 'дом & сад #1')
+    await api.list('all', 'home & garden #1')
     const url = http.get.mock.calls[0]![0]
-    expect(query(url).getAll('tags')).toEqual(['дом & сад #1'])
+    expect(query(url).getAll('tags')).toEqual(['home & garden #1'])
     expect(url).not.toContain(' ')
   })
 
@@ -134,13 +134,13 @@ describe('writes', () => {
   it('prepares an attempt with the latest epoch and a new key, and resends it unchanged', async () => {
     const { api, http } = fake((op) => (op === 'http.get' ? ok({ today: '2026-10-11', tags: [], nextTagsCursor: null }, 'e9') : ok({ task: { version: 4 } })))
     await api.workspace()
-    const attempt = api.update('t 1', 3, { title: 'Новое' })
+    const attempt = api.update('t 1', 3, { title: 'New' })
     expect(attempt).toEqual({
       method: 'PATCH',
       path: '/tasks/t%201',
-      body: { expectedVersion: 3, title: 'Новое', workspaceEpoch: 'e9', idempotencyKey: expect.stringMatching(/^[0-9a-f]{32}$/) },
+      body: { expectedVersion: 3, title: 'New', workspaceEpoch: 'e9', idempotencyKey: expect.stringMatching(/^[0-9a-f]{32}$/) },
     })
-    expect(api.update('t 1', 3, { title: 'Новое' }).body.idempotencyKey).not.toBe(attempt.body.idempotencyKey)
+    expect(api.update('t 1', 3, { title: 'New' }).body.idempotencyKey).not.toBe(attempt.body.idempotencyKey)
     await api.send(attempt)
     await api.send(attempt)
     const sends = http.send.mock.calls.map(([request]) => request)

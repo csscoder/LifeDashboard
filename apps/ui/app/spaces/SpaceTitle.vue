@@ -50,7 +50,7 @@ watch(
       v-model="draft"
       class="space-title__input"
       type="text"
-      aria-label="Название пространства"
+      aria-label="Space name"
       :maxlength="SPACE_LIMITS.title"
       @keydown.enter.prevent="finish(true)"
       @keydown.esc.stop.prevent="finish(false)"
@@ -60,7 +60,7 @@ watch(
       v-else-if="editing"
       type="button"
       class="space-title__button"
-      aria-label="Переименовать пространство"
+      aria-label="Rename space"
       @click="startEdit"
     >
       <span class="space-title__text">{{ title }}</span><sub v-if="suffix" class="space-title__number">{{ suffix.replace(/[()]/g, '').trim() }}</sub>

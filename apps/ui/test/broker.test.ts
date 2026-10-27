@@ -48,7 +48,7 @@ function deferred<T>() {
 }
 
 // The real queue and its deadline, as SandboxWidget wires it.
-const askUser: Confirm = (op, input) => requestConfirmation({ widgetId: 'w1', title: 'Привет', op, input })
+const askUser: Confirm = (op, input) => requestConfirmation({ widgetId: 'w1', title: 'Hello', op, input })
 
 describe('createGatewayClient', () => {
   it('rejects an unknown op and invalid input before any API call', async () => {

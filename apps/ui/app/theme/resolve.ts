@@ -2,7 +2,7 @@ import { BARE_THEME_ID, type WidgetAppearance } from '@lifedashboard/contracts/b
 import { BUILTIN_THEME_IDS, DEFAULT_THEME_ID, themeMeta } from './builtin'
 import type { SkinId } from './contract'
 
-/** A frame skin: a theme's skin, or «Без оформления», which only a widget appearance picks. */
+/** A frame skin: a theme's skin, or «No frame», which only a widget appearance picks. */
 export type FrameSkin = SkinId | 'bare'
 
 /**

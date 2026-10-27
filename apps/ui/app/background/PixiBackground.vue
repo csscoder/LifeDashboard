@@ -27,7 +27,7 @@ async function update() {
     }
     await renderer.setBackground(props.background)
   } catch {
-    if (!disposed) emit('error', 'Не удалось показать фон. Используется фон темы.')
+    if (!disposed) emit('error', 'Could not show the background. Using the theme background.')
   } finally { creating = false }
 }
 onMounted(() => watch(() => props.background, () => { void update() }, { immediate: true, deep: true }))

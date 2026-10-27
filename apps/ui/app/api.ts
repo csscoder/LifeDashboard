@@ -92,7 +92,7 @@ export const api = {
   pairCode: () => apiRequest<null>('POST', '/auth/pair-code', {}),
   widgetPackages: () => apiRequest<InstalledPackage[]>('GET', '/widget-packages'),
   createUpload: (manifest: unknown, files: FolderFile[]) => apiRequest<UploadCreated>('POST', '/widget-uploads', { manifest, files }),
-  // No absolute timeout: the duration grows with the file; «Отмена» aborts through the signal.
+  // No absolute timeout: the duration grows with the file; «Cancel» aborts through the signal.
   uploadFile: (uploadId: string, path: string, file: Blob, signal: AbortSignal) =>
     apiRequest<null>('PUT', `/widget-uploads/${encodeURIComponent(uploadId)}/files/${path.split('/').map(encodeURIComponent).join('/')}`, file, signal),
   installUpload: (uploadId: string, signal: AbortSignal) =>

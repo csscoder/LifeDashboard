@@ -11,9 +11,9 @@ Give the board a quiet header matching the supplied reference. Move the existing
 - Place screen navigation at the bottom center. Preserve previous/next, direct screen selection, disabled states, and edit-mode screen creation and deletion.
 - Place a settings button at the bottom right. Its panel opens upward and closes on outside click or Escape. Preserve keyboard access and return focus to the trigger when dismissed with Escape. Constrain its height and scroll its contents on short windows.
 - Panel header: `LifeDashboard` and a close button.
-- Panel contents: current space name and current screen position; the existing `Добавить виджет…` picker; `Изменить доску`; `Библиотека виджетов`; and three theme choices, `Стекло`, `Обсидиан`, `Бумага`, with an explicit selected state. The theme applies to the workspace, matching current behavior.
+- Panel contents: current space name and current screen position; the existing `Add widget…` picker; `Edit board`; `Widget library`; and three theme choices, `Glass`, `Obsidian`, `Paper`, with an explicit selected state. The theme applies to the workspace, matching current behavior.
 - Panel footer: the actual API status and the current grid dimensions. Do not invent an API version or imply the column count is configurable.
-- Selecting a widget, entering edit mode, or opening the library closes the panel. During placement and editing, show persistent `Готово` and `Отмена` controls at the bottom center; show the existing row-count input during editing. These controls must remain accessible without reopening settings.
+- Selecting a widget, entering edit mode, or opening the library closes the panel. During placement and editing, show persistent `Done` and `Cancel` controls at the bottom center; show the existing row-count input during editing. These controls must remain accessible without reopening settings.
 - Keep API failures and application notices visible outside the closed settings panel. Reposition notifications so they do not cover the settings trigger or editing controls.
 - Use existing theme tokens across all three themes. Preserve reduced-motion and focus-visible behavior.
 

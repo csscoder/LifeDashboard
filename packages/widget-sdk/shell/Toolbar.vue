@@ -36,6 +36,6 @@ function update(key: keyof ShellState, event: Event) {
         <option value="decline">decline</option>
       </select>
     </label>
-    <button type="button" @click="emit('reset')">Сбросить состояние</button>
+    <button type="button" @click="emit('reset')">Reset state</button>
   </form>
 </template>

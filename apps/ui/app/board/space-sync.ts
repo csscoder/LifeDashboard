@@ -123,13 +123,13 @@ export function afterSave(outcome: SaveOutcome): Reaction {
       return {}
     case 'conflict':
       // Leaving the mode first makes the reload apply.
-      return { leaveMode: true, notice: 'Доска изменена в другой вкладке', reload: true }
+      return { leaveMode: true, notice: 'The board changed in another tab. Press «Cancel» and try again', reload: true }
     case 'unauthorized':
       return { leaveMode: true, app: 'pairing' }
     case 'invalid':
-      return { notice: 'Не удалось сохранить: данные отклонены' }
+      return { notice: 'Could not save: data rejected' }
     case 'unavailable':
-      return { notice: 'Не удалось сохранить, повторите', api: 'down' }
+      return { notice: 'Could not save, try again', api: 'down' }
   }
 }
 
@@ -141,19 +141,19 @@ export function afterStaySave(outcome: SaveOutcome): Reaction {
     case 'skipped':
       return {}
     case 'conflict':
-      return { notice: 'Доска изменена в другой вкладке. Нажмите «Отмена» и повторите' }
+      return { notice: 'The board changed in another tab. Press «Cancel» and try again' }
     case 'unauthorized':
       return { leaveMode: true, app: 'pairing' }
     case 'invalid':
-      return { notice: 'Не удалось сохранить: данные отклонены' }
+      return { notice: 'Could not save: data rejected' }
     case 'unavailable':
-      return { notice: 'Не удалось сохранить, повторите', api: 'down' }
+      return { notice: 'Could not save, try again', api: 'down' }
   }
 }
 
-/** Reaction of a space or screen operation. It keeps edit mode open, so «Отмена» can retry it. */
+/** Reaction of a space or screen operation. It keeps edit mode open, so «Cancel» can retry it. */
 export function afterManage(outcome: SaveOutcome): Reaction {
-  if (outcome === 'conflict') return { notice: 'Пространство изменено в другой вкладке. Нажмите «Отмена» и повторите' }
-  if (outcome === 'invalid') return { notice: 'Не удалось выполнить действие' }
+  if (outcome === 'conflict') return { notice: 'The space changed in another tab. Press «Cancel» and try again' }
+  if (outcome === 'invalid') return { notice: 'Could not complete the action' }
   return afterStaySave(outcome)
 }
