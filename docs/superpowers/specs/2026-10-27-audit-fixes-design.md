@@ -118,9 +118,9 @@ Test: an open package modal renders the label with its `packageId`.
 
 `isPlainText` (`packages/contracts/src/parse.ts:14-16`) blocks only C0 controls and DEL; the space title check (`space.ts:63-69`) checks the trimmed length only.
 
-Design: `isPlainText` and the space title check also reject whitespace-only text, C1 controls `\u0080-\u009f`, zero-width and direction marks `​-‏`, direction embeddings and overrides `‪-‮`, isolates `⁦-⁩`, and line/paragraph separators ` - `. The rule applies to new input only (uploads, API requests); stored data is not re-validated.
+Design: `isPlainText` and the space title check also reject whitespace-only text, C1 controls `\u0080-\u009f`, the zero-width space `\u200b`, direction marks `\u200e-\u200f`, direction embeddings and overrides `\u202a-\u202e`, isolates `\u2066-\u2069`, and line/paragraph separators `\u2028-\u2029`. The zero-width non-joiner and joiner `\u200c-\u200d` stay allowed: emoji sequences and scripts such as Persian need them. The rule applies to new input only (uploads, API requests); stored data is not re-validated.
 
-Tests: one case per character class for `isPlainText` and for the space title; an ordinary title with spaces and non-ASCII letters still passes.
+Tests: one case per character class for `isPlainText` and for the space title; an ordinary title with spaces and non-ASCII letters still passes, and so does a title with an emoji ZWJ sequence such as «👨‍👩‍👧» or a Persian word with a ZWNJ.
 
 ## Phase C — SDK, contracts, desktop
 
