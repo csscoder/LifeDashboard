@@ -69,7 +69,7 @@ describe('static UI', () => {
   )
 
   it('does not shadow API, sandbox or health routes', async () => {
-    const unauthorized = await call(t.app, { url: '/api/v1/probe' })
+    const unauthorized = await call(t.app, { url: '/api/v1/spaces' })
     expect([unauthorized.statusCode, errorCode(unauthorized)]).toEqual([401, 'UNAUTHORIZED'])
     const cookie = await pair(t)
     const unknownApi = await call(t.app, { url: '/api/v1/probe', cookie })

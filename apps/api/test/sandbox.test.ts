@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { sandboxDocument } from '@lifedashboard/contracts/sandbox-document'
-import { call, HOST, installPackage, pair, testApp, widgetPackage, type TestApp } from './helpers.ts'
+import { call, errorCode, HOST, installPackage, pair, testApp, widgetPackage, type TestApp } from './helpers.ts'
 
 const BASE = `http://${HOST}`
 const IMMUTABLE = 'public, max-age=31536000, immutable'
@@ -204,6 +204,11 @@ describe('package files from disk', () => {
 })
 
 describe('GET /sandbox/runtime/:file', () => {
+  it('checks Host on an encoded sandbox path', async () => {
+    const response = await call(t.app, { url: '/%73andbox/runtime/vue.js', host: 'evil.example:3001' })
+    expect([response.statusCode, errorCode(response)]).toEqual([403, 'FORBIDDEN'])
+  })
+
   it('serves the Vue runtime from the API dependency', async () => {
     const response = await call(t.app, { url: '/sandbox/runtime/vue.js', origin: 'null' })
     expect(response.statusCode).toBe(200)

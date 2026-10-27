@@ -63,7 +63,8 @@ export function registerSandbox(app: FastifyInstance, { db, config }: SandboxDep
   }
 
   app.addHook('onRequest', async (request, reply) => {
-    if (!request.url.startsWith('/sandbox/')) return
+    const route = request.routeOptions.url
+    if (route === undefined || !route.startsWith('/sandbox/')) return
     // Module scripts from an opaque-origin frame are CORS requests with Origin: null.
     reply.header('access-control-allow-origin', '*').header('x-content-type-options', 'nosniff')
     const host = request.headers.host

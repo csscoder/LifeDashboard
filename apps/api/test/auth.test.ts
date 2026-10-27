@@ -9,8 +9,8 @@ vi.mock('node:crypto', async (importOriginal) => {
   return { ...actual, randomInt: (min: number, max: number) => nextCodes.shift() ?? actual.randomInt(min, max) }
 })
 
-// Any authenticated /api path: unknown routes answer 404 after the session check, 401 before it.
-const PROBE = '/api/v1/probe'
+// A registered protected route: a missing space answers 404 after authentication, 401 before it.
+const PROBE = '/api/v1/spaces/00000000-0000-4000-8000-000000000000/board'
 const PAIR = '/api/v1/auth/pair'
 const PAIR_CODE = '/api/v1/auth/pair-code'
 
@@ -31,6 +31,17 @@ function storedExpiry(cookie: string): string {
 }
 
 describe('request checks', () => {
+  it.each(['/%61pi/v1/spaces', '/%2561pi/v1/spaces', '//api/v1/spaces', '/api/v1/spaces/'])('never answers %s without a session', async (url) => {
+    const response = await call(t.app, { url })
+    expect(response.statusCode).not.toBe(200)
+    expect([401, 404]).toContain(response.statusCode)
+  })
+
+  it('checks Host on an encoded API path', async () => {
+    const response = await call(t.app, { method: 'POST', url: '/%61pi/v1/spaces', host: 'evil.example:3001', payload: {} })
+    expect([response.statusCode, errorCode(response)]).toEqual([403, 'FORBIDDEN'])
+  })
+
   it('rejects a foreign Host', async () => {
     const response = await call(t.app, { url: PROBE, host: 'evil.test:3001' })
     expect(response.statusCode).toBe(403)
