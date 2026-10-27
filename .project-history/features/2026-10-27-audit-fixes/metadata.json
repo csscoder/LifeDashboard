@@ -5,40 +5,324 @@
     "name": "Audit fixes",
     "slug": "audit-fixes"
   },
-  "status": "complete",
+  "status": "completed",
   "completedAt": "2026-10-27",
   "git": {
     "repositoryRoot": ".",
-    "branch": "fix/audit-findings",
-    "commit": "5313c676eb67c8c8f9e7f95b9c083c6fefe9dd84",
-    "headDescribe": "5313c67"
+    "branch": "main",
+    "commit": "1edb493213662a0fb3e94a3113b4287401302087",
+    "headDescribe": "1edb493",
+    "workingTree": "clean",
+    "statusSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contentStateSha256": "5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456",
+    "treeStateSha256": "4e5c1dcd102bd71b5c92e4f0a9219769c8d6b212139f011a7957ee8e57419710",
+    "indexStateSha256": "6717f2f3dd526aa765fb90773a6464715c2e907d2a7d008e3c4744ae97e95ace",
+    "tags": []
   },
   "artifacts": {
     "spec": {
       "sourcePath": "docs/superpowers/specs/2026-10-27-audit-fixes-design.md",
       "archivePath": "spec.md",
-      "sha256": "a7813d1e17f0b9a84bff72d1ea85b8e116d2acdbfae7b56178b77a9b4b723a21"
+      "sha256": "a7813d1e17f0b9a84bff72d1ea85b8e116d2acdbfae7b56178b77a9b4b723a21",
+      "provenance": {
+        "kind": "git",
+        "external": false,
+        "commit": "5313c676eb67c8c8f9e7f95b9c083c6fefe9dd84"
+      }
     },
     "plan": {
       "sourcePath": "docs/superpowers/plans/2026-10-27-audit-fixes.md",
       "archivePath": "plan.md",
-      "sha256": "cb019e06fdb5109cfd5c57fbaabf83b29a4a23b4662b32fe1294a31e1b34b490"
+      "sha256": "cb019e06fdb5109cfd5c57fbaabf83b29a4a23b4662b32fe1294a31e1b34b490",
+      "provenance": {
+        "kind": "git",
+        "external": false,
+        "commit": "5313c676eb67c8c8f9e7f95b9c083c6fefe9dd84"
+      }
     },
     "outcome": {
       "archivePath": "outcome.md",
-      "sha256": "92d6937f0e1366722dcccb5c2f2c143dfbd0108cf1c654aa3abb9d1f2eea2732"
+      "sha256": "9c2f98dfc5259adfcd7128dd50917ae28932551cd94f61863614a48ef73bc173"
     }
   },
+  "areas": [],
+  "tags": [],
+  "assessment": {
+    "sourcesRead": true,
+    "finalArtifacts": true,
+    "featureMatch": true,
+    "evidenceReviewed": true,
+    "secretsReviewed": true,
+    "basis": "Spec and plan dated 2026-10-27, approved by the owner in session 0b36365d; the plan links the spec by path. Both were committed (725bcd5 and earlier), executed on fix/audit-findings, fast-forwarded into main, and removed from docs/superpowers by 1edb493; the archive reads them from 5313c67, where they are byte-identical to the approved versions. Implementation commits 8a07e21..5313c67 are in main at 1edb493. Evidence is the session verification and review recorded here.",
+    "evidence": [
+      "ev-session-verify",
+      "ev-session-review"
+    ]
+  },
+  "evidence": [
+    {
+      "id": "ev-session-verify",
+      "kind": "session",
+      "inspected": true,
+      "reference": "Claude Code session 0b36365d-4e7b-42e2-b09b-91be1298a885 (2026-10-27), Bash tool results: pnpm typecheck; pnpm test (worktree audit-fixes-execution and later main); SDK build and API build:bundle/smoke:bundle; live API curl probes on 127.0.0.1:3021; Orca browser checks; cargo check/test; pnpm -C apps/desktop run package; built-app kill -9 and early-error runs",
+      "summary": "At 5313c67/1edb493: pnpm typecheck passed; pnpm test passed (contracts 609, widget-sdk 388, ui 722, api 404, create-widget 51, examples 136). SDK cli.js and API dist-bundle inline undici; smoke:bundle OK. Live branch API: /%61pi/v1/spaces 401, encoded POST with foreign Host 403, encoded sandbox path with foreign Host 403, /%2561pi and //api served SPA HTML without data. Orca two-tab conflict: Done kept edit mode, rows 14 and the notice; second Done repeated it; Cancel loaded 24x13 from the other tab. Package widget modal stayed open after a visibilitychange-triggered board reload and showed Third-party widget · dev.lifedashboard.showcase.counter. cargo check passed without warnings; cargo test 5 passed; desktop package built .app and dmg; after kill -9 of the app the node sidecar exited within 0.5 s and port 3101 was free; with the data folder replaced by a file the owner saw the dialog LifeDashboard could not start / Not a directory (os error 20) and the app exited with code 1.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    },
+    {
+      "id": "ev-session-review",
+      "kind": "session",
+      "inspected": true,
+      "reference": "Claude Code session 0b36365d-4e7b-42e2-b09b-91be1298a885 (2026-10-27), Bash tool results: git diff 725bcd5..bf44916 read in full against the plan; commit 5313c67",
+      "summary": "Re-check of the 18 executing-agent commits against plan and spec. No attribution trailers; undici 8.11.2 is the only new dependency. One finding fixed by RED/GREEN in 5313c67 (header error text names Latin-1; range escaped as \\u00ff). Accepted deviations: early-error dialog uses show() with exit(1) instead of blocking_show() on the main thread; unknown /api paths answer 404 without session/Host checks; the decline route writes no DECLINED audit row; an approval repeat after a switch to allow spends no second unit (91c095f); confirmations.ts imports ./toasts.js for NodeNext (01fda3f). The executing agent recorded a final whole-branch review fixed in bf44916; its report was not inspected.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    }
+  ],
   "implementation": {
-    "status": "completed"
+    "status": "completed",
+    "evidence": [
+      "ev-session-review"
+    ]
   },
   "review": {
-    "status": "completed"
+    "status": "approved",
+    "evidence": [
+      "ev-session-review"
+    ]
   },
   "verification": {
-    "status": "verified"
+    "status": "passed",
+    "evidence": [
+      "ev-session-verify"
+    ],
+    "checks": [
+      {
+        "command": "pnpm typecheck",
+        "result": "passed",
+        "exitCode": 0,
+        "evidence": [
+          "ev-session-verify"
+        ]
+      },
+      {
+        "command": "pnpm test",
+        "result": "passed",
+        "exitCode": 0,
+        "evidence": [
+          "ev-session-verify"
+        ]
+      },
+      {
+        "command": "pnpm -C apps/api build:bundle && pnpm -C apps/api smoke:bundle",
+        "result": "passed",
+        "exitCode": 0,
+        "evidence": [
+          "ev-session-verify"
+        ]
+      },
+      {
+        "command": "cargo check and cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml",
+        "result": "passed",
+        "exitCode": 0,
+        "evidence": [
+          "ev-session-verify"
+        ]
+      },
+      {
+        "command": "pnpm -C apps/desktop run package",
+        "result": "passed",
+        "exitCode": 0,
+        "evidence": [
+          "ev-session-verify"
+        ]
+      },
+      {
+        "command": "Live curl probes of encoded API and sandbox paths on the branch API",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-session-verify"
+        ]
+      },
+      {
+        "command": "Orca two-tab save conflict and widget modal reload checks",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-session-verify"
+        ]
+      },
+      {
+        "command": "Built desktop app: kill -9 ends the sidecar; early start error shows the dialog",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-session-verify"
+        ]
+      }
+    ]
   },
-  "archivedAt": "2026-10-27",
+  "outcomeRecord": {
+    "excludedScope": [
+      {
+        "text": "Space titles still accept C0 controls \\u0000-\\u001f; the spec covers only hidden-text classes.",
+        "evidence": [
+          "ev-session-review"
+        ]
+      }
+    ],
+    "followUps": [],
+    "risks": [
+      {
+        "text": "Orca does not hide a tab on switch, so the modal reload check dispatched visibilitychange by script.",
+        "evidence": [
+          "ev-session-verify"
+        ]
+      }
+    ],
+    "decisions": [
+      {
+        "text": "Finding 17 (theme validator) withdrawn: validateThemeCss guards built-in theme contrast in tests.",
+        "evidence": [
+          "ev-session-review"
+        ]
+      },
+      {
+        "text": "undici 8.11.2 is the only new dependency, in packages/contracts; both bundles inline it.",
+        "evidence": [
+          "ev-session-review",
+          "ev-session-verify"
+        ]
+      },
+      {
+        "text": "A declined confirmation writes only the CONFIRMATION_REQUIRED row, so audit rows stay within twice the sum of the limits.",
+        "evidence": [
+          "ev-session-review"
+        ]
+      }
+    ],
+    "deviations": {
+      "status": "recorded",
+      "evidence": [
+        "ev-session-review"
+      ],
+      "items": [
+        {
+          "change": "Early start error uses show() with exit(1) on dismissal instead of blocking_show()",
+          "reason": "blocking_show must not run on the main thread during setup",
+          "effect": "The dialog shows and the app exits with code 1 after OK",
+          "evidence": [
+            "ev-session-review",
+            "ev-session-verify"
+          ]
+        },
+        {
+          "change": "Unknown /api paths answer 404 without session and Host checks",
+          "reason": "Checks key on the matched route; no route means no checks",
+          "effect": "Previously 401; no data is exposed",
+          "evidence": [
+            "ev-session-review"
+          ]
+        },
+        {
+          "change": "An approval repeat after the grant switched to allow consumes the pending id without a second limit unit",
+          "reason": null,
+          "effect": "Approval quota is preserved across grant mode changes (91c095f)",
+          "evidence": [
+            "ev-session-review"
+          ]
+        },
+        {
+          "change": "Header error text names Latin-1 and the range is escaped as \\u00ff",
+          "reason": "The previous text said only control characters",
+          "effect": "Clearer INVALID_INPUT message (5313c67)",
+          "evidence": [
+            "ev-session-review"
+          ]
+        }
+      ]
+    },
+    "scope": [
+      {
+        "text": "Auth, Host/Origin and sandbox Host checks use the matched route (request.routeOptions.url), closing the encoded-path bypass (8a07e21).",
+        "evidence": [
+          "ev-session-review",
+          "ev-session-verify"
+        ]
+      },
+      {
+        "text": "A widget modal survives a board reload with an equal source; a save conflict keeps edit mode and edits (9649e9d, 96e226b).",
+        "evidence": [
+          "ev-session-review",
+          "ev-session-verify"
+        ]
+      },
+      {
+        "text": "Rejected gateway calls and wrong confirmation ids spend the rate limit; RATE_LIMITED writes no audit row; hourly audit purge and index on at (119b4d9, 91c095f, 746beec).",
+        "evidence": [
+          "ev-session-review"
+        ]
+      },
+      {
+        "text": "Three user declines block a widget for 5 minutes; confirmations, toasts and modals identify the package (0a8e4d5, 99748d9, bf44916).",
+        "evidence": [
+          "ev-session-review"
+        ]
+      },
+      {
+        "text": "Plain text and space titles reject blank and hidden control text, keeping ZWJ/ZWNJ (393f50b).",
+        "evidence": [
+          "ev-session-review"
+        ]
+      },
+      {
+        "text": "API exits on stdin EOF when LIFEDASHBOARD_EXIT_ON_STDIN_EOF=1; desktop pipes stdin, sets the variable and shows early start errors (2fa9736, da2dd4a, bf44916).",
+        "evidence": [
+          "ev-session-review",
+          "ev-session-verify"
+        ]
+      },
+      {
+        "text": "SDK build skips dotfiles in assets; modal options accept undefined; non-Latin-1 headers rejected; new manifests need canonical versions; create-widget names the slug reason (053519c, fe19311, 121e773, 5313c67).",
+        "evidence": [
+          "ev-session-review"
+        ]
+      },
+      {
+        "text": "Approved host names resolving to private addresses are refused at connect time via an undici Agent lookup; literal IPs and localhost stay allowed (9f93a38).",
+        "evidence": [
+          "ev-session-review",
+          "ev-session-verify"
+        ]
+      },
+      {
+        "text": "Dead helpers removed and theme contract wording fixed (ddf2c80).",
+        "evidence": [
+          "ev-session-review"
+        ]
+      }
+    ]
+  },
+  "archiveStatus": "complete",
+  "skill": {
+    "name": "archive-plan",
+    "version": "1.1.1"
+  },
+  "archiveRoot": ".project-history/features",
+  "incompleteReason": null,
+  "warnings": [
+    "URL/session evidence is agent-attested; the helper does not fetch or independently verify it."
+  ],
+  "requestFingerprint": "9905ebb7fe5fb37acec4425a599acfbf84b7392812d05efc96b750200a562670",
+  "archivedAt": "2026-10-27T15:43:30Z",
   "revision": 1,
-  "supersedes": null
+  "supersedes": null,
+  "revisionReason": null,
+  "integrity": {
+    "algorithm": "sha256",
+    "metadataSha256": "696de15017ff818a11db48555d27ad9d9e2682d2301facc686c83c8ca0110eb4"
+  }
 }

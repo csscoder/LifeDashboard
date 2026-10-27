@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 2,
+  "feature": {
+    "id": "screen-settings-popover",
+    "name": "Screen settings popover",
+    "slug": "screen-settings-popover"
+  },
+  "status": "completed",
+  "completedAt": null,
+  "git": {
+    "repositoryRoot": ".",
+    "branch": "main",
+    "commit": "1edb493213662a0fb3e94a3113b4287401302087",
+    "headDescribe": "1edb493",
+    "workingTree": "clean",
+    "statusSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contentStateSha256": "5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456",
+    "treeStateSha256": "4e5c1dcd102bd71b5c92e4f0a9219769c8d6b212139f011a7957ee8e57419710",
+    "indexStateSha256": "6717f2f3dd526aa765fb90773a6464715c2e907d2a7d008e3c4744ae97e95ace",
+    "tags": []
+  },
+  "artifacts": {
+    "spec": {
+      "sourcePath": "docs/superpowers/specs/2026-10-23-theme-inheritance-design.md",
+      "archivePath": "spec.md",
+      "sha256": "8991f9d643185595698af6a007f6e409f67f755148f0c700984331ed323ab609",
+      "provenance": {
+        "kind": "file",
+        "external": false,
+        "commit": null
+      }
+    },
+    "plan": {
+      "sourcePath": "docs/superpowers/plans/2026-10-23-screen-settings-popover.md",
+      "archivePath": "plan.md",
+      "sha256": "6b2b86cac787111b5db7a62dd5e7b492303780b0fa547ef5c089deb325ca79de",
+      "provenance": {
+        "kind": "file",
+        "external": false,
+        "commit": null
+      }
+    },
+    "outcome": {
+      "archivePath": "outcome.md",
+      "sha256": "679b897330a3e89705b77e1851c771a647bd96b3e361559d9544b16562bb31cb"
+    }
+  },
+  "areas": [],
+  "tags": [],
+  "assessment": {
+    "sourcesRead": true,
+    "finalArtifacts": true,
+    "featureMatch": true,
+    "evidenceReviewed": true,
+    "secretsReviewed": true,
+    "basis": "The plan implements the \"Screen settings placement update\" section of the theme-inheritance spec, which the plan links. Implementation is in tree (9562ed3).",
+    "evidence": [
+      "ev-plan",
+      "ev-head"
+    ]
+  },
+  "evidence": [
+    {
+      "id": "ev-plan",
+      "kind": "file",
+      "reference": "docs/superpowers/plans/2026-10-23-screen-settings-popover.md",
+      "inspected": true,
+      "summary": "Tasks RED/GREEN; pnpm test 1890 passed twice; typecheck and build passed. Orca on a temporary database verified gear placement, screen themes, Done/Cancel, deletion confirmations and final-space protection; console empty. Review found one Important Escape/Shift+Tab finding, fixed by RED/GREEN; no deferred minors. Native Shift+Tab/Escape in Orca remained unverified.",
+      "sha256": "6b2b86cac787111b5db7a62dd5e7b492303780b0fa547ef5c089deb325ca79de",
+      "external": false,
+      "validation": "bytes-hashed"
+    },
+    {
+      "id": "ev-head",
+      "kind": "session",
+      "inspected": true,
+      "reference": "Claude Code session 0b36365d-4e7b-42e2-b09b-91be1298a885 (2026-10-27), Bash tool results: git grep gear apps/ui/app/spaces/ScreenDots.vue; git log 9562ed3",
+      "summary": "ScreenDots.vue holds the active-screen gear and settings popover at HEAD 1edb493; the work landed in 9562ed3.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    }
+  ],
+  "implementation": {
+    "status": "completed",
+    "evidence": [
+      "ev-head",
+      "ev-plan"
+    ]
+  },
+  "review": {
+    "status": "approved",
+    "evidence": [
+      "ev-plan"
+    ]
+  },
+  "verification": {
+    "status": "passed",
+    "evidence": [
+      "ev-plan"
+    ],
+    "checks": [
+      {
+        "command": "pnpm test",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "command": "pnpm typecheck && pnpm build",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "command": "Orca acceptance of popover placement, screen themes, Done/Cancel and deletion confirmations",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ]
+  },
+  "outcomeRecord": {
+    "excludedScope": [],
+    "followUps": [],
+    "risks": [
+      {
+        "text": "Native Shift+Tab/Escape in Orca did not dispatch; behavior was verified with DOM focus and keyboard events. Orca screenshots close the popover, so pixels do not show the open panel.",
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ],
+    "decisions": [
+      {
+        "text": "Navigation stays visible while it holds an open popover, using the shell visibility selector.",
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ],
+    "deviations": {
+      "status": "not-recorded",
+      "evidence": [],
+      "items": []
+    },
+    "scope": [
+      {
+        "text": "Active-screen gear in edit mode opening a popover with screen theme and confirmed deletion; every screen deletion asks for confirmation (9562ed3).",
+        "evidence": [
+          "ev-plan",
+          "ev-head"
+        ]
+      }
+    ]
+  },
+  "archiveStatus": "complete",
+  "skill": {
+    "name": "archive-plan",
+    "version": "1.1.1"
+  },
+  "archiveRoot": ".project-history/features",
+  "incompleteReason": null,
+  "warnings": [
+    "Completion date not recorded; completedAt remains null.",
+    "Deviations from plan were not recorded; absence of deviations is not claimed.",
+    "URL/session evidence is agent-attested; the helper does not fetch or independently verify it."
+  ],
+  "requestFingerprint": "3f69744ee86fbae19b0b6bce0121f446d869095ebc2807e823e112acabb538ce",
+  "archivedAt": "2026-10-27T15:43:34Z",
+  "revision": 1,
+  "supersedes": null,
+  "revisionReason": null,
+  "integrity": {
+    "algorithm": "sha256",
+    "metadataSha256": "cdea44de197e48027e07d22fa93a5538f83cb79b65c1a9e4a311c549190fe516"
+  }
+}

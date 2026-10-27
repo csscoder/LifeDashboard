@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 2,
+  "feature": {
+    "id": "screen-video-backgrounds",
+    "name": "Screen video backgrounds",
+    "slug": "screen-video-backgrounds"
+  },
+  "status": "incomplete-evidence",
+  "completedAt": null,
+  "git": {
+    "repositoryRoot": ".",
+    "branch": "main",
+    "commit": "1edb493213662a0fb3e94a3113b4287401302087",
+    "headDescribe": "1edb493",
+    "workingTree": "clean",
+    "statusSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contentStateSha256": "5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456",
+    "treeStateSha256": "4e5c1dcd102bd71b5c92e4f0a9219769c8d6b212139f011a7957ee8e57419710",
+    "indexStateSha256": "6717f2f3dd526aa765fb90773a6464715c2e907d2a7d008e3c4744ae97e95ace",
+    "tags": []
+  },
+  "artifacts": {
+    "spec": {
+      "sourcePath": "docs/superpowers/specs/2026-10-23-screen-video-backgrounds-design.md",
+      "archivePath": "spec.md",
+      "sha256": "77892a22e9737df94b69f29d773221232c0efa4f879429e2505cd9b0248c3379",
+      "provenance": {
+        "kind": "file",
+        "external": false,
+        "commit": null
+      }
+    },
+    "plan": {
+      "sourcePath": "docs/superpowers/plans/2026-10-23-screen-video-backgrounds.md",
+      "archivePath": "plan.md",
+      "sha256": "f94166920d3146cbcf1249d64b037101690f88acdb1a1bef919e3fc81863a040",
+      "provenance": {
+        "kind": "file",
+        "external": false,
+        "commit": null
+      }
+    },
+    "outcome": {
+      "archivePath": "outcome.md",
+      "sha256": "e790b8ac271d31b898be4b59470262444da9bc14d3aa32936862afea09d5f7c3"
+    }
+  },
+  "areas": [],
+  "tags": [],
+  "assessment": {
+    "sourcesRead": true,
+    "finalArtifacts": true,
+    "featureMatch": true,
+    "evidenceReviewed": true,
+    "secretsReviewed": true,
+    "basis": "The spec is owner-approved with approved refinements (images, pixel patterns); the plan links it. Implementation is in tree (9562ed3). Automated checks and reviews are recorded in the plan; the final live image/video acceptance is recorded as unverified.",
+    "evidence": [
+      "ev-plan",
+      "ev-head"
+    ]
+  },
+  "evidence": [
+    {
+      "id": "ev-plan",
+      "kind": "file",
+      "reference": "docs/superpowers/plans/2026-10-23-screen-video-backgrounds.md",
+      "inspected": true,
+      "summary": "Tasks 1-4 RED/GREEN; final root pnpm test 2024 passed, typecheck, build and diff check passed; independent reviews found one Important play/pause race (fixed) and no later Critical/Important issue. Live Orca: real MP4 playback with one canvas; legacy MOV fix; stale-API save failure explained and fixed by restart. Final GPU appearance and end-to-end image/video acceptance remain unverified; the plan checkbox for it is unchecked.",
+      "sha256": "f94166920d3146cbcf1249d64b037101690f88acdb1a1bef919e3fc81863a040",
+      "external": false,
+      "validation": "bytes-hashed"
+    },
+    {
+      "id": "ev-head",
+      "kind": "session",
+      "inspected": true,
+      "reference": "Claude Code session 0b36365d-4e7b-42e2-b09b-91be1298a885 (2026-10-27), Bash tool results: ls apps/ui/app/background/{PixiBackground.vue,renderer.ts,BackgroundEditor.vue,media-api.ts} apps/api/src/background-media.ts; git log 9562ed3",
+      "summary": "Background renderer, editor, media client and API media module exist at HEAD 1edb493; the work landed in 9562ed3.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    }
+  ],
+  "implementation": {
+    "status": "completed",
+    "evidence": [
+      "ev-head",
+      "ev-plan"
+    ]
+  },
+  "review": {
+    "status": "approved",
+    "evidence": [
+      "ev-plan"
+    ]
+  },
+  "verification": {
+    "status": "unverified",
+    "evidence": [
+      "ev-plan"
+    ],
+    "checks": [
+      {
+        "command": "pnpm test",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "command": "pnpm typecheck && pnpm build && git diff --check",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "command": "Orca isolated database + real MP4/WebM: import, copy independence, playback, controls, Done/Cancel, reload, switching, hide/resume, errors, one canvas",
+        "result": "unverified",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ]
+  },
+  "outcomeRecord": {
+    "excludedScope": [],
+    "followUps": [
+      {
+        "text": "Run the final Orca image/video acceptance on an isolated database with real MP4/WebM files.",
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ],
+    "risks": [
+      {
+        "text": "Final GPU appearance and end-to-end image/video acceptance are unverified; no native/Pixi performance comparison was made.",
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ],
+    "decisions": [
+      {
+        "text": "PixiJS 8.22.0 renders video and the pattern; the smaller native video/CSS option was offered and declined by the owner.",
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "text": "Renewable 24 h media leases protect drafts and active playback across tabs.",
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ],
+    "deviations": {
+      "status": "not-recorded",
+      "evidence": [],
+      "items": []
+    },
+    "scope": [
+      {
+        "text": "Per-screen local video or image background with Pixi rendering, dimming and binary PNG micro-patterns, streamed authenticated media storage and renewable leases (9562ed3).",
+        "evidence": [
+          "ev-plan",
+          "ev-head"
+        ]
+      }
+    ]
+  },
+  "archiveStatus": "complete",
+  "skill": {
+    "name": "archive-plan",
+    "version": "1.1.1"
+  },
+  "archiveRoot": ".project-history/features",
+  "incompleteReason": "Owner approved archiving on 2026-10-27 with the final live checks recorded as unverified in the plan",
+  "warnings": [
+    "Explicit incomplete-evidence archive. Unsupported gates: verification, verification checks.",
+    "Completion date not recorded; completedAt remains null.",
+    "Deviations from plan were not recorded; absence of deviations is not claimed.",
+    "URL/session evidence is agent-attested; the helper does not fetch or independently verify it."
+  ],
+  "requestFingerprint": "9d0decc5e84625dc698b4c75ed85f8138b36eeea9cbf771032fd1f01f9b3f72d",
+  "archivedAt": "2026-10-27T15:43:35Z",
+  "revision": 1,
+  "supersedes": null,
+  "revisionReason": null,
+  "integrity": {
+    "algorithm": "sha256",
+    "metadataSha256": "bf674528818ba47c04cab1658c2c7d43342c42211d3e509cf1451c21d959fb14"
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 2,
+  "feature": {
+    "id": "theme-inheritance",
+    "name": "Theme inheritance",
+    "slug": "theme-inheritance"
+  },
+  "status": "completed",
+  "completedAt": null,
+  "git": {
+    "repositoryRoot": ".",
+    "branch": "main",
+    "commit": "1edb493213662a0fb3e94a3113b4287401302087",
+    "headDescribe": "1edb493",
+    "workingTree": "clean",
+    "statusSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contentStateSha256": "5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456",
+    "treeStateSha256": "4e5c1dcd102bd71b5c92e4f0a9219769c8d6b212139f011a7957ee8e57419710",
+    "indexStateSha256": "6717f2f3dd526aa765fb90773a6464715c2e907d2a7d008e3c4744ae97e95ace",
+    "tags": []
+  },
+  "artifacts": {
+    "spec": {
+      "sourcePath": "docs/superpowers/specs/2026-10-23-theme-inheritance-design.md",
+      "archivePath": "spec.md",
+      "sha256": "8991f9d643185595698af6a007f6e409f67f755148f0c700984331ed323ab609",
+      "provenance": {
+        "kind": "file",
+        "external": false,
+        "commit": null
+      }
+    },
+    "plan": {
+      "sourcePath": "docs/superpowers/plans/2026-10-23-theme-inheritance.md",
+      "archivePath": "plan.md",
+      "sha256": "6737a9af003f3cdf6082b6e2ac769d3251fefa02ced41dd3af7ee4bfb9df6747",
+      "provenance": {
+        "kind": "file",
+        "external": false,
+        "commit": null
+      }
+    },
+    "outcome": {
+      "archivePath": "outcome.md",
+      "sha256": "e2ba65ddf763665ab2f57c2384192078fc9e499dc3bb5c5748055e9d8d71fbe6"
+    }
+  },
+  "areas": [],
+  "tags": [],
+  "assessment": {
+    "sourcesRead": true,
+    "finalArtifacts": true,
+    "featureMatch": true,
+    "evidenceReviewed": true,
+    "secretsReviewed": true,
+    "basis": "The spec records the owner-approved widget > screen > space > dashboard direction; the plan links it. The spec also holds the later screen settings placement update, archived separately with its own plan. Implementation is in tree (9562ed3).",
+    "evidence": [
+      "ev-plan",
+      "ev-head"
+    ]
+  },
+  "evidence": [
+    {
+      "id": "ev-plan",
+      "kind": "file",
+      "reference": "docs/superpowers/plans/2026-10-23-theme-inheritance.md",
+      "inspected": true,
+      "summary": "RED/GREEN contracts and API, then UI; pnpm test 1879 passed on full recheck (one intermittent SDK dev-server test passed on rerun); typecheck and build passed. Orca with a temporary database verified screen/space/dashboard inheritance, reload, cancel, Done and widget override. Independent review found one Important stale-refresh race, fixed by RED/GREEN; no deferred minors.",
+      "sha256": "6737a9af003f3cdf6082b6e2ac769d3251fefa02ced41dd3af7ee4bfb9df6747",
+      "external": false,
+      "validation": "bytes-hashed"
+    },
+    {
+      "id": "ev-head",
+      "kind": "session",
+      "inspected": true,
+      "reference": "Claude Code session 0b36365d-4e7b-42e2-b09b-91be1298a885 (2026-10-27), Bash tool results: git grep theme_id apps/api/src/migrations.ts; git log 9562ed3",
+      "summary": "Migrations add spaces.theme_id and screens.theme_id at HEAD 1edb493; the work landed in 9562ed3.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    }
+  ],
+  "implementation": {
+    "status": "completed",
+    "evidence": [
+      "ev-head",
+      "ev-plan"
+    ]
+  },
+  "review": {
+    "status": "approved",
+    "evidence": [
+      "ev-plan"
+    ]
+  },
+  "verification": {
+    "status": "passed",
+    "evidence": [
+      "ev-plan"
+    ],
+    "checks": [
+      {
+        "command": "pnpm test",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "command": "pnpm typecheck && pnpm build",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "command": "Orca inheritance, switching, reload, cancel and widget override checks on a temporary database",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ]
+  },
+  "outcomeRecord": {
+    "excludedScope": [],
+    "followUps": [],
+    "risks": [
+      {
+        "text": "Native pointer activation in Orca remained unverified; buttons used DOM activation.",
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ],
+    "decisions": [
+      {
+        "text": "Background refreshes stay non-blocking and drop responses superseded by a newer snapshot instead of disabling theme selection during refresh.",
+        "evidence": [
+          "ev-plan"
+        ]
+      },
+      {
+        "text": "Theme imports were deferred as requested.",
+        "evidence": [
+          "ev-plan"
+        ]
+      }
+    ],
+    "deviations": {
+      "status": "not-recorded",
+      "evidence": [],
+      "items": []
+    },
+    "scope": [
+      {
+        "text": "Nullable space and screen theme IDs persisted in SQLite and the board; themes resolve widget > screen > space > dashboard; space colour overlay replaced by themes (9562ed3).",
+        "evidence": [
+          "ev-plan",
+          "ev-head"
+        ]
+      }
+    ]
+  },
+  "archiveStatus": "complete",
+  "skill": {
+    "name": "archive-plan",
+    "version": "1.1.1"
+  },
+  "archiveRoot": ".project-history/features",
+  "incompleteReason": null,
+  "warnings": [
+    "Completion date not recorded; completedAt remains null.",
+    "Deviations from plan were not recorded; absence of deviations is not claimed.",
+    "URL/session evidence is agent-attested; the helper does not fetch or independently verify it."
+  ],
+  "requestFingerprint": "18036b14c7a46783f0bb218f761588a68a5dbcacae19f38881c36615f0ec9f9a",
+  "archivedAt": "2026-10-27T15:43:33Z",
+  "revision": 1,
+  "supersedes": null,
+  "revisionReason": null,
+  "integrity": {
+    "algorithm": "sha256",
+    "metadataSha256": "f6206832fbd1a11621a12061922dc0e6939da0a5f5fc1e4c43f50e66c19f915d"
+  }
+}
