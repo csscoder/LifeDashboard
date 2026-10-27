@@ -67,7 +67,14 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .manage(Sidecar::default())
         .setup(|app| {
-            start(app.handle())?;
+            if let Err(error) = start(app.handle()) {
+                app.dialog()
+                    .message(format!("{error}"))
+                    .title("LifeDashboard could not start")
+                    .kind(MessageDialogKind::Error)
+                    .blocking_show();
+                return Err(error);
+            }
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -96,7 +103,8 @@ fn start(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .env("LIFEDASHBOARD_UI_ORIGINS", &origin)
         .env("LIFEDASHBOARD_UI_DIR", resources.join("ui"))
         .env("LIFEDASHBOARD_RUNTIME_DIR", resources.join("api").join("runtime"))
-        .stdin(Stdio::null())
+        .env("LIFEDASHBOARD_EXIT_ON_STDIN_EOF", "1")
+        .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
