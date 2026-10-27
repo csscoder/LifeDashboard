@@ -126,10 +126,11 @@ it('renders and copies an installed widget exception with its exact package vers
 })
 
 // Compile the real host; replace only HTTP and the browser window handshake registration.
-async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean; dialog?: boolean } = {}) {
+async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean; dialog?: boolean; onController?: (controller: ReturnType<typeof import('../app/widgets/modals').createDashboardModals>) => void } = {}) {
   const broker = await import('../app/widgets/broker')
   const { createDashboardModals } = await import('../app/widgets/modals')
   const controller = createDashboardModals()
+  options.onController?.(controller)
   const sessions: string[] = [], ended: string[] = [], requests: { op: string; token: string }[] = []
   let releaseModalStart!: () => void
   const modalStart = new Promise<void>(resolve => { releaseModalStart = resolve })
@@ -186,7 +187,7 @@ async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean
   if (options.dialog) vi.stubGlobal('document', { activeElement: null, querySelector: () => fallback })
   const Dialog = options.dialog ? compileSfc(new URL('../app/widgets/WidgetModal.vue', import.meta.url), {}) : null
   const modalContent = () => modalVisible.value && controller.activeModal.value ? Vue.h(exports.default!, { key: controller.retryVersion.value, widgetId: 'widget', surface: 'modal', surfaceId: 'modal-1', mount: { view: 'workspace', props: { n: 1 } }, hash: 'hash', title: 'Probe', packageId: 'dev.test', version: '1', context: controller.context()! }) : null
-  const hostProps = { source: { kind: 'package', packageId: 'dev.test', version: '1' }, size: { w: 3, h: 3 }, themeId: 'builtin:paper' }
+  const hostProps = Vue.reactive({ source: { kind: 'package' as const, packageId: 'dev.test', version: '1' }, size: { w: 3, h: 3 }, themeId: 'builtin:paper' })
   const mounted = mount({ render: () => Vue.h('main', hosts ? [Vue.h(Host!, { ...hostProps, widgetId: 'widget' }), Vue.h(Host!, { ...hostProps, widgetId: 'sibling' })] : [
     Vue.h(exports.default!, { widgetId: 'widget', surfaceId: 'widget', hash: 'hash', title: 'Probe', packageId: 'dev.test', version: '1', context }),
     Dialog ? Vue.h(Dialog, { record: controller.activeModal.value, error: controller.error.value, onClose: controller.close, onRetry: controller.retry }, { default: modalContent }) : modalContent(),
@@ -210,8 +211,32 @@ async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean
     await vi.waitFor(() => expect(messages[index]!.some((message: any) => message.t === 'res' && message.id === requestId)).toBe(true))
     return messages[index]!.find((message: any) => message.t === 'res' && message.id === requestId) as any
   }
-  return { controller, context, sessions, ended, requests, messages, frames, mounted, modalVisible, call, hellos, fallback, ports, firstHellos, releaseModalStart, holdGateway() { let release!: (result: any) => void; heldGateway = new Promise(resolve => { release = resolve }); return release }, evict(token: string) { evict = token }, cleanup() { mounted.app.unmount(); ports.forEach(port => port.close()); controller.dispose() } }
+  return { controller, hostProps, context, sessions, ended, requests, messages, frames, mounted, modalVisible, call, hellos, fallback, ports, firstHellos, releaseModalStart, holdGateway() { let release!: (result: any) => void; heldGateway = new Promise(resolve => { release = resolve }); return release }, evict(token: string) { evict = token }, cleanup() { mounted.app.unmount(); ports.forEach(port => port.close()); controller.dispose() } }
 }
+
+it('keeps the modal caller when the source is replaced by an equal object', async () => {
+  const unregister = vi.fn()
+  let registerCaller!: ReturnType<typeof vi.spyOn>
+  const f = await surfaceFixture(true, { onController(controller) {
+    const register = controller.registerCaller
+    registerCaller = vi.spyOn(controller, 'registerCaller').mockImplementation(entry => {
+      const cleanup = register(entry)
+      return () => { unregister(entry.owner.widgetId); cleanup() }
+    })
+  } })
+  try {
+    expect(registerCaller).toHaveBeenCalledTimes(2)
+    f.hostProps.source = { kind: 'package', packageId: 'dev.test', version: '1' }
+    await Vue.nextTick()
+    expect(unregister).not.toHaveBeenCalled()
+    expect(registerCaller).toHaveBeenCalledTimes(2)
+    f.hostProps.source = { kind: 'package', packageId: 'dev.test', version: '2' }
+    await Vue.nextTick()
+    expect(unregister.mock.calls.filter(([widgetId]) => widgetId === 'widget')).toHaveLength(1)
+    expect(unregister.mock.calls.filter(([widgetId]) => widgetId === 'sibling')).toHaveLength(1)
+    expect(registerCaller).toHaveBeenCalledTimes(4)
+  } finally { f.cleanup() }
+})
 
 it('gives the modal surface its own session and keeps tokens host-only', async () => {
  const f = await surfaceFixture()

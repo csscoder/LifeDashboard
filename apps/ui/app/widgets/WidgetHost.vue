@@ -47,7 +47,7 @@ const context = useWidgetContext({
 
 const hostId = useId()
 const runtimeId = computed(() => `${props.widgetId}:${hostId}`)
-watch(() => [props.widgetId, props.source.kind === 'package' ? props.source.packageId : '', props.source.kind === 'package' ? props.source.version : '', info.value?.hash] as const,
+watch([() => props.widgetId, () => (props.source.kind === 'package' ? props.source.packageId : ''), () => (props.source.kind === 'package' ? props.source.version : ''), () => info.value?.hash],
   ([widgetId, packageId, version, hash], _old, cleanup) => {
     if (!widgetId || !packageId || !hash) return
     const unregister = widgetModals.registerCaller({
