@@ -71,7 +71,7 @@ watch(() => props.applicationModalId, async (id) => {
 function onCancel(event: Event) {
   event.preventDefault()
   event.stopPropagation()
-  current.value?.answer('declined')
+  current.value?.decline()
 }
 
 // A queued close event must not decline an entry that has already reopened the dialog.
@@ -83,7 +83,7 @@ onUnmounted(() => clearTimeout(armTimer))
 </script>
 
 <template>
-  <dialog ref="dialogBox" class="confirm" aria-labelledby="confirm-title" @close="onClose" @cancel="onCancel" @keydown.esc.stop.prevent="current?.answer('declined')">
+  <dialog ref="dialogBox" class="confirm" aria-labelledby="confirm-title" @close="onClose" @cancel="onCancel" @keydown.esc.stop.prevent="current?.decline()">
     <template v-if="current">
       <h2 id="confirm-title" class="confirm__title">Widget «{{ current.title }}» wants to {{ ACTIONS[current.op] }}</h2>
       <div v-if="notification" class="confirm__preview">
@@ -95,7 +95,7 @@ onUnmounted(() => clearTimeout(armTimer))
       </div>
       <div class="confirm__actions">
         <button type="button" class="confirm__button" :disabled="!armed" @click="current.answer('approved')">Allow once</button>
-        <button ref="declineBox" type="button" class="confirm__button" @click="current.answer('declined')">Decline</button>
+        <button ref="declineBox" type="button" class="confirm__button" @click="current.decline()">Decline</button>
       </div>
     </template>
   </dialog>

@@ -2,9 +2,22 @@ import { h, nextTick, ref } from 'vue'
 import type { ModalRecord } from '@lifedashboard/widget-sdk/host'
 import * as confirmationModule from '../app/confirmations'
 import { compileSfc, mountComponent } from './helpers/sfc-renderer'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CONFIRMATION_DIALOG_MS } from '@lifedashboard/contracts/widget-gateway'
 import { cancelConfirmations, cancelSurfaceConfirmations, confirmations, requestConfirmation } from '../app/confirmations'
+
+import { toasts } from '../app/toasts'
+
+let testTime = Date.now()
+beforeEach(() => {
+  testTime += 10 * 60_000
+  vi.useFakeTimers({ now: testTime })
+  // Approval resets each widget's public state; advance past any previous block first.
+  for (const widgetId of ['a', 'b', 'w1', 'w2']) {
+    ask(widgetId)
+    confirmations.value.at(-1)!.answer('approved')
+  }
+})
 
 const note = { title: 'Hi', body: '' }
 
@@ -16,15 +29,89 @@ function queued(): string[] {
   return confirmations.value.map((item) => item.widgetId)
 }
 
-afterEach(() => {
-  cancelConfirmations('a')
-  cancelConfirmations('b')
-  cancelConfirmations('w1')
+afterEach(async () => {
+  for (const entry of [...confirmations.value]) entry.answer('declined')
+  await nextTick()
+  toasts.value = []
   vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
 describe('confirmations', () => {
+  async function decline(widgetId = 'w1', ownerId?: string) {
+    const result = requestConfirmation({ widgetId, ownerId, title: 'Hello', op: 'notifications.send', input: note })
+    confirmations.value[0]!.decline()
+    expect(await result).toBe('declined')
+  }
+
+  it('answers declined without a dialog after three user declines', async () => {
+    for (let i = 0; i < 3; i++) await decline()
+    const fourth = ask('w1')
+    expect(confirmations.value).toHaveLength(0)
+    expect(await fourth).toBe('declined')
+    expect(toasts.value.filter(t => t.title.includes('blocked'))).toHaveLength(1)
+    expect(toasts.value[0]).toMatchObject({ source: 'Hello', title: 'Widget «Hello» requests are blocked for 5 minutes' })
+    expect(await ask('w1')).toBe('declined')
+    expect(toasts.value).toHaveLength(1)
+  })
+
+  it('does not count teardown cancels or expirations', async () => {
+    for (let i = 0; i < 3; i++) {
+      const cancelled = ask('w1')
+      cancelConfirmations('w1')
+      expect(await cancelled).toBe('declined')
+      const surface = requestConfirmation({ widgetId: 'w1', ownerId: 'modal', title: 'Hello', op: 'notifications.send', input: note })
+      cancelSurfaceConfirmations('modal')
+      expect(await surface).toBe('declined')
+      const expired = ask('w1')
+      vi.advanceTimersByTime(CONFIRMATION_DIALOG_MS)
+      expect(await expired).toBe('expired')
+    }
+    ask('w1')
+    expect(queued()).toEqual(['w1'])
+  })
+
+  it('shows the dialog again after five minutes and starts a new decline count', async () => {
+    for (let i = 0; i < 3; i++) await decline()
+    vi.advanceTimersByTime(5 * 60_000 - 1)
+    expect(await ask('w1')).toBe('declined')
+    vi.advanceTimersByTime(1)
+    await decline()
+    ask('w1')
+    expect(queued()).toEqual(['w1'])
+  })
+
+  it('resets the count on an approval', async () => {
+    await decline(); await decline()
+    const approved = ask('w1')
+    confirmations.value[0]!.answer('approved')
+    expect(await approved).toBe('approved')
+    await decline()
+    ask('w1')
+    expect(queued()).toEqual(['w1'])
+  })
+
+  it('blocks only the declining widget, counting its board and modal surfaces together', async () => {
+    await decline('w1', 'board'); await decline('w1', 'modal'); await decline('w1', 'board')
+    expect(await ask('w1')).toBe('declined')
+    ask('w2')
+    expect(queued()).toEqual(['w2'])
+  })
+
+  it('counts a user decline only once and ignores a decline after settlement', async () => {
+    const first = ask('w1')
+    const entry = confirmations.value[0]!
+    entry.decline(); entry.decline()
+    expect(await first).toBe('declined')
+    const second = ask('w1')
+    const approved = confirmations.value[0]!
+    approved.answer('approved'); approved.decline()
+    expect(await second).toBe('approved')
+    await decline(); await decline()
+    ask('w1')
+    expect(queued()).toEqual(['w1'])
+  })
+
   it('cancels only one surface', async () => {
     const card = requestConfirmation({ widgetId: 'w1', ownerId: 'c1', title: 'Card', op: 'notifications.send', input: note })
     const modal = requestConfirmation({ widgetId: 'w1', ownerId: 'm1', title: 'Modal', op: 'notifications.send', input: note })
@@ -97,6 +184,24 @@ describe('confirmations', () => {
 const ConfirmDialog = compileSfc(new URL('../app/ConfirmDialog.vue', import.meta.url), { './confirmations': confirmationModule })
 
 describe('ConfirmDialog', () => {
+  it.each(['button', 'Escape', 'cancel'])('records a user decline from %s', async (action) => {
+    vi.stubGlobal('document', { activeElement: null, querySelector: () => null })
+    const ui = mountComponent(ConfirmDialog, {}, [])
+    const result = ask('w1')
+    const decline = vi.spyOn(confirmations.value[0]!, 'decline')
+    await nextTick()
+    const dialog = ui.nodes().find(node => node.tag === 'dialog')!
+    if (action === 'button') ui.button('Decline').props.onClick()
+    else if (action === 'cancel') dialog.props.onCancel(new Event('cancel', { cancelable: true }))
+    else {
+      const event = new Event('keydown', { cancelable: true })
+      Object.defineProperty(event, 'key', { value: 'Escape' })
+      dialog.props.onKeydown(event)
+    }
+    expect(decline).toHaveBeenCalledOnce()
+    expect(await result).toBe('declined')
+  })
+
   it('stays above an open application dialog and handles Escape first', async () => {
     const underlyingCancel = vi.fn()
     const app = mountComponent({ render: () => h('dialog', { onCancel: underlyingCancel }, [h('button', 'Origin')]) }, {}, [])
