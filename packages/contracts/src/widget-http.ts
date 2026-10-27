@@ -1,3 +1,7 @@
+import { lookup as dnsLookup, type LookupAddress } from 'node:dns'
+import { isIP, type LookupFunction } from 'node:net'
+import { Agent, fetch, type Response } from 'undici'
+import { isPublicAddress } from './address.ts'
 import { GatewayFailure, HTTP_LIMITS, type HttpOutput, type HttpSendMethod } from './widget-gateway.ts'
 import { injectSecret, redactSecrets, type BoundSecret } from './widget-secrets.ts'
 
@@ -8,14 +12,63 @@ export interface ProxyRequest {
   body?: string
 }
 
+class PrivateAddressError extends Error {
+  constructor(host: string) {
+    super(`${host} resolves to a private address`)
+  }
+}
+
+const agents = new WeakMap<LookupFunction, { guarded: Agent; local: Agent }>()
+
+function agentFor(host: string, lookup: LookupFunction): Agent {
+  let pair = agents.get(lookup)
+  if (!pair) {
+    const guarded: LookupFunction = (hostname, options, callback) => {
+      // Resolve all families even when the connector requests one: a mixed answer is denied.
+      lookup(hostname, { all: true }, (error, addresses) => {
+        if (error) return callback(error, [])
+        const records = addresses as LookupAddress[]
+        if (records.some(({ address }) => !isPublicAddress(address))) {
+          return callback(new PrivateAddressError(hostname), [])
+        }
+        const family = options.family === 'IPv4' ? 4 : options.family === 'IPv6' ? 6 : options.family
+        const candidates = family ? records.filter((record) => record.family === family) : records
+        if (options.all) return callback(null, candidates)
+        const first = candidates[0]
+        if (!first) return callback(Object.assign(new Error('No DNS addresses'), { code: 'ENOTFOUND' }), [])
+        callback(null, first.address, first.family)
+      })
+    }
+    pair = { guarded: new Agent({ connect: { lookup: guarded } }), local: new Agent({ connect: { lookup } }) }
+    agents.set(lookup, pair)
+  }
+  return host === 'localhost' || isIP(host) !== 0 ? pair.local : pair.guarded
+}
+
+function privateAddressCause(error: unknown): PrivateAddressError | undefined {
+  const seen = new Set<unknown>()
+  while (error instanceof Error && !seen.has(error)) {
+    if (error instanceof PrivateAddressError) return error
+    seen.add(error)
+    error = error.cause
+  }
+}
+
 /**
  * Spec 2026-10-11 «Operations»: one request to an approved origin. No redirects, cookies or extra
- * headers; bounded in time and size. Any upstream status is a result; failures are UPSTREAM_ERROR.
+ * headers; bounded in time and size. Private DNS answers are denied; upstream failures are UPSTREAM_ERROR.
  */
-export async function proxyHttp(request: ProxyRequest, origins: ReadonlySet<string>, timeoutMs: number = HTTP_LIMITS.timeoutMs): Promise<HttpOutput> {
-  if (!origins.has(new URL(request.url).origin)) throw new GatewayFailure('PERMISSION_DENIED', 'The widget may not reach this origin')
+export async function proxyHttp(
+  request: ProxyRequest,
+  origins: ReadonlySet<string>,
+  timeoutMs: number = HTTP_LIMITS.timeoutMs,
+  lookup: LookupFunction = dnsLookup,
+): Promise<HttpOutput> {
+  const url = new URL(request.url)
+  if (!origins.has(url.origin)) throw new GatewayFailure('PERMISSION_DENIED', 'The widget may not reach this origin')
   try {
     const response = await fetch(request.url, {
+      dispatcher: agentFor(url.hostname.replace(/^\[|\]$/g, ''), lookup),
       method: request.method,
       headers: request.headers ?? {},
       body: request.body,
@@ -32,6 +85,8 @@ export async function proxyHttp(request: ProxyRequest, origins: ReadonlySet<stri
     return output
   } catch (error) {
     if (error instanceof GatewayFailure) throw error
+    const denied = privateAddressCause(error)
+    if (denied) throw new GatewayFailure('PERMISSION_DENIED', denied.message)
     const name = error instanceof Error ? error.name : ''
     throw new GatewayFailure('UPSTREAM_ERROR', name === 'TimeoutError' || name === 'AbortError' ? 'The service did not answer in time' : 'The service is unreachable')
   }

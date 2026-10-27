@@ -1,3 +1,6 @@
+// Resolve the transport owned by contracts without adding an API/SDK runtime dependency.
+import * as httpTransport from '../../../packages/contracts/node_modules/undici/index.js'
+import { Response as HttpResponse } from '../../../packages/contracts/node_modules/undici/index.js'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SettingsSchema } from '@lifedashboard/contracts/widget-settings'
 import type { AddressInfo } from 'node:net'
@@ -7,6 +10,11 @@ import { needsConfirmation, RATE_LIMITS } from '../src/widget-gateway.ts'
 import { createGatewayClient } from '../../ui/app/widgets/broker.ts'
 import { api as uiApi } from '../../ui/app/api.ts'
 import { call, DAY, errorCode, HOUR, installPackage, pair, T0, testApp, widgetPackage, type TestApp } from './helpers.ts'
+
+vi.mock('../../../packages/contracts/node_modules/undici/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../packages/contracts/node_modules/undici/index.js')>()
+  return { ...actual, fetch: vi.fn(actual.fetch) }
+})
 
 const BOARD = `/api/v1/spaces/${SEED_SPACE_ID}/board`
 const PKG_WIDGET = '00000000-0000-4000-8000-0000000000a1'
@@ -812,7 +820,10 @@ describe('secrets', () => {
     t.db.prepare("UPDATE widgets SET source_version = '1.1.0' WHERE id = ?").run(PKG_WIDGET)
   })
 
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.mocked(httpTransport.fetch).mockReset()
+  })
 
   async function installSecrets(properties: SettingsSchema['properties'] = {
     apiKey: { type: 'secret', title: 'Key', bind: { origin, header: 'Authorization', prefix: 'Bearer ' } },
@@ -844,7 +855,7 @@ describe('secrets', () => {
 
   describe('validation before upstream requests', () => {
     beforeEach(() => {
-      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected upstream request'))
+      vi.spyOn(httpTransport, 'fetch').mockRejectedValue(new Error('Unexpected upstream request'))
     })
 
     it.each(['http.get', 'http.send'] as const)('denies an unapproved origin before checking missing secrets for %s', async (op) => {
@@ -852,14 +863,14 @@ describe('secrets', () => {
       const response = await request(op, await openSession(PKG_WIDGET))
       expect([response.statusCode, errorCode(response), response.json().error.message])
         .toEqual([403, 'PERMISSION_DENIED', 'The widget may not reach this origin'])
-      expect(fetch).not.toHaveBeenCalled()
+      expect(httpTransport.fetch).not.toHaveBeenCalled()
     })
 
     it.each(['http.get', 'http.send'] as const)('rejects %s with the setting title when its secret is missing', async (op) => {
       const response = await request(op, await openSession(PKG_WIDGET))
       expect([response.statusCode, errorCode(response), response.json().error.message])
         .toEqual([502, 'UPSTREAM_ERROR', 'Secret «Key» is not set'])
-      expect(fetch).not.toHaveBeenCalled()
+      expect(httpTransport.fetch).not.toHaveBeenCalled()
     })
 
     it.each(['http.get', 'http.send'] as const)('rejects a query collision for %s without sending a request', async (op) => {
@@ -868,7 +879,7 @@ describe('secrets', () => {
       const response = await request(op, await openSession(PKG_WIDGET), `${origin}/echo?apikey=x`)
       expect([response.statusCode, errorCode(response), response.json().error.message])
         .toEqual([400, 'INVALID_INPUT', 'The URL already contains the secret parameter "apikey"'])
-      expect(fetch).not.toHaveBeenCalled()
+      expect(httpTransport.fetch).not.toHaveBeenCalled()
       expect(JSON.stringify(auditRows())).not.toContain(VALUE)
       expect(JSON.stringify(auditRows())).not.toContain(QUERY_VALUE)
     })
@@ -888,14 +899,14 @@ describe('secrets', () => {
       const response = await request('http.get', await openSession(PKG_WIDGET), `${origin}/echo?apikey=x`)
       expect([response.statusCode, errorCode(response), response.json().error.message])
         .toEqual([502, 'UPSTREAM_ERROR', 'Secret «Key» is not set'])
-      expect(fetch).not.toHaveBeenCalled()
+      expect(httpTransport.fetch).not.toHaveBeenCalled()
     })
   })
 
   describe('responses without a listener', () => {
     it('redacts the injected encodeURIComponent query secret in an echoed request URL', async () => {
       const queryValue = 'ab+cd/ef=gh ijklmnop'
-      const upstream = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => new Response(String(url), {
+      const upstream = vi.spyOn(httpTransport, 'fetch').mockImplementation(async (url) => new HttpResponse(String(url), {
         status: 400, headers: { 'content-type': 'text/plain' },
       }))
       await put('apiKey', VALUE)
@@ -909,7 +920,7 @@ describe('secrets', () => {
     })
 
     it.each(['http.get', 'http.send'] as const)('injects and redacts %s with current values and preserves upstream status', async (op) => {
-      const upstream = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(
+      const upstream = vi.spyOn(httpTransport, 'fetch').mockResolvedValue(new HttpResponse(
         `${OTHER_VALUE}|${VALUE}|${QUERY_VALUE}|${OTHER_VALUE}|${VALUE}`,
         { status: 409, headers: { 'content-type': `text/plain; token=${OTHER_VALUE}; key=${VALUE}` } },
       ))
@@ -939,7 +950,7 @@ describe('secrets', () => {
     })
 
     it('ignores missing bindings on another origin and preserves a null contentType', async () => {
-      const upstream = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+      const upstream = vi.spyOn(httpTransport, 'fetch').mockResolvedValue(new HttpResponse(null, { status: 204 }))
       await put('otherKey', OTHER_VALUE)
       const response = await request('http.get', await openSession(PKG_WIDGET), `${otherOrigin}/echo`)
       expect(response.statusCode).toBe(200)

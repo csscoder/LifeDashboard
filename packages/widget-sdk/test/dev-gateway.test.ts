@@ -1,3 +1,6 @@
+// Resolve the transport owned by contracts without adding an API/SDK runtime dependency.
+import * as httpTransport from '../../contracts/node_modules/undici/index.js'
+import { Response } from '../../contracts/node_modules/undici/index.js'
 import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -8,6 +11,11 @@ import type { WidgetPackageManifest } from '@lifedashboard/contracts/widget-pack
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createDevGateway } from '../src/dev/gateway.ts'
 import { readDevSecrets } from '../src/dev/secrets.ts'
+
+vi.mock('../../contracts/node_modules/undici/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../contracts/node_modules/undici/index.js')>()
+  return { ...actual, fetch: vi.fn(actual.fetch) }
+})
 
 const origin = 'https://service.example'
 const shell = 'w=4 h=3 theme=builtin:glass frame=framed'
@@ -36,7 +44,10 @@ function setup(current = manifest()) {
   return { gateway, log, values, current, advance: (ms: number) => { time += ms } }
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.mocked(httpTransport.fetch).mockReset()
+})
 
 describe('dev gateway', () => {
   it('starts empty, increments revisions and rejects stale writes without changing state', async () => {
@@ -131,7 +142,7 @@ describe('dev gateway', () => {
   it('delegates HTTP to shared rules, reads current values and logs only method, origin and upstream status', async () => {
     const { gateway, values, log } = setup()
     const fetchSpy = vi.fn().mockImplementation(async () => new Response(secret, { status: 201, headers: { 'content-type': 'text/plain' } }))
-    vi.stubGlobal('fetch', fetchSpy)
+    vi.mocked(httpTransport.fetch).mockImplementation(fetchSpy)
     values.set('apiKey', secret)
     expect(await gateway.call('http.get', { url: `${origin}/private?token=hidden` }, 'decline', shell))
       .toEqual({ ok: true, value: { status: 201, contentType: 'text/plain', body: '[REDACTED]' } })

@@ -1,10 +1,17 @@
 /// <reference types="vitest/node" />
 import { createServer, type IncomingHttpHeaders, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
-import type { AddressInfo } from 'node:net'
+import { Socket, type AddressInfo, type LookupFunction } from 'node:net'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import * as httpTransport from 'undici'
+import { Response } from 'undici'
 import { GatewayFailure } from '../src/widget-gateway.ts'
 import type { BoundSecret } from '../src/widget-secrets.ts'
 import { performHttp, proxyHttp } from '../src/widget-http.ts'
+
+vi.mock('undici', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('undici')>()
+  return { ...actual, fetch: vi.fn(actual.fetch) }
+})
 
 describe('HTTP listener integration (controller-run)', () => {
   let server: Server
@@ -49,6 +56,42 @@ describe('HTTP listener integration (controller-run)', () => {
   }
 
   describe('proxyHttp', () => {
+    const answers = (...addresses: string[]): LookupFunction => (_host, options, callback) => {
+      const records = addresses.map((address) => ({ address, family: address.includes(':') ? 6 : 4 }))
+      if (options.all) callback(null, records)
+      else callback(null, records[0]!.address, records[0]!.family)
+    }
+
+    it.each([
+      ['127.0.0.1'],
+      ['::ffff:127.0.0.1'],
+      ['::ffff:7f00:1'],
+      ['8.8.8.8', '127.0.0.1'],
+      ['127.0.0.1', '8.8.8.8'],
+    ])('blocks private DNS answers before connecting: %j', async (...addresses) => {
+      const named = `http://api.example.test:${port}`
+      const error = await rejection(proxyHttp({ url: named, method: 'GET' }, new Set([named]), 500, answers(...addresses)))
+      expect([error.code, error.message]).toEqual(['PERMISSION_DENIED', 'api.example.test resolves to a private address'])
+      expect(seen).toHaveLength(0)
+    })
+
+    it('lets public DNS answers reach the connection stage', async () => {
+      const named = `http://api.example.test:${port}`
+      const emitted = vi.spyOn(Socket.prototype, 'emit')
+      try {
+        // Observe the real socket receiving the validated DNS answer; no public HTTP service is required.
+        await proxyHttp({ url: named, method: 'GET' }, new Set([named]), 200, answers('8.8.8.8')).catch(() => {})
+        expect(emitted).toHaveBeenCalledWith('lookup', null, '8.8.8.8', 4, 'api.example.test')
+      } finally {
+        emitted.mockRestore()
+      }
+    })
+
+    it.each(['127.0.0.1', 'localhost'])('allows an explicitly approved local origin: %s', async (host) => {
+      const local = `http://${host}:${port}`
+      expect((await proxyHttp({ url: local, method: 'GET' }, new Set([local]), 500, answers('127.0.0.1'))).status).toBe(200)
+    })
+
     it('returns the status, content type and text body', async () => {
       expect(await proxyHttp({ url: `${origin}/api/v1/tasks?due=today`, method: 'GET', headers: { accept: 'application/json' } }, allowed())).toEqual({
         status: 200,
@@ -162,11 +205,11 @@ describe('shared HTTP rules without sockets', () => {
   ]
   const values = new Map([['header', 'SECRETSECRETSECRET1'], ['query', 'ключ ab+cd/ef=ghijklmnop']])
   const context = { origins: new Set([origin]), secrets, values }
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => vi.mocked(httpTransport.fetch).mockReset())
 
   it('checks origin, all missing secrets and query collisions before fetching', async () => {
     const fetchSpy = vi.fn()
-    vi.stubGlobal('fetch', fetchSpy)
+    vi.mocked(httpTransport.fetch).mockImplementation(fetchSpy)
     await expect(performHttp({ url: 'https://other.example', method: 'GET' }, { ...context, values: new Map() }))
       .rejects.toMatchObject({ code: 'PERMISSION_DENIED', message: 'The widget may not reach this origin' })
     await expect(performHttp({ url: `${origin}/?apikey=x`, method: 'GET' }, { ...context, values: new Map() }))
@@ -182,7 +225,7 @@ describe('shared HTTP rules without sockets', () => {
     const fetchSpy = vi.fn().mockImplementation(async () => new Response(`${values.get('header')}|${encodeURIComponent(values.get('query')!)}|another-secret-value`, {
       status: 201, headers: { 'content-type': `application/${values.get('header')}` },
     }))
-    vi.stubGlobal('fetch', fetchSpy)
+    vi.mocked(httpTransport.fetch).mockImplementation(fetchSpy)
     const output = await performHttp({ url: `${origin}/echo`, method: 'POST', headers: { accept: 'text/plain' }, body: 'request' }, {
       ...context,
       secrets: [...secrets, { key: 'other', title: 'Other', bind: { origin: 'https://other.example', header: 'X-Other' } }],
@@ -190,14 +233,14 @@ describe('shared HTTP rules without sockets', () => {
     }, 200)
     expect(fetchSpy).toHaveBeenCalledWith(`${origin}/echo?apikey=${encodeURIComponent(values.get('query')!)}`, {
       method: 'POST', headers: { accept: 'text/plain', authorization: `Bearer ${values.get('header')}` }, body: 'request',
-      redirect: 'manual', credentials: 'omit', signal: expect.any(AbortSignal),
+      redirect: 'manual', credentials: 'omit', signal: expect.any(AbortSignal), dispatcher: expect.anything(),
     })
     expect(output).toEqual({ status: 201, contentType: 'application/[REDACTED]', body: '[REDACTED]|[REDACTED]|[REDACTED]' })
   })
 
   it('decodes concatenated UTF-8 bytes without dropping the BOM', async () => {
     const chunks = [new Uint8Array([0xef, 0xbb, 0xbf, 0x61, 0xe2]), new Uint8Array([0x82, 0xac, 0x62])]
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => new Response(new ReadableStream({
+    vi.mocked(httpTransport.fetch).mockImplementation(vi.fn().mockImplementation(async () => new Response(new ReadableStream({
       start(controller) {
         for (const chunk of chunks) controller.enqueue(chunk)
         controller.close()
