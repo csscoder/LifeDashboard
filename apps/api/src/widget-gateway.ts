@@ -8,6 +8,7 @@ import {
   GATEWAY_OPS,
   checkGatewayCall,
   createRateLimiter,
+  isGatewayOp,
   GatewayFailure,
   type ConfirmPolicy,
   type GatewayInputs,
@@ -106,6 +107,7 @@ export function registerWidgetGateway(app: FastifyInstance, { db, now }: WidgetG
     const pending = session.confirmation !== null && session.confirmation.expiresAt > t ? session.confirmation : null
     if (typeof header === 'string') {
       if (!pending || pending.id !== header || pending.op !== op || pending.inputHash !== inputHash) {
+        rateLimit(session.widgetId, op)
         throw new ApiError('CONFIRMATION_INVALID', 'The confirmation is not valid for this call')
       }
       // Single use; the rate limit was spent when the id was issued.
@@ -138,7 +140,7 @@ export function registerWidgetGateway(app: FastifyInstance, { db, now }: WidgetG
     return session
   }
 
-  function rateLimit(widgetId: string, op: GatewayOp): void {
+  function rateLimit(widgetId: string, op: GatewayOp | 'rejected'): void {
     if (!allowCall(widgetId, op)) throw new ApiError('RATE_LIMITED', `Too many ${op} calls`)
   }
 
@@ -194,7 +196,10 @@ export function registerWidgetGateway(app: FastifyInstance, { db, now }: WidgetG
     let target = ''
     try {
       const call = checkGatewayCall(op, request.body, session.grants)
-      if (!call.ok) throw new ApiError(call.code, call.message)
+      if (!call.ok) {
+        rateLimit(session.widgetId, isGatewayOp(op) ? op : 'rejected')
+        throw new ApiError(call.code, call.message)
+      }
       const checkedOp = call.op
       const { permission, confirm } = GATEWAY_OPS[checkedOp]
       target = httpTarget(checkedOp, call.input)
@@ -218,17 +223,17 @@ export function registerWidgetGateway(app: FastifyInstance, { db, now }: WidgetG
       outcome = failure instanceof ApiError ? failure.code : 'INTERNAL_ERROR'
       throw failure
     } finally {
-      audit(session, op, outcome + target)
+      if (outcome !== 'RATE_LIMITED') audit(session, op, outcome + target)
     }
   })
 
-  // The host declines (user, dialog deadline). An unknown or foreign id is a no-op.
+  // The host declines (user, dialog deadline). The issuing call already supplied its audit row.
+  // An unknown or foreign id is a no-op.
   app.delete<{ Params: { id: string } }>('/api/v1/widget-gateway/confirmations/:id', async (request) => {
     const session = useSession(request)
     const pending = session.confirmation
     if (pending !== null && pending.id === request.params.id) {
       session.confirmation = null
-      audit(session, pending.op, 'DECLINED')
     }
     return ok(request, null)
   })

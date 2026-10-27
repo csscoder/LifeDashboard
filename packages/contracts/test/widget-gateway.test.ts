@@ -261,6 +261,19 @@ describe('checkGatewayCall', () => {
 })
 
 describe('createRateLimiter', () => {
+  it('allows 60 rejected calls per key per minute', () => {
+    let now = 0
+    const allow = createRateLimiter(() => now)
+    for (let i = 0; i < 60; i++) expect(allow('a', 'rejected')).toBe(true)
+    expect(allow('a', 'rejected')).toBe(false)
+    expect(allow('b', 'rejected')).toBe(true)
+    expect(allow('a', 'state.set')).toBe(true)
+    now = 59_999
+    expect(allow('a', 'rejected')).toBe(false)
+    now = 60_000
+    expect(allow('a', 'rejected')).toBe(true)
+  })
+
   it('allows max calls, rejects the next and expires hits at the window boundary', () => {
     let now = 1_000
     const allow = createRateLimiter(() => now)

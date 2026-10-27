@@ -300,6 +300,24 @@ describe('gateway pipeline', () => {
     ])
   })
 
+  it('limits and audits invalid calls within the limit', async () => {
+    const token = await openSession(PKG_WIDGET)
+    const codes = []
+    for (let i = 0; i < 2000; i++) codes.push(errorCode(await gateway('state.set', token, {})))
+    expect(codes.filter((code) => code === 'INVALID_INPUT')).toHaveLength(60)
+    expect(codes.slice(60).every((code) => code === 'RATE_LIMITED')).toBe(true)
+    expect((t.db.prepare('SELECT count(*) AS count FROM widget_audit').get() as { count: number }).count).toBe(60)
+    expect(errorCode(await gateway('state.set', token, { data: null, expectedRevision: 0 }))).toBe('RATE_LIMITED')
+  })
+
+  it('audits unknown ops from the shared rejected bucket', async () => {
+    const token = await openSession(PKG_WIDGET)
+    for (let i = 0; i < 60; i++) expect(errorCode(await gateway(i % 2 ? 'nope.op' : 'other.op', token))).toBe('UNKNOWN_OP')
+    expect(errorCode(await gateway('nope.op', token))).toBe('RATE_LIMITED')
+    expect(auditRows()).toHaveLength(60)
+    expect((await gateway('state.get', token)).statusCode).toBe(200)
+  })
+
   it('deletes audit rows older than 30 days at start', async () => {
     t.db.exec(`
       INSERT INTO widget_audit (at, widget_id, package_id, op, outcome) VALUES ('${new Date(T0 - 31 * DAY).toISOString()}', 'w', NULL, 'state.get', 'ok');
@@ -565,7 +583,7 @@ describe('confirmation', () => {
     await issue(token)
   })
 
-  it('keeps one pending confirmation per session; a decline audits it and frees the slot', async () => {
+  it('keeps one pending confirmation per session; a decline frees the slot without another audit row', async () => {
     const token = await openSession(PKG_WIDGET)
     const id = await issue(token)
     const second = await send(token)
@@ -579,9 +597,7 @@ describe('confirmation', () => {
     await issue(token)
     expect(outcomes()).toEqual([
       'CONFIRMATION_REQUIRED',
-      'RATE_LIMITED',
       'CONFIRMATION_REQUIRED',
-      'DECLINED',
       'CONFIRMATION_INVALID',
       'CONFIRMATION_REQUIRED',
     ])
@@ -645,6 +661,37 @@ describe('http', () => {
       headers: { 'x-widget-session': token, 'x-widget-confirmation': id },
     })
   }
+
+  it('limits calls with a wrong confirmation id', async () => {
+    const token = await openSession(PKG_WIDGET)
+    const input = { url: `${origin}/write`, method: 'POST' }
+    const codes = []
+    for (let i = 0; i < 2000; i++) codes.push(errorCode(await confirmed(token, 'wrong', input)))
+    expect(codes.filter((code) => code === 'CONFIRMATION_INVALID')).toHaveLength(60)
+    expect(codes.slice(60).every((code) => code === 'RATE_LIMITED')).toBe(true)
+    expect((t.db.prepare('SELECT count(*) AS count FROM widget_audit').get() as { count: number }).count).toBe(60)
+    expect(seen).toHaveLength(0)
+  })
+
+  it.each(['confirmed', 'declined'])('spends one unit for a %s call and audits only gateway requests', async (decision) => {
+    const token = await openSession(PKG_WIDGET)
+    const input = { url: `${origin}/write`, method: 'POST' }
+    const asked = await gateway('http.send', token, input)
+    expect(errorCode(asked)).toBe('CONFIRMATION_REQUIRED')
+    const id: string = asked.json().error.confirmationId
+    if (decision === 'confirmed') {
+      expect((await confirmed(token, id, input)).statusCode).toBe(200)
+    } else {
+      expect((await call(t.app, { method: 'DELETE', url: `/api/v1/widget-gateway/confirmations/${id}`, cookie, payload: {}, headers: { 'x-widget-session': token } })).statusCode).toBe(200)
+    }
+    expect(auditRows()).toHaveLength(decision === 'confirmed' ? 2 : 1)
+    expect(auditRows()[0]).toMatchObject({ outcome: `CONFIRMATION_REQUIRED POST ${origin}` })
+    t.db.prepare("UPDATE widget_grants SET mode = 'allow' WHERE permission = 'network'").run()
+    for (let i = 0; i < RATE_LIMITS['http.send'].max - 1; i++) expect((await gateway('http.send', token, input)).statusCode).toBe(200)
+    const count = auditRows().length
+    expect(errorCode(await gateway('http.send', token, input))).toBe('RATE_LIMITED')
+    expect(auditRows()).toHaveLength(count)
+  })
 
   it('proxies a GET to an approved origin and audits status, method and origin only', async () => {
     const token = await openSession(PKG_WIDGET)

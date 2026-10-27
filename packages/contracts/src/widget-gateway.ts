@@ -19,6 +19,7 @@ export type GatewayOp = keyof typeof GATEWAY_OPS
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
+export const REJECTED_LIMIT = { max: 60, windowMs: MINUTE }
 export const RATE_LIMITS: Record<GatewayOp, { max: number; windowMs: number }> = {
   'state.get': { max: 120, windowMs: MINUTE },
   'state.set': { max: 60, windowMs: MINUTE },
@@ -51,10 +52,10 @@ export function checkGatewayCall(
   return { ok: true, op, input: parsed.value }
 }
 
-export function createRateLimiter(now: () => number): (key: string, op: GatewayOp) => boolean {
+export function createRateLimiter(now: () => number): (key: string, op: GatewayOp | 'rejected') => boolean {
   const hits = new Map<string, number[]>()
   return (key, op) => {
-    const { max, windowMs } = RATE_LIMITS[op]
+    const { max, windowMs } = op === 'rejected' ? REJECTED_LIMIT : RATE_LIMITS[op]
     const t = now()
     const bucket = `${key} ${op}`
     const recent = (hits.get(bucket) ?? []).filter((at) => t - at < windowMs)
