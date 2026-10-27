@@ -1,6 +1,6 @@
 import { DEFAULT_SHADOW, parseScreenBoard, type ScreenBoard, type WidgetAppearance } from '@lifedashboard/contracts/board'
 import { describe, expect, it } from 'vitest'
-import { addInstance, focusAfterRemoval, isSameBoard, readingOrder, removeInstance, setAppearance, setConfig, setPlacement, withRows } from '../app/board/edit-session'
+import { addInstance, focusAfterRemoval, isSameBoard, readingOrder, removeInstance, resetWidget, setAppearance, setConfig, setPlacement, withRows } from '../app/board/edit-session'
 import * as edits from '../app/board/edit-session'
 import type { InstalledPackage } from '@lifedashboard/contracts/widget-package'
 
@@ -170,6 +170,17 @@ describe('setConfig', () => {
   })
 })
 
+describe('resetWidget', () => {
+  it('drops the appearance and the config of one widget, keeping the rest of the board', () => {
+    const styled = setAppearance(board, A, { themeId: 'builtin:paper', shadow: DEFAULT_SHADOW })
+    styled.instances[0] = { ...styled.instances[0]!, configVersion: 2, config: { zone: 'Asia/Tokyo' } }
+    const next = resetWidget(styled, A)
+    expect(next.instances[0]).toStrictEqual({ id: A, source: styled.instances[0]!.source, configVersion: 2, config: {} })
+    expect(next.instances.slice(1)).toEqual(styled.instances.slice(1))
+    expect(next.layout).toBe(styled.layout)
+  })
+})
+
 describe('setAppearance', () => {
   const look: WidgetAppearance = { themeId: 'builtin:paper', shadow: null }
 
@@ -190,7 +201,7 @@ describe('setAppearance', () => {
   })
 
   it.each([
-    ['null («Сбросить»)', null],
+    ['null («Reset»)', null],
     ['undefined', undefined],
     ['both fields null', { themeId: null, shadow: null }],
   ])('removes the key for %s, so the board is unchanged again', (_name, value) => {

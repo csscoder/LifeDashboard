@@ -62,18 +62,23 @@ export function setConfig(board: ScreenBoard, instanceId: string, config: Record
   }
 }
 
+/** «Reset widget settings»: the widget's look and options go back to their defaults; secrets and version stay. */
+export function resetWidget(board: ScreenBoard, id: string): ScreenBoard {
+  return setConfig(setAppearance(board, id, null), id, {})
+}
+
 /** Switches an instance within its installed package, keeping its ID, data and position. */
 export function setPackageVersion(board: ScreenBoard, id: string, version: string, packages: readonly InstalledPackage[]): ParseResult<ScreenBoard> {
   const instance = board.instances.find((item) => item.id === id)
   const rect = board.layout.find((item) => item.instanceId === id)
-  if (!instance || instance.source.kind !== 'package' || !rect) return { ok: false, error: 'Выберите установленный виджет' }
+  if (!instance || instance.source.kind !== 'package' || !rect) return { ok: false, error: 'Select an installed widget' }
   const source = instance.source
   const target = packages.find((pkg) => pkg.id === source.packageId)?.versions.find((item) => item.version === version)
-  if (!target) return { ok: false, error: 'Версия виджета не установлена' }
+  if (!target) return { ok: false, error: 'The widget version is not installed' }
   const { sizing, settings } = target.manifest
   const next = { ...rect, w: Math.max(sizing.min.w, Math.min(rect.w, sizing.max.w)), h: Math.max(sizing.min.h, Math.min(rect.h, sizing.max.h)) }
   if (!isFree(next, board.layout.filter((item) => item.instanceId !== id), Math.max(board.rows, rect.y + rect.h))) {
-    return { ok: false, error: `Для этой версии нужно свободное место ${next.w}×${next.h}. Передвиньте виджет или освободите место рядом` }
+    return { ok: false, error: `This version needs ${next.w}×${next.h} of free space. Move the widget or free up space nearby` }
   }
   const config = settings ? plainConfig(settings, normalizeConfig(settings, instance.config, new Set())) : {}
   return { ok: true, value: { ...board,

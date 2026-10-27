@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { handAngles } from '../app/widgets/builtin/clocks/analog_1/clock-angles'
 
-const at = (h: number, m: number, s: number) => new Date(2026, 9, 9, h, m, s)
+const at = (h: number, m: number, s: number) => ({ h, m, s })
 
 describe('handAngles', () => {
   it('points the hands from 12 o’clock, clockwise in degrees', () => {

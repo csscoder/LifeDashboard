@@ -1,3 +1,10 @@
+/** Wall time on a 24-hour clock. */
+export interface ClockTime {
+  h: number
+  m: number
+  s: number
+}
+
 export interface HandAngles {
   hour: number
   minute: number
@@ -17,10 +24,8 @@ const turn = (from: number, to: number, way: Turn) => {
  * Hand rotations in degrees clockwise from 12. The minute hand moves once a minute, the hour hand
  * every second. With `prev` the angles keep accumulating, so 59 → 0 tweens forward, not 354° back.
  */
-export function handAngles(date: Date, prev?: HandAngles, way: Turn = 'shortest'): HandAngles {
-  const s = date.getSeconds()
-  const m = date.getMinutes()
-  const raw = { hour: (date.getHours() % 12) * 30 + m / 2 + s / 120, minute: m * 6, second: s * 6 }
+export function handAngles({ h, m, s }: ClockTime, prev?: HandAngles, way: Turn = 'shortest'): HandAngles {
+  const raw = { hour: (h % 12) * 30 + m / 2 + s / 120, minute: m * 6, second: s * 6 }
   if (!prev) return raw
   return {
     hour: prev.hour + turn(prev.hour, raw.hour, way),

@@ -22,6 +22,7 @@ export interface HostNode {
   focus(): void
   scrollIntoView(): void
   querySelector(selector: string): HostNode | null
+  closest(selector: string): HostNode | null
   getBoundingClientRect(): HostNode['rect']
 }
 const descendants = (el: HostNode): HostNode[] => [el, ...el.children.flatMap(descendants)]
@@ -44,6 +45,12 @@ const node = (tag: string, text = ''): HostNode => Vue.markRaw<HostNode>({
       ? String(el.props.class ?? '').split(' ').includes(selector.slice(1)) : el.tag === selector) ?? null
   },
   getBoundingClientRect() { return this.rect },
+  // Only attribute selectors such as `[popover]`.
+  closest(selector) {
+    const attribute = /^\[([\w-]+)\]$/.exec(selector)?.[1]
+    for (let el: HostNode | null = this; el; el = el.parent) if (attribute && el.props[attribute] !== undefined) return el
+    return null
+  },
 })
 const renderer = Vue.createRenderer<HostNode, HostNode>({
   createElement: node, createText: (text) => node('#text', text), createComment: (text) => node('#comment', text),

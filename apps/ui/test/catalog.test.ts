@@ -36,11 +36,11 @@ function manifest(version: string, title: string): WidgetPackageManifest {
 // The API lists versions newest first.
 const clock: InstalledPackage = {
   id: 'dev.a.clock',
-  title: 'Часы',
+  title: 'Clock',
   author: 'a',
   versions: [
-    { version: '2.0.0', hash: 'h2', manifest: manifest('2.0.0', 'Часы 2'), paths: { source: null, assets: null } },
-    { version: '1.0.0', hash: 'h1', manifest: manifest('1.0.0', 'Часы'), paths: { source: null, assets: null } },
+    { version: '2.0.0', hash: 'h2', manifest: manifest('2.0.0', 'Clock 2'), paths: { source: null, assets: null } },
+    { version: '1.0.0', hash: 'h1', manifest: manifest('1.0.0', 'Clock'), paths: { source: null, assets: null } },
   ],
   grants: [],
   origins: [],
@@ -54,12 +54,12 @@ describe('catalog', () => {
 
   it('describes built-in sources and the exact package version of a placed widget', () => {
     expect(describeSource({ kind: 'builtin', type: 'placeholder' }, [])).toEqual({
-      title: 'Заглушка',
+      title: 'Placeholder',
       sizing: findBuiltinWidget('placeholder')!.sizing,
       hash: null,
     })
     expect(describeSource({ kind: 'package', packageId: 'dev.a.clock', version: '1.0.0' }, [clock])).toEqual({
-      title: 'Часы',
+      title: 'Clock',
       sizing: clock.versions[1]!.manifest.sizing,
       hash: 'h1',
     })
@@ -67,11 +67,15 @@ describe('catalog', () => {
     expect(describeSource({ kind: 'builtin', type: 'nope' }, [])).toBeNull()
   })
 
+  it('reports the settings schema a built-in widget declares', () => {
+    expect(describeSource({ kind: 'builtin', type: 'clock-analog-1' }, [])?.settings).toBe(findBuiltinWidget('clock-analog-1')!.settings)
+  })
+
   it('reports the frame a package version declares, and no frame key when it declares none', () => {
-    const framelessManifest = { ...manifest('2.0.0', 'Часы 2'), sdk: 3 as const, frame: 'frameless' as const }
+    const framelessManifest = { ...manifest('2.0.0', 'Clock 2'), sdk: 3 as const, frame: 'frameless' as const }
     const frameless: InstalledPackage = { ...clock, versions: [{ ...clock.versions[0]!, manifest: framelessManifest }, clock.versions[1]!] }
     expect(describeSource({ kind: 'package', packageId: 'dev.a.clock', version: '2.0.0' }, [frameless])).toEqual({
-      title: 'Часы 2',
+      title: 'Clock 2',
       sizing: clock.versions[0]!.manifest.sizing,
       hash: 'h2',
       frame: 'frameless',
@@ -82,9 +86,9 @@ describe('catalog', () => {
 
   it('offers built-ins and the newest version of each package', () => {
     expect(pickerEntries([clock])).toEqual([
-      { key: 'builtin:placeholder', title: 'Заглушка', source: { kind: 'builtin', type: 'placeholder' } },
-      { key: 'builtin:clock-analog-1', title: 'Часы: лес', source: { kind: 'builtin', type: 'clock-analog-1' } },
-      { key: 'package:dev.a.clock', title: 'Часы 2', source: { kind: 'package', packageId: 'dev.a.clock', version: '2.0.0' } },
+      { key: 'builtin:placeholder', title: 'Placeholder', source: { kind: 'builtin', type: 'placeholder' } },
+      { key: 'builtin:clock-analog-1', title: 'Clock: forest', source: { kind: 'builtin', type: 'clock-analog-1' } },
+      { key: 'package:dev.a.clock', title: 'Clock 2', source: { kind: 'package', packageId: 'dev.a.clock', version: '2.0.0' } },
     ])
   })
 
@@ -136,16 +140,16 @@ describe('filesFromEntry', () => {
 
 describe('readFolder', () => {
   it('needs widget.json at the root', async () => {
-    expect(await readFolder([picked('clock-1.0.0/widget.json', '{}')])).toEqual({ ok: false, message: 'В папке нет widget.json' })
+    expect(await readFolder([picked('clock-1.0.0/widget.json', '{}')])).toEqual({ ok: false, message: 'The folder has no widget.json' })
   })
 
   it('rejects a widget.json that is not JSON', async () => {
-    expect(await readFolder([picked('widget.json', '<html>')])).toEqual({ ok: false, message: 'widget.json не является JSON' })
+    expect(await readFolder([picked('widget.json', '<html>')])).toEqual({ ok: false, message: 'widget.json is not valid JSON' })
   })
 
   it('reports the folder validation error', async () => {
     const result = await readFolder([picked('widget.json', JSON.stringify(MANIFEST)), picked('index.js', ''), picked('notes.txt', 'x')])
-    expect(result).toEqual({ ok: false, message: 'Папка отклонена: files: "notes.txt" is not an allowed path' })
+    expect(result).toEqual({ ok: false, message: 'Folder rejected: files: "notes.txt" is not an allowed path' })
   })
 
   it('returns the manifest and the file list', async () => {
@@ -213,7 +217,7 @@ describe('describeUploadFailure', () => {
     const failure = { kind: 'invalid' as const, code: 'NOT_FOUND', message: 'Upload not found or expired' }
     expect(describeUploadFailure({ ok: false, path: 'assets/a.png', failure })).toEqual({
       restart: true,
-      message: 'Загрузка прервана на assets/a.png, начните заново',
+      message: 'Upload interrupted at assets/a.png, start over',
     })
   })
 
@@ -221,13 +225,13 @@ describe('describeUploadFailure', () => {
     { kind: 'unavailable' as const },
     { kind: 'invalid' as const, code: 'VALIDATION_ERROR', message: 'Rejected' },
   ])('offers a retry for $kind', (failure) => {
-    expect(describeUploadFailure({ ok: false, path: 'index.js', failure })).toEqual({ restart: false, message: 'Не удалось загрузить index.js' })
+    expect(describeUploadFailure({ ok: false, path: 'index.js', failure })).toEqual({ restart: false, message: 'Could not upload index.js' })
   })
 })
 
 describe('describeInstallFailure', () => {
   it('asks to start over when the upload session is gone', () => {
-    expect(describeInstallFailure({ kind: 'invalid', code: 'NOT_FOUND', message: 'Upload not found or expired' })).toBe('Загрузка прервана, начните заново')
+    expect(describeInstallFailure({ kind: 'invalid', code: 'NOT_FOUND', message: 'Upload not found or expired' })).toBe('Upload interrupted, start over')
   })
 
   it.each([
@@ -241,11 +245,11 @@ describe('describeInstallFailure', () => {
 
 describe('formatBytes', () => {
   it.each([
-    [0, '0 КБ'],
-    [1, '1 КБ'],
-    [1536, '2 КБ'],
-    [1_048_576, '1.0 МБ'],
-    [52_428_800, '50.0 МБ'],
+    [0, '0 KB'],
+    [1, '1 KB'],
+    [1536, '2 KB'],
+    [1_048_576, '1.0 MB'],
+    [52_428_800, '50.0 MB'],
   ])('%d → %s', (bytes, text) => {
     expect(formatBytes(bytes)).toBe(text)
   })

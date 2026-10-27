@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useId, useTemplateRef, watch } from 'vue'
+import { computed, ref, useId, useTemplateRef, watch, type Component } from 'vue'
 import {
   BARE_THEME_ID,
   DEFAULT_SHADOW,
@@ -10,6 +10,7 @@ import {
 import type { SettingsSchema } from '@lifedashboard/contracts/widget-settings'
 import { BUILTIN_THEMES } from '../theme/builtin'
 import { panelPosition, styleValue, withShadow, withStyle } from './widget-settings'
+import UiSelect from '../ui/UiSelect.vue'
 import WidgetConfigForm from './WidgetConfigForm.vue'
 
 // One per board: a non-modal popover beside the widget being tuned, anchored to the widget item so its
@@ -23,12 +24,15 @@ const props = defineProps<{
   secrets: ReadonlySet<string>
   version: string
   versions: string[]
+  // A built-in widget's own settings form; it replaces the generic one built from the schema.
+  editor?: Component
 }>()
 const emit = defineEmits<{
   change: [next: WidgetAppearance | null]
   config: [next: Record<string, unknown>]
   toggle: [open: boolean]
   version: [version: string]
+  reset: []
 }>()
 
 const panel = useTemplateRef<HTMLElement>('panelBox')
@@ -36,14 +40,19 @@ const uid = useId()
 const selectedVersion = ref(props.version)
 watch(() => [props.widgetId, props.version], () => { selectedVersion.value = props.version })
 const shadow = computed(() => props.appearance?.shadow ?? null)
-// While the shadow is off the controls show DEFAULT_SHADOW, disabled; nothing is written.
-const shown = computed(() => shadow.value ?? DEFAULT_SHADOW)
-const percent = computed(() => Math.round(shown.value.opacity * 100))
+// The shadow controls are shown only while the shadow is on.
+const percent = computed(() => Math.round((shadow.value?.opacity ?? 0) * 100))
 const offsets = [
   { key: 'x', label: 'X', limits: SHADOW_LIMITS.x },
   { key: 'y', label: 'Y', limits: SHADOW_LIMITS.y },
-  { key: 'blur', label: 'Размытие', limits: SHADOW_LIMITS.blur },
+  { key: 'blur', label: 'Blur', limits: SHADOW_LIMITS.blur },
 ] as const
+const styleOptions = [
+  { value: '', label: 'Same as board' },
+  ...BUILTIN_THEMES.map((theme) => ({ value: theme.id, label: theme.name })),
+  { value: BARE_THEME_ID, label: 'No frame' },
+]
+const versionOptions = computed(() => props.versions.map((item) => ({ value: item, label: item })))
 
 function isOpen(): boolean {
   return panel.value?.matches(':popover-open') ?? false
@@ -75,14 +84,14 @@ function onFocusOut(event: FocusEvent) {
 
 function onToggle(event: ToggleEvent) {
   const opened = event.newState === 'open'
-  if (opened) panel.value?.querySelector<HTMLElement>('select')?.focus()
+  if (opened) panel.value?.querySelector<HTMLElement>('.ui-select')?.focus()
   emit('toggle', opened)
 }
 
 const valueOf = (event: Event) => (event.target as HTMLInputElement | HTMLSelectElement).value
 
-function setStyle(event: Event) {
-  emit('change', withStyle(props.appearance, valueOf(event)))
+function setStyle(value: string) {
+  emit('change', withStyle(props.appearance, value))
 }
 
 function setShadowOn(event: Event) {
@@ -101,71 +110,72 @@ defineExpose({ open, close, isOpen })
     ref="panelBox"
     popover="auto"
     role="dialog"
-    aria-label="Настройки виджета"
+    aria-label="Widget settings"
     class="settings"
     @toggle="onToggle"
     @focusout="onFocusOut"
   >
     <template v-if="versions.length > 0">
-      <label class="settings__row">
-        <span class="settings__label">Версия</span>
-        <select v-model="selectedVersion" class="settings__control">
-          <option v-for="item in versions" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <button type="button" class="settings__reset" :disabled="selectedVersion === version" @click="emit('version', selectedVersion)">Применить версию</button>
-      <p class="settings__version-hint">Смена версии сохраняет изменения доски и данные виджета. Секреты с изменённой привязкой потребуется задать заново.</p>
+      <div class="settings__row">
+        <label class="settings__label" :for="`${uid}-version`">Version</label>
+        <UiSelect :id="`${uid}-version`" v-model="selectedVersion" :options="versionOptions" />
+      </div>
+      <button type="button" class="settings__reset" :disabled="selectedVersion === version" @click="emit('version', selectedVersion)">Apply version</button>
+      <p class="settings__version-hint">Changing the version keeps the board changes and the widget data. Secrets whose binding changed must be set again.</p>
     </template>
+    <div class="settings__row">
+      <label class="settings__label" :for="`${uid}-style`">Style</label>
+      <UiSelect :id="`${uid}-style`" :model-value="styleValue(appearance)" :options="styleOptions" @update:model-value="setStyle" />
+    </div>
     <label class="settings__row">
-      <span class="settings__label">Стиль</span>
-      <select class="settings__control" :value="styleValue(appearance)" @change="setStyle">
-        <option value="">Как у доски</option>
-        <option v-for="theme in BUILTIN_THEMES" :key="theme.id" :value="theme.id">{{ theme.name }}</option>
-        <option :value="BARE_THEME_ID">Без оформления</option>
-      </select>
-    </label>
-    <label class="settings__row">
-      <span class="settings__label">Тень</span>
+      <span class="settings__label">Shadow</span>
       <input type="checkbox" :checked="shadow !== null" @change="setShadowOn" />
     </label>
-    <!-- The value sits outside the label, so a slider's accessible name does not change while it is dragged. -->
-    <div v-for="item in offsets" :key="item.key" class="settings__row">
-      <label class="settings__label" :for="`${uid}-${item.key}`">{{ item.label }}</label>
-      <input
-        :id="`${uid}-${item.key}`"
-        type="range"
-        class="settings__control"
-        :min="item.limits[0]"
-        :max="item.limits[1]"
-        step="1"
-        :value="shown[item.key]"
-        :disabled="!shadow"
-        @input="setShadow(item.key, Number(valueOf($event)))"
-      />
-      <output class="settings__value">{{ shown[item.key] }} px</output>
-    </div>
-    <label class="settings__row">
-      <span class="settings__label">Цвет</span>
-      <input type="color" :value="shown.color" :disabled="!shadow" @input="setShadow('color', valueOf($event))" />
-    </label>
-    <div class="settings__row">
-      <label class="settings__label" :for="`${uid}-opacity`">Непрозрачность</label>
-      <input
-        :id="`${uid}-opacity`"
-        type="range"
-        class="settings__control"
-        min="0"
-        max="100"
-        step="1"
-        :value="percent"
-        :disabled="!shadow"
-        @input="setShadow('opacity', Number(valueOf($event)) / 100)"
-      />
-      <output class="settings__value">{{ percent }} %</output>
-    </div>
-    <button type="button" class="settings__reset" @click="emit('change', null)">Сбросить</button>
+    <template v-if="shadow">
+      <!-- The value sits outside the label, so a slider's accessible name does not change while it is dragged. -->
+      <div v-for="item in offsets" :key="item.key" class="settings__row">
+        <label class="settings__label" :for="`${uid}-${item.key}`">{{ item.label }}</label>
+        <input
+          :id="`${uid}-${item.key}`"
+          type="range"
+          class="settings__control"
+          :min="item.limits[0]"
+          :max="item.limits[1]"
+          step="1"
+          :value="shadow[item.key]"
+          @input="setShadow(item.key, Number(valueOf($event)))"
+        />
+        <output class="settings__value">{{ shadow[item.key] }} px</output>
+      </div>
+      <label class="settings__row">
+        <span class="settings__label">Color</span>
+        <input type="color" :value="shadow.color" @input="setShadow('color', valueOf($event))" />
+      </label>
+      <div class="settings__row">
+        <label class="settings__label" :for="`${uid}-opacity`">Opacity</label>
+        <input
+          :id="`${uid}-opacity`"
+          type="range"
+          class="settings__control"
+          min="0"
+          max="100"
+          step="1"
+          :value="percent"
+          @input="setShadow('opacity', Number(valueOf($event)) / 100)"
+        />
+        <output class="settings__value">{{ percent }} %</output>
+      </div>
+    </template>
+    <component
+      :is="editor"
+      v-if="editor && schema"
+      :key="`editor:${widgetId ?? 'unsaved'}`"
+      :schema="schema"
+      :config="config"
+      @change="emit('config', $event)"
+    />
     <WidgetConfigForm
-      v-if="schema && Object.keys(schema.properties).length > 0"
+      v-else-if="schema && Object.keys(schema.properties).length > 0"
       :key="widgetId ?? 'unsaved'"
       :schema="schema"
       :config="config"
@@ -173,6 +183,9 @@ defineExpose({ open, close, isOpen })
       :secrets="secrets"
       @change="emit('config', $event)"
     />
+    <div class="settings__footer">
+      <button type="button" class="settings__reset" @click="emit('reset')">Reset widget settings</button>
+    </div>
   </div>
 </template>
 
@@ -183,28 +196,42 @@ defineExpose({ open, close, isOpen })
   position: fixed;
   inset: auto;
   margin: 0;
-  width: 21rem;
+  width: 18rem;
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
-  padding: 0.75rem;
+  padding: 0.625rem 0.75rem;
   border: var(--ld-border-width) solid var(--ld-border-default);
   border-radius: var(--ld-radius-card);
   background: var(--ld-surface-2);
   color: var(--ld-text-primary);
   box-shadow: var(--ld-shadow-raised, none);
   font: inherit;
+  /* Its own size: the board scales its font with the grid, the panel stays compact. */
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
 }
 
 .settings:popover-open {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 
 .settings__row {
   display: grid;
-  grid-template-columns: 9rem 1fr 3rem;
+  grid-template-columns: 6.5rem 1fr 2.75rem;
   align-items: center;
   gap: 0.5rem;
+  min-height: 1.75rem;
+}
+
+.settings__row > input[type='checkbox'] {
+  justify-self: start;
+  margin: 0;
+}
+
+/* Deep: the widget's own settings form is a child component. */
+.settings :deep(input) {
+  accent-color: var(--ld-accent);
 }
 
 .settings__label {
@@ -213,7 +240,8 @@ defineExpose({ open, close, isOpen })
 
 .settings__version-hint {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
   color: var(--ld-text-secondary);
 }
 
@@ -222,8 +250,13 @@ defineExpose({ open, close, isOpen })
 }
 
 /* The select has no value column: it spans the control and value columns so long names fit. */
-select.settings__control {
+.settings__row :deep(.ui-select-field) {
   grid-column: 2 / -1;
+}
+
+.settings__footer {
+  padding-top: 0.5rem;
+  border-top: var(--ld-border-width) solid var(--ld-border-default);
 }
 
 .settings__value {
@@ -233,7 +266,7 @@ select.settings__control {
 
 .settings__reset {
   justify-self: start;
-  padding: 0.25rem 0.75rem;
+  padding: 0.125rem 0.625rem;
   border: var(--ld-border-width) solid var(--ld-border-default);
   border-radius: var(--ld-radius-control);
   background: var(--ld-surface-3);
@@ -242,7 +275,6 @@ select.settings__control {
   cursor: pointer;
 }
 
-.settings select:focus-visible,
 .settings input:focus-visible,
 .settings__reset:focus-visible {
   outline: 0.125rem solid var(--ld-focus-ring);

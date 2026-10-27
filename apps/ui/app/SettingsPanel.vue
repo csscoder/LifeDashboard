@@ -2,6 +2,7 @@
 import { ref, useTemplateRef } from 'vue'
 import { GRID_COLS } from '@lifedashboard/contracts/grid'
 import { BUILTIN_THEMES } from './theme/builtin'
+import UiSelect from './ui/UiSelect.vue'
 import type { PickerEntry } from './widgets/catalog'
 
 const props = defineProps<{
@@ -25,10 +26,8 @@ function close() {
   panel.value?.hidePopover()
 }
 
-function pick(event: Event) {
-  const select = event.target as HTMLSelectElement
-  const key = select.value
-  select.value = ''
+// An action picker: its value stays '', so it shows «＋ Add widget…» again after each pick.
+function pick(key: string) {
   if (!props.loaded || !props.viewing || !props.entries.some((entry) => entry.key === key)) return
   close()
   emit('pick', key)
@@ -41,11 +40,11 @@ function pick(event: Event) {
     <button
       type="button"
       class="settings__trigger"
-      aria-label="Настройки доски"
+      aria-label="Board settings"
       aria-controls="dashboard-settings"
       :aria-expanded="open"
       popovertarget="dashboard-settings"
-      title="Настройки доски"
+      title="Board settings"
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true">
         <path d="m9.5 3-.6 2.1-1.6.9-2.1-.5-2.5 4.3 1.5 1.6v1.8l-1.5 1.6 2.5 4.3 2.1-.5 1.6.9.6 2.1h5l.6-2.1 1.6-.9 2.1.5 2.5-4.3-1.5-1.6v-1.8l1.5-1.6-2.5-4.3-2.1.5-1.6-.9L14.5 3z" />
@@ -63,35 +62,40 @@ function pick(event: Event) {
     >
       <header class="settings__header">
         <h2 id="settings-title"><span class="settings__brand-dot" /> LifeDashboard</h2>
-        <button type="button" class="settings__close" aria-label="Закрыть настройки" popovertarget="dashboard-settings" popovertargetaction="hide">×</button>
+        <button type="button" class="settings__close" aria-label="Close settings" popovertarget="dashboard-settings" popovertargetaction="hide">×</button>
       </header>
 
       <div class="settings__section">
-        <p class="settings__caption">Текущее пространство</p>
+        <p class="settings__caption">Current space</p>
         <div class="settings__space">
           <span class="settings__space-icon" aria-hidden="true">{{ spaceIcon }}</span>
           <div class="settings__space-info">
-            <p class="settings__space-title" :title="spaceTitle">{{ spaceTitle || 'Пространство не выбрано' }}</p>
-            <p class="settings__hint">{{ screenCount ? `Экран ${screenIndex + 1} из ${screenCount}` : 'Доска загружается…' }}</p>
+            <p class="settings__space-title" :title="spaceTitle">{{ spaceTitle || 'No space selected' }}</p>
+            <p class="settings__hint">{{ screenCount ? `Screen ${screenIndex + 1} of ${screenCount}` : 'Loading the board…' }}</p>
           </div>
         </div>
       </div>
 
       <div class="settings__actions">
-        <select class="settings__picker" aria-label="Добавить виджет" :disabled="!loaded || !viewing" @change="pick">
-          <option value="" selected>＋ Добавить виджет…</option>
-          <option v-for="entry in entries" :key="entry.key" :value="entry.key">{{ entry.title }}</option>
-        </select>
+        <UiSelect
+          class="settings__picker"
+          aria-label="Add widget"
+          model-value=""
+          placeholder="＋ Add widget…"
+          :options="entries.map((entry) => ({ value: entry.key, label: entry.title }))"
+          :disabled="!loaded || !viewing"
+          @update:model-value="pick"
+        />
         <button type="button" class="settings__action" :disabled="!loaded || !viewing" @click="close(); emit('edit')">
-          <span aria-hidden="true">✎</span> Изменить доску <span class="settings__action-end" aria-hidden="true">↗</span>
+          <span aria-hidden="true">✎</span> Edit board <span class="settings__action-end" aria-hidden="true">↗</span>
         </button>
         <button type="button" class="settings__action" :disabled="!viewing" @click="close(); emit('library')">
-          <span aria-hidden="true">▦</span> Библиотека виджетов <span class="settings__action-end" aria-hidden="true">↗</span>
+          <span aria-hidden="true">▦</span> Widget library <span class="settings__action-end" aria-hidden="true">↗</span>
         </button>
       </div>
 
       <fieldset class="settings__themes">
-        <legend>Тема дашборда по умолчанию</legend>
+        <legend>Default dashboard theme</legend>
         <div class="settings__theme-list">
           <button
             v-for="theme in BUILTIN_THEMES"
@@ -171,9 +175,9 @@ function pick(event: Event) {
 .settings__space-title { overflow: hidden; margin: 0 0 0.125rem; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--ld-weight-medium); }
 .settings__hint { font-size: 0.6875rem; }
 .settings__actions { display: grid; gap: 0.5rem; }
-.settings__picker, .settings__action { width: 100%; min-height: 2.75rem; padding: 0.625rem 0.875rem; border: var(--ld-border-width) solid var(--ld-border-subtle); border-radius: 0.9375rem; background: var(--ld-state-hover); color: var(--ld-text-primary); font: inherit; cursor: pointer; }
-.settings__picker { margin-bottom: 0.375rem; border-color: var(--ld-info); background: var(--ld-info-subtle); color: var(--ld-info-text); }
-.settings__picker option { background: var(--ld-surface-1-solid); color: var(--ld-text-primary); }
+.settings__action, .settings__actions :deep(.settings__picker) { width: 100%; min-height: 2.75rem; padding: 0.625rem 0.875rem; border: var(--ld-border-width) solid var(--ld-border-subtle); border-radius: 0.9375rem; background: var(--ld-state-hover); color: var(--ld-text-primary); font: inherit; cursor: pointer; }
+.settings__actions :deep(.settings__picker) { height: auto; margin-bottom: 0.375rem; border-color: var(--ld-info); background: var(--ld-info-subtle); color: var(--ld-info-text); }
+.settings__actions :deep(.settings__picker .ui-select__icon) { color: var(--ld-info-text); }
 .settings__action { display: flex; align-items: center; gap: 0.625rem; text-align: left; }
 .settings__action-end { margin-left: auto; color: var(--ld-text-muted); }
 .settings__action:hover:not(:disabled) { background: var(--ld-state-selected); }

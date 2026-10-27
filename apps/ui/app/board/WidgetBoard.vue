@@ -8,9 +8,10 @@ import { askDelete, pendingDelete } from '../spaces/confirm-delete'
 import { afterDelete } from '../spaces/nav'
 import { resolveWidgetLook } from '../theme/resolve'
 import { describeSource, installedPackages } from '../widgets/catalog'
+import { builtinSettingsEditors } from '../widgets/registry'
 import { refreshSecretFlags, useSecretFlags } from '../widgets/secret-flags'
 import WidgetHost from '../widgets/WidgetHost.vue'
-import { addInstance, focusAfterRemoval, isSameBoard, readingOrder, removeInstance, setAppearance, setConfig, setPackageVersion, setPlacement, withRows, withTheme, withBackground, type BoardMode } from './edit-session'
+import { addInstance, focusAfterRemoval, isSameBoard, readingOrder, removeInstance, resetWidget, setAppearance, setConfig, setPackageVersion, setPlacement, withRows, withTheme, withBackground, type BoardMode } from './edit-session'
 import { isFormControlTarget } from './keyboard'
 import { afterLoad, afterManage, afterSave, afterStaySave, useSpaceSync, type Reaction } from './space-sync'
 import { screenNamed, useScreenModel } from './screen-model'
@@ -28,7 +29,7 @@ const emit = defineEmits<{
   // 'down' after a failed save: the board stays, the header shows the API as unavailable.
   api: [status: 'ok' | 'down']
   unauthorized: []
-  // A load failed: the app replaces the board with «Повторить».
+  // A load failed: the app replaces the board with «Retry».
   unavailable: []
 }>()
 
@@ -167,7 +168,7 @@ watch(
 )
 
 function rectLabel(rect: Rect) {
-  return `Виджет ${rect.w}×${rect.h}, колонка ${rect.x + 1}, ряд ${rect.y + 1}`
+  return `Widget ${rect.w}×${rect.h}, column ${rect.x + 1}, row ${rect.y + 1}`
 }
 
 const liveLabel = computed(() => (activeRect.value ? rectLabel(activeRect.value) : ''))
@@ -281,7 +282,7 @@ async function removeScreen(): Promise<'deleted' | 'last' | 'cancelled' | 'faile
   const id = doc.value.id
   const ids = screens.value
   const result = await runDeleteScreen({
-    ask: () => askDelete('Удалить экран? Виджеты на нём будут удалены.'),
+    ask: () => askDelete('Delete the screen? Its widgets will be deleted.'),
     remove: () => deleteScreenOnServer(id),
   })
   if ('cancelled' in result) return 'cancelled'
@@ -305,7 +306,7 @@ function start() {
     sizing &&
     (findFreeRect(sizing.default, others, doc.value.rows) ?? findFreeRect(sizing.min, others, doc.value.rows))
   if (!rect) {
-    emit('notice', 'Нет свободного места')
+    emit('notice', 'No free space')
     mode.value = 'view'
     return
   }
@@ -409,8 +410,18 @@ function changeConfig(next: Record<string, unknown>) {
   if (editing.value && !saving.value && settingsId.value) working.value = setConfig(working.value, settingsId.value, next)
 }
 
+// The modal closes the panel (showModal hides open popovers), so the widget is taken before asking.
+async function resetSettings() {
+  const id = settingsId.value
+  if (!id || !editing.value || saving.value) return
+  const ok = await askDelete('Reset all settings of this widget? Style, shadow and widget options return to their defaults.', { confirm: 'Reset', cancel: 'Cancel' })
+  if (ok && editing.value && !saving.value && working.value.instances.some((item) => item.id === id)) working.value = resetWidget(working.value, id)
+  gearOf(id)?.focus({ preventScroll: true })
+}
+
 const settingsInstance = computed(() => working.value.instances.find((item) => item.id === settingsId.value))
 const settingsSchema = computed(() => settingsInstance.value ? describeSource(settingsInstance.value.source)?.settings : undefined)
+const settingsEditor = computed(() => settingsInstance.value?.source.kind === 'builtin' ? builtinSettingsEditors.get(settingsInstance.value.source.type) : undefined)
 const settingsWidgetId = computed(() => doc.value.instances.find((item) => item.id === settingsInstance.value?.id)?.id ?? null)
 const settingsSecrets = useSecretFlags(() => settingsSchema.value && settingsWidgetId.value ? settingsWidgetId.value : undefined)
 const settingsVersion = computed(() => settingsInstance.value?.source.kind === 'package' ? settingsInstance.value.source.version : '')
@@ -485,7 +496,7 @@ function onKeydown(event: KeyboardEvent) {
     event.preventDefault()
     step(arrow[0], arrow[1], event.shiftKey)
   } else if (event.key === 'Enter' && !(event.target instanceof HTMLButtonElement)) {
-    // A focused button handles Enter itself (Готово confirms, Отмена cancels, × deletes).
+    // A focused button handles Enter itself (Done confirms, Cancel cancels, × deletes).
     event.preventDefault()
     confirm()
   } else if (event.key === 'Escape') {
@@ -638,7 +649,7 @@ defineExpose({
           v-if="editing"
           type="button"
           class="board__remove"
-          :aria-label="`Удалить виджет ${placement.w}×${placement.h}`"
+          :aria-label="`Delete widget ${placement.w}×${placement.h}`"
           @pointerdown.stop
           @click="removeWidget(instance.id)"
         >
@@ -649,7 +660,7 @@ defineExpose({
           type="button"
           class="board__settings"
           :data-settings="instance.id"
-          aria-label="Настройки виджета"
+          aria-label="Widget settings"
           :aria-expanded="settingsOpen && settingsId === instance.id"
           @pointerdown.stop="pressGear(instance.id)"
           @click="toggleSettings($event, instance.id)"
@@ -686,9 +697,11 @@ defineExpose({
       :secrets="settingsSecrets"
       :version="settingsVersion"
       :versions="settingsVersions"
+      :editor="settingsEditor"
       @change="changeAppearance"
       @config="changeConfig"
       @version="changeVersion"
+      @reset="resetSettings"
       @toggle="onSettingsToggle"
     />
     <p class="board__live" aria-live="polite">{{ liveLabel }}</p>

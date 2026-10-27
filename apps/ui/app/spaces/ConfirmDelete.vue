@@ -38,8 +38,8 @@ function onClose() {
     <template v-if="pendingDelete">
       <p id="confirm-delete-title" class="confirm__message">{{ pendingDelete.message }}</p>
       <div class="confirm__actions">
-        <button ref="cancelBox" type="button" class="confirm__button" @click="pendingDelete.answer(false)">Отмена</button>
-        <button type="button" class="confirm__button confirm__button--danger" @click="pendingDelete.answer(true)">Удалить</button>
+        <button ref="cancelBox" type="button" class="confirm__button" @click="pendingDelete.answer(false)">{{ pendingDelete.labels?.cancel ?? 'Cancel' }}</button>
+        <button type="button" class="confirm__button confirm__button--danger" @click="pendingDelete.answer(true)">{{ pendingDelete.labels?.confirm ?? 'Delete' }}</button>
       </div>
     </template>
   </dialog>

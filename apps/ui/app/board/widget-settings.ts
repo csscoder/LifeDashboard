@@ -1,13 +1,13 @@
 import { BARE_THEME_ID, type DropShadow, type WidgetAppearance } from '@lifedashboard/contracts/board'
 import { BUILTIN_THEME_IDS } from '../theme/builtin'
 
-/** The «Стиль» value: '' is «Как у доски», which a stored unknown id also shows. */
+/** The «Style» value: '' is «Same as board», which a stored unknown id also shows. */
 export function styleValue(appearance: WidgetAppearance | undefined): string {
   const id = appearance?.themeId ?? null
   return id !== null && (id === BARE_THEME_ID || BUILTIN_THEME_IDS.has(id)) ? id : ''
 }
 
-/** A new «Стиль»; the shadow stays. */
+/** A new «Style»; the shadow stays. */
 export function withStyle(appearance: WidgetAppearance | undefined, value: string): WidgetAppearance {
   return { themeId: value === '' ? null : value, shadow: appearance?.shadow ?? null }
 }

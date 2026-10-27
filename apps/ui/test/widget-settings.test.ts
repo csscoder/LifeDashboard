@@ -22,7 +22,7 @@ describe('withStyle', () => {
     expect(withStyle({ themeId: null, shadow: DEFAULT_SHADOW }, BARE_THEME_ID)).toEqual({ themeId: BARE_THEME_ID, shadow: DEFAULT_SHADOW })
   })
 
-  it('maps «Как у доски» to null', () => {
+  it('maps «Same as board» to null', () => {
     expect(withStyle({ themeId: 'builtin:paper', shadow: null }, '')).toEqual({ themeId: null, shadow: null })
     expect(withStyle(undefined, '')).toEqual({ themeId: null, shadow: null })
   })

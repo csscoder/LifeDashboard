@@ -57,7 +57,7 @@ export async function loadPackages(client: Pick<typeof api, 'widgetPackages'>): 
 export function describeSource(source: WidgetSource, packages: readonly InstalledPackage[] = installedPackages.value): SourceInfo | null {
   if (source.kind === 'builtin') {
     const manifest = findBuiltinWidget(source.type)
-    return manifest ? { title: manifest.title, sizing: manifest.sizing, hash: null } : null
+    return manifest ? { title: manifest.title, sizing: manifest.sizing, hash: null, ...(manifest.settings ? { settings: manifest.settings } : {}) } : null
   }
   const version = packages.find((pkg) => pkg.id === source.packageId)?.versions.find((item) => item.version === source.version)
   if (!version) return null
@@ -71,7 +71,7 @@ export function describeSource(source: WidgetSource, packages: readonly Installe
   }
 }
 
-/** «Добавить виджет»: built-in widgets, then the newest installed version of each package. */
+/** «Add widget»: built-in widgets, then the newest installed version of each package. */
 export function pickerEntries(packages: readonly InstalledPackage[] = installedPackages.value): PickerEntry[] {
   const builtins = BUILTIN_WIDGETS.map((manifest): PickerEntry => ({
     key: `builtin:${manifest.type}`,
@@ -120,16 +120,16 @@ const OS_METADATA = new Set(['.ds_store', 'thumbs.db', 'desktop.ini'])
 export async function readFolder(all: readonly PickedFile[]): Promise<FolderRead> {
   const files = all.filter((item) => !OS_METADATA.has(item.path.split('/').pop()!.toLowerCase()))
   const manifestFile = files.find((item) => item.path === 'widget.json')
-  if (!manifestFile) return { ok: false, message: 'В папке нет widget.json' }
+  if (!manifestFile) return { ok: false, message: 'The folder has no widget.json' }
   let manifest: unknown
   try {
     manifest = JSON.parse(await manifestFile.file.text())
   } catch {
-    return { ok: false, message: 'widget.json не является JSON' }
+    return { ok: false, message: 'widget.json is not valid JSON' }
   }
   const list = files.map((item) => ({ path: item.path, size: item.file.size }))
   const parsed = parseWidgetFolder(manifest, list)
-  return parsed.ok ? { ok: true, manifest, files: list, picked: files } : { ok: false, message: `Папка отклонена: ${parsed.error}` }
+  return parsed.ok ? { ok: true, manifest, files: list, picked: files } : { ok: false, message: `Folder rejected: ${parsed.error}` }
 }
 
 /** Sends files three at a time; stops at the first failure and names its file. */
@@ -162,30 +162,30 @@ export async function uploadFiles(
 export function describeUploadFailure(outcome: Extract<UploadOutcome, { ok: false }>): { restart: boolean; message: string } {
   const { failure, path } = outcome
   return failure.kind === 'invalid' && failure.code === 'NOT_FOUND'
-    ? { restart: true, message: `Загрузка прервана на ${path}, начните заново` }
-    : { restart: false, message: `Не удалось загрузить ${path}` }
+    ? { restart: true, message: `Upload interrupted at ${path}, start over` }
+    : { restart: false, message: `Could not upload ${path}` }
 }
 
 /** The install call failed: an ended session needs a fresh start; null leaves the text to the caller. */
 export function describeInstallFailure(failure: ApiFailure): string | null {
-  return failure.kind === 'invalid' && failure.code === 'NOT_FOUND' ? 'Загрузка прервана, начните заново' : null
+  return failure.kind === 'invalid' && failure.code === 'NOT_FOUND' ? 'Upload interrupted, start over' : null
 }
 
 export function formatBytes(bytes: number): string {
-  return bytes < 1_048_576 ? `${Math.ceil(bytes / 1024)} КБ` : `${(bytes / 1_048_576).toFixed(1)} МБ`
+  return bytes < 1_048_576 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1_048_576).toFixed(1)} MB`
 }
 
 export type GrantModes = Partial<Record<WidgetPermission, GrantMode>>
 
-/** Permissions that offer «Спрашивать каждый раз / Разрешить». */
+/** Permissions that offer «Ask every time / Allow». */
 export const CONFIRMABLE_PERMISSIONS: ReadonlySet<WidgetPermission> = new Set(confirmablePermissions())
 
-/** Install screen: a new confirmable permission starts as «Спрашивать»; others offer no mode. */
+/** Install screen: a new confirmable permission starts as «Ask»; others offer no mode. */
 export function initialModes(newPermissions: readonly WidgetPermission[]): GrantModes {
   return Object.fromEntries(newPermissions.filter((permission) => CONFIRMABLE_PERMISSIONS.has(permission)).map((permission) => [permission, 'ask']))
 }
 
-/** After an install: new confirmable permissions the user switched to «Разрешить». Held grants are never touched. */
+/** After an install: new confirmable permissions the user switched to «Allow». Held grants are never touched. */
 export function relaxedPermissions(newPermissions: readonly WidgetPermission[], modes: GrantModes): WidgetPermission[] {
   return newPermissions.filter((permission) => CONFIRMABLE_PERMISSIONS.has(permission) && modes[permission] === 'allow')
 }

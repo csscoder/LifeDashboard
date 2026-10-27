@@ -71,7 +71,7 @@ describe('plainConfig', () => {
 })
 
 describe('secretStatusMessage', () => {
-  const hint = 'Сохраните доску, чтобы задать секрет'
+  const hint = 'Save the board to set a secret'
 
   it('asks to save for an unsaved instance or a 404', () => {
     expect(secretStatusMessage(null)).toBe(hint)
@@ -88,7 +88,7 @@ describe('secretStatusMessage', () => {
     { kind: 'rate-limited' }, { kind: 'confirmation-required', confirmationId: 'id' },
     { kind: 'upstream', message: 'Unavailable upstream' }, { kind: 'unavailable' },
   ])('shows the generic failure message for $kind', (failure) => {
-    expect(secretStatusMessage({ ok: false, ...failure })).toBe('Не удалось сохранить секрет')
+    expect(secretStatusMessage({ ok: false, ...failure })).toBe('Could not save the secret')
   })
 
   it('has no error message on success', () => {
@@ -158,6 +158,11 @@ const renderer = Vue.createRenderer<FormNode, FormNode>({
     target.parent = null
   },
 })
+const UiSelect = Vue.defineComponent({
+  props: { modelValue: String, options: Array },
+  emits: ['update:modelValue'],
+  setup: (props, { attrs, emit }) => () => Vue.h('ui-select', { ...attrs, modelValue: props.modelValue, options: props.options, 'onUpdate:modelValue': (value: string) => emit('update:modelValue', value) }),
+})
 const { descriptor } = parse(readFileSync(new URL('../app/board/WidgetConfigForm.vue', import.meta.url), 'utf8'))
 const compiled = transpileModule(compileScript(descriptor, { id: 'config-form-test', inlineTemplate: true }).content, {
   compilerOptions: { module: ModuleKind.CommonJS },
@@ -168,6 +173,7 @@ const modules: Record<string, unknown> = {
   '@lifedashboard/contracts/widget-settings': settings,
   '@lifedashboard/contracts/widget-secrets': secrets,
   '../api': { api }, '../widgets/secret-flags': { refreshSecretFlags }, './config-form': configForm,
+  '../ui/UiSelect.vue': UiSelect,
 }
 new Function('require', 'exports', compiled)((id: string) => {
   if (!(id in modules)) throw new Error(`Unexpected SFC import: ${id}`)
@@ -205,24 +211,24 @@ describe('WidgetConfigForm', () => {
     for (const label of labels.slice(0, 4)) {
       const contents = [label, ...label.children].map((item) => item.text).join('')
       expect(contents).toContain('*')
-      expect(contents).toContain('обязательно')
+      expect(contents).toContain('required')
     }
     const status = () => form.nodes().find((item) => String(item.props.id).endsWith('-token-status'))!
-    expect(status().text).toBe('не задан')
+    expect(status().text).toBe('not set')
     expect(status().props.class).toContain('settings__warning')
     const optional = form.nodes().find((item) => String(item.props.id).endsWith('-optional-status'))!
     expect(optional.props.class).not.toContain('settings__warning')
     form.props.secrets.add('token')
     await Vue.nextTick()
-    expect(status().text).toBe('задан')
+    expect(status().text).toBe('set')
     expect(status().props.class).not.toContain('settings__warning')
   })
 
   it('explains the secret minimum only while a nonempty password is too short', async () => {
     const form = mountForm({ type: 'object', properties: { token: secret } })
-    const hint = `Минимум ${secrets.SECRET_MIN_LENGTH} символов`
+    const hint = `At least ${secrets.SECRET_MIN_LENGTH} characters`
     const shown = () => form.nodes().some((item) => item.text === hint)
-    const button = () => form.nodes().find((item) => item.tag === 'button' && item.text === 'Задать')!
+    const button = () => form.nodes().find((item) => item.tag === 'button' && item.text === 'Set')!
     expect(shown()).toBe(false)
     expect(button().props.disabled).toBe(true)
     expect(Number(form.field('token').props.minlength)).toBe(secrets.SECRET_MIN_LENGTH)
@@ -243,6 +249,16 @@ describe('WidgetConfigForm', () => {
     expect(form.change).not.toHaveBeenCalled()
     expect(form.field('title').props.maxlength).toBe(settings.SETTINGS_LIMITS.maxLength)
     expect(form.field('short').props.maxlength).toBe(text.maxLength)
+  })
+
+  it('lists an enum setting in the themed select and stores the picked value', () => {
+    const form = mountForm({ type: 'object', properties: { choice } })
+    const select = form.field('choice')
+    expect(select.tag).toBe('ui-select')
+    expect(select.props.modelValue).toBe('a')
+    expect(select.props.options).toEqual([{ value: 'a', label: 'a' }, { value: 'b', label: 'b' }])
+    ;(select.props['onUpdate:modelValue'] as (value: string) => void)('b')
+    expect(form.change).toHaveBeenCalledWith({ choice: 'b' })
   })
 
   it('keeps same-tick edits and resets its draft when config props change', async () => {

@@ -6,3 +6,8 @@ export const builtinWidgetRenderers: ReadonlyMap<string, Component> = new Map<st
   ['placeholder', defineAsyncComponent(() => import('./builtin/PlaceholderWidget.vue'))],
   ['clock-analog-1', defineAsyncComponent(() => import('./builtin/clocks/analog_1/ClockAnalog1.vue'))],
 ])
+
+// Built-ins with their own settings form; the panel shows the generic schema form for the rest.
+export const builtinSettingsEditors: ReadonlyMap<string, Component> = new Map<string, Component>([
+  ['clock-analog-1', defineAsyncComponent(() => import('./builtin/clocks/analog_1/ClockAnalog1Settings.vue'))],
+])

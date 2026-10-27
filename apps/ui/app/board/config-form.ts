@@ -18,8 +18,8 @@ export function mergeConfigField(
 
 export function secretStatusMessage(result: ApiResult<unknown> | null): string | null {
   if (result === null || (!result.ok && result.kind === 'invalid' && result.code === 'NOT_FOUND')) {
-    return 'Сохраните доску, чтобы задать секрет'
+    return 'Save the board to set a secret'
   }
   if (result.ok) return null
-  return result.kind === 'invalid' ? result.message : 'Не удалось сохранить секрет'
+  return result.kind === 'invalid' ? result.message : 'Could not save the secret'
 }

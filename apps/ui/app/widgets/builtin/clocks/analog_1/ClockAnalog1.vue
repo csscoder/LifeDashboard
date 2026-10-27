@@ -1,15 +1,24 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, useId, useTemplateRef, watch } from 'vue'
+import { computed, onMounted, onUnmounted, useId, useTemplateRef, watch } from 'vue'
 import { gsap } from 'gsap'
 import { useWidget } from '@lifedashboard/widget-sdk'
 import face from './clock-analog1.webp'
 import { handAngles, type HandAngles } from './clock-angles'
+import { clockSource, offsetLabel, zoneOffset } from './time-zones'
 
 // Dial centre in face.webp pixels, measured from the alpha bounds; nudge it if the hands look off-centre.
 const CX = 625
 const CY = 612
 
 const { context } = useWidget()
+const source = computed(() => clockSource(context.config))
+const label = computed(() => {
+  const { zone } = source.value
+  return zone === null
+    ? 'Analog clock, system time'
+    // WidgetConfig is the SDK's augmentable empty type; built-ins share it, so the value is read untyped.
+    : `Analog clock, ${zone} (${offsetLabel(zoneOffset(zone, new Date()), String((context.config as Record<string, unknown>).notation))})`
+})
 const id = useId()
 const hands = {
   hour: useTemplateRef<SVGGElement>('hour'),
@@ -29,7 +38,7 @@ function render() {
 
 /** Entrance and catch-up: all hands sweep together, the second hand last. */
 function sweep(duration: number) {
-  const next = (target = handAngles(new Date(), target, 'forward'))
+  const next = (target = handAngles(source.value.read(new Date()), target, 'forward'))
   keys.forEach((key, index) => {
     gsap.to(shown, { [key]: next[key], duration, delay: duration && index * 0.12, ease: 'power3.inOut', overwrite: 'auto', onUpdate: render })
   })
@@ -38,7 +47,7 @@ function sweep(duration: number) {
 /** Once a second: second and minute hands snap with an elastic overshoot, the hour hand glides. */
 function tick() {
   const prev = target
-  const next = (target = handAngles(new Date(), prev))
+  const next = (target = handAngles(source.value.read(new Date()), prev))
   for (const key of keys) {
     if (prev?.[key] === next[key]) continue
     const hour = key === 'hour'
@@ -76,11 +85,18 @@ watch(
   () => context.visible,
   (visible) => (visible ? start(0.8) : stop()),
 )
+// Another zone: the hands sweep to its time; the running tick keeps going.
+watch(
+  () => source.value.zone,
+  () => {
+    if (context.visible) sweep(reduced ? 0 : 0.8)
+  },
+)
 onUnmounted(stop)
 </script>
 
 <template>
-  <svg class="block w-full h-full" :viewBox="`${CX - 605} ${CY - 605} 1210 1210`" role="img" aria-label="Аналоговые часы">
+  <svg class="block w-full h-full" :viewBox="`${CX - 605} ${CY - 605} 1210 1210`" role="img" :aria-label="label">
     <defs>
       <filter :id="`${id}-shadow`" x="-50%" y="-50%" width="200%" height="200%">
         <feDropShadow dx="7" dy="11" stdDeviation="6" flood-color="#2a1608" flood-opacity="0.5" />

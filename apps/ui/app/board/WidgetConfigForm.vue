@@ -3,6 +3,7 @@ import { computed, ref, shallowRef, useId, watch } from 'vue'
 import { normalizeConfig, SETTINGS_LIMITS, type PlainSetting, type SettingsSchema } from '@lifedashboard/contracts/widget-settings'
 import { SECRET_MIN_LENGTH } from '@lifedashboard/contracts/widget-secrets'
 import { api } from '../api'
+import UiSelect from '../ui/UiSelect.vue'
 import { refreshSecretFlags } from '../widgets/secret-flags'
 import { controlFor, isRequiredSetting, mergeConfigField, parseFieldInput, secretStatusMessage } from './config-form'
 
@@ -33,6 +34,11 @@ watch(() => props.widgetId, () => {
   messages.value = Object.create(null)
   missing.value = false
 })
+
+function changeChoice(key: string, value: string) {
+  draft.value = mergeConfigField(props.schema, values.value, key, value)
+  emit('change', draft.value)
+}
 
 function changeField(key: string, setting: PlainSetting, event: Event) {
   const input = event.target as HTMLInputElement | HTMLSelectElement
@@ -74,7 +80,7 @@ function messageFor(key: string): string | null {
     <div v-for="(setting, key) in schema.properties" :key="key" class="settings__field">
       <div class="settings__row">
         <label class="settings__label" :for="`${uid}-${key}`">
-          {{ setting.title }}<template v-if="isRequiredSetting(schema, key)"> *<span class="settings__visually-hidden"> обязательно</span></template>
+          {{ setting.title }}<template v-if="isRequiredSetting(schema, key)"> *<span class="settings__visually-hidden"> required</span></template>
         </label>
         <template v-if="setting.type === 'secret'">
           <input
@@ -88,36 +94,34 @@ function messageFor(key: string): string | null {
             :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
             :aria-describedby="`${uid}-${key}-status${setting.description ? ` ${uid}-${key}-description` : ''}`"
           />
-          <span :id="`${uid}-${key}-status`" class="settings__description" :class="{ settings__warning: isRequiredSetting(schema, key) && !secrets.has(key) }">{{ secrets.has(key) ? 'задан' : 'не задан' }}</span>
+          <span :id="`${uid}-${key}-status`" class="settings__description" :class="{ settings__warning: isRequiredSetting(schema, key) && !secrets.has(key) }">{{ secrets.has(key) ? 'set' : 'not set' }}</span>
           <div class="settings__actions">
             <button
               type="button"
               class="settings__reset"
               :disabled="!widgetId || missing || pending[key] || (passwords[key]?.length ?? 0) < SECRET_MIN_LENGTH"
               @click="changeSecret(key, false)"
-            >Задать</button>
+            >Set</button>
             <button
               type="button"
               class="settings__reset"
               :disabled="!widgetId || missing || pending[key] || !secrets.has(key)"
               @click="changeSecret(key, true)"
-            >Очистить</button>
+            >Clear</button>
           </div>
-          <p v-if="(passwords[key]?.length ?? 0) > 0 && (passwords[key]?.length ?? 0) < SECRET_MIN_LENGTH" class="settings__message" role="status">Минимум {{ SECRET_MIN_LENGTH }} символов</p>
+          <p v-if="(passwords[key]?.length ?? 0) > 0 && (passwords[key]?.length ?? 0) < SECRET_MIN_LENGTH" class="settings__message" role="status">At least {{ SECRET_MIN_LENGTH }} characters</p>
           <p v-if="messageFor(key)" class="settings__message" role="status">{{ messageFor(key) }}</p>
         </template>
         <template v-else>
-          <select
+          <UiSelect
             v-if="controlFor(setting) === 'select'"
             :id="`${uid}-${key}`"
-            class="settings__control"
-            :value="values[key]"
+            :model-value="String(values[key])"
+            :options="(setting.enum ?? []).map((option) => ({ value: option, label: option }))"
             :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
             :aria-describedby="setting.description ? `${uid}-${key}-description` : undefined"
-            @change="changeField(key, setting, $event)"
-          >
-            <option v-for="option in setting.enum" :key="option" :value="option">{{ option }}</option>
-          </select>
+            @update:model-value="changeChoice(key, $event)"
+          />
           <input
             v-else
             :id="`${uid}-${key}`"
@@ -143,16 +147,22 @@ function messageFor(key: string): string | null {
 <style scoped>
 .settings__config {
   display: grid;
-  gap: 0.75rem;
-  padding-top: 0.75rem;
+  gap: 0.375rem;
+  padding-top: 0.5rem;
   border-top: var(--ld-border-width) solid var(--ld-border-default);
 }
 
 .settings__row {
   display: grid;
-  grid-template-columns: 9rem minmax(0, 1fr);
+  grid-template-columns: 6.5rem minmax(0, 1fr);
   align-items: center;
   gap: 0.5rem;
+  min-height: 1.75rem;
+}
+
+.settings__row > input[type='checkbox'] {
+  justify-self: start;
+  margin: 0;
 }
 
 .settings__label,
@@ -191,12 +201,13 @@ function messageFor(key: string): string | null {
 
 .settings__message,
 .settings__description {
-  margin: 0.25rem 0 0;
-  font-size: 0.875rem;
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1rem;
 }
 
 .settings__reset {
-  padding: 0.25rem 0.75rem;
+  padding: 0.125rem 0.625rem;
   border: var(--ld-border-width) solid var(--ld-border-default);
   border-radius: var(--ld-radius-control);
   background: var(--ld-surface-3);
