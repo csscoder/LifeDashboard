@@ -11,6 +11,8 @@ export interface ConfirmationRequest {
   returnFocus?: () => HTMLElement | null
   // Shown only.
   title: string
+  packageId?: string
+  version?: string
   op: GatewayOp
   // The parsed input the API bound the confirmation id to; the dialog previews it.
   input: unknown

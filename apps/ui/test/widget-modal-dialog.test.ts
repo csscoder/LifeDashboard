@@ -21,8 +21,10 @@ describe('WidgetModal', () => {
     expect(ui.events).toEqual([])
   })
   it('renders the package source and title as text', async () => {
-    const ui = mount(record('<b>x</b>')); await nextTick()
-    expect(ui.text()).toContain('Package')
+    const value = record('<b>x</b>')
+    value.owner.packageId = 'dev.test'
+    const ui = mount(value); await nextTick()
+    expect(ui.nodes().find(node => node.props.class === 'widget-modal__source')?.text).toBe('Third-party widget · dev.test')
     expect(ui.nodes().find(node => node.tag === 'h2')?.text).toBe('<b>x</b>')
     expect(ui.nodes().some(node => node.tag === 'b')).toBe(false)
     expect(dialog(ui).props['aria-labelledby']).toBe(ui.nodes().find(node => node.tag === 'h2')?.props.id)

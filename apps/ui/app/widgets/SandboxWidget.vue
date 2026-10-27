@@ -78,8 +78,8 @@ async function start() {
     api,
     widgetId: props.widgetId,
     source: { kind: 'package', packageId: props.packageId, version: props.version },
-    confirm: (op, input) => paused ? Promise.resolve('declined') : requestConfirmation({ widgetId: props.widgetId, ownerId: surfaceId, returnFocus: () => iframe.value, title: props.title, op, input }),
-    onNotify: (message) => showToast({ source: props.title, ...message }),
+    confirm: (op, input) => paused ? Promise.resolve('declined') : requestConfirmation({ widgetId: props.widgetId, ownerId: surfaceId, returnFocus: () => iframe.value, title: props.title, packageId: props.packageId, version: props.version, op, input }),
+    onNotify: (message) => showToast({ source: `${props.title} · ${props.packageId}`, ...message }),
     onSessionLost: () => {
       if (client === current) fail()
     },

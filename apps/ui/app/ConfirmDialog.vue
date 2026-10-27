@@ -86,6 +86,7 @@ onUnmounted(() => clearTimeout(armTimer))
   <dialog ref="dialogBox" class="confirm" aria-labelledby="confirm-title" @close="onClose" @cancel="onCancel" @keydown.esc.stop.prevent="current?.decline()">
     <template v-if="current">
       <h2 id="confirm-title" class="confirm__title">Widget «{{ current.title }}» wants to {{ ACTIONS[current.op] }}</h2>
+      <p class="confirm__source">{{ current.packageId ? `${current.packageId} · ${current.version}` : 'Built-in' }}</p>
       <div v-if="notification" class="confirm__preview">
         <p class="confirm__preview-title">{{ notification.title }}</p>
         <p v-if="notification.body">{{ notification.body }}</p>
@@ -120,6 +121,12 @@ onUnmounted(() => clearTimeout(armTimer))
 .confirm__title {
   margin: 0 0 1rem;
   font-size: 1.125rem;
+}
+
+.confirm__source {
+  margin: 0 0 1rem;
+  color: var(--ld-text-secondary);
+  overflow-wrap: anywhere;
 }
 
 .confirm__preview {

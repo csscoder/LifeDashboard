@@ -184,6 +184,25 @@ describe('confirmations', () => {
 const ConfirmDialog = compileSfc(new URL('../app/ConfirmDialog.vue', import.meta.url), { './confirmations': confirmationModule })
 
 describe('ConfirmDialog', () => {
+  it('distinguishes packages with the same title and identifies built-ins', async () => {
+    vi.stubGlobal('document', { activeElement: null, querySelector: () => null })
+    const ui = mountComponent(ConfirmDialog, {}, [])
+    const requests = [
+      { widgetId: 'a', packageId: 'dev.a.weather', version: '1.0.0', expected: 'dev.a.weather · 1.0.0' },
+      { widgetId: 'b', packageId: 'dev.b.weather', version: '2.0.0', expected: 'dev.b.weather · 2.0.0' },
+      { widgetId: 'w2', expected: 'Built-in' },
+    ]
+    for (const { expected, ...identity } of requests) {
+      const result = requestConfirmation({ ...identity, title: 'Weather', op: 'notifications.send', input: note })
+      await nextTick()
+      expect(ui.nodes().find(node => node.tag === 'h2')?.text).toContain('Weather')
+      expect(ui.nodes().find(node => node.props.class === 'confirm__source')?.text).toBe(expected)
+      ui.button('Decline').props.onClick()
+      await result
+      await nextTick()
+    }
+  })
+
   it.each(['button', 'Escape', 'cancel'])('records a user decline from %s', async (action) => {
     vi.stubGlobal('document', { activeElement: null, querySelector: () => null })
     const ui = mountComponent(ConfirmDialog, {}, [])

@@ -59,7 +59,7 @@ onBeforeUnmount(() => {
     <template v-if="record">
       <header class="widget-modal__header">
         <div>
-          <p class="widget-modal__source">{{ record.owner.title }}</p>
+          <p class="widget-modal__source">Third-party widget · {{ record.owner.packageId }}</p>
           <h2 id="widget-modal-title">{{ record.input.title ?? record.owner.title }}</h2>
         </div>
         <button ref="closeBox" type="button" aria-label="Close" @click="close">×</button>
