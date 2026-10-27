@@ -26,13 +26,19 @@ const app = buildApp({
   },
 })
 
-for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.once(signal, () => {
-    void app.close().then(() => {
-      db.close()
-      process.exit(0)
-    })
+function shutdown() {
+  void app.close().then(() => {
+    db.close()
+    process.exit(0)
   })
+}
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.once(signal, shutdown)
+}
+
+if (process.env.LIFEDASHBOARD_EXIT_ON_STDIN_EOF === '1') {
+  process.stdin.once('end', shutdown).resume()
 }
 
 try {
