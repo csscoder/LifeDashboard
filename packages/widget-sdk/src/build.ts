@@ -108,7 +108,7 @@ export async function buildWidget(dir: string, { source = true, quiet = false }:
         rolldownOptions: { external: ['vue', '@lifedashboard/widget-sdk'], output: { chunkFileNames: 'chunk-[hash].js' } },
       },
     })
-    if (existsSync(join(root, 'assets'))) await cp(join(root, 'assets'), join(stage, 'assets'), { recursive: true, filter: copyFilter(root) })
+    if (existsSync(join(root, 'assets'))) await cp(join(root, 'assets'), join(stage, 'assets'), { recursive: true, filter: copyFilter(root, (path) => !path.split(sep).some((segment) => segment.startsWith('.'))) })
     // Copied from outside the project: fs.cp refuses a destination inside its source.
     if (source) await cp(root, join(stage, 'source'), { recursive: true, filter: copyFilter(root, keepInSource) })
     await writeFile(join(stage, 'widget.json'), `${JSON.stringify(manifest, null, 2)}\n`)

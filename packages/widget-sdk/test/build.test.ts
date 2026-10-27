@@ -74,6 +74,17 @@ describe('buildWidget', () => {
     expect(existsSync(join(target, 'source', 'assets'))).toBe(false)
   }, 30_000)
 
+  it('ignores dotfiles in assets while preserving nested real files', async () => {
+    const dir = await copyOf('counter')
+    await mkdir(join(dir, 'assets', 'img'), { recursive: true })
+    await writeFile(join(dir, 'assets', '.DS_Store'), 'metadata')
+    await writeFile(join(dir, 'assets', 'img', '.hidden'), 'hidden')
+    await writeFile(join(dir, 'assets', 'img', 'icon.svg'), '<svg />')
+    const target = await buildWidget(dir)
+    expect((await filesOf(target)).filter((file) => file.startsWith('assets/'))).toEqual(['assets/img/icon.svg'])
+    expect(await readFile(join(target, 'assets', 'img', 'icon.svg'), 'utf8')).toBe('<svg />')
+  }, 30_000)
+
   it('keeps src="assets/..." in a template as a URL instead of importing it', async () => {
     const dir = await copyOf('counter')
     const vue = await readFile(join(dir, 'src', 'index.vue'), 'utf8')
