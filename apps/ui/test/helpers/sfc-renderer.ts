@@ -55,8 +55,8 @@ const node = (tag: string, text = ''): HostNode => {
     for (const listener of listeners.get(event.type) ?? []) {
       if (typeof listener === 'function') listener.call(this, event); else listener.handleEvent(event)
     }
-    if (event.bubbles && this.parent) this.parent.dispatchEvent(event)
-    else if (event.bubbles && typeof window !== 'undefined') window.dispatchEvent?.(event)
+    if (event.bubbles && !event.cancelBubble && this.parent) this.parent.dispatchEvent(event)
+    else if (event.bubbles && !event.cancelBubble && typeof window !== 'undefined') window.dispatchEvent?.(event)
     return !event.defaultPrevented
   },
   click() { if (this.props.disabled === undefined || this.props.disabled === false) this.dispatchEvent(new Event('click', { bubbles: true, cancelable: true })) },

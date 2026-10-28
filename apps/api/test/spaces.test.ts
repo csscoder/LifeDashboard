@@ -712,6 +712,16 @@ describe('space and screen theme persistence', () => {
     expect(t.db.prepare('SELECT theme_id, theme FROM spaces').get()).toEqual({ theme_id: null, theme: null })
   })
 
+  it('preserves an unavailable palette through unrelated space metadata edits', async () => {
+    const theme = { palette: 'builtin:nord', mode: 'auto', style: 'glass' }
+    const saved = await patch(SEED_SPACE_ID, { theme })
+    expect(saved.statusCode).toBe(200)
+    expect(saved.json().data.theme).toEqual(theme)
+    const edited = await patch(SEED_SPACE_ID, { title: 'Renamed space' })
+    expect(edited.statusCode).toBe(200)
+    expect((await listSpaces())[0]).toMatchObject({ title: 'Renamed space', theme })
+  })
+
   it('canonicalizes legacy screen and widget themes on PUT and GET', async () => {
     const legacy = { ...screen, themeId: 'builtin:obsidian', instances: [{ ...screen.instances[0]!, appearance: { themeId: 'builtin:bare', shadow: null } }, screen.instances[1]!] }
     const response = await put({ expectedRevision: 1, screens: [legacy] })

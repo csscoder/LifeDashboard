@@ -13,6 +13,7 @@ const id = useId()
 const scheme = useColorScheme()
 const selected = computed(() => props.modelValue && props.modelValue !== 'bare' && !props.unavailable ? props.modelValue : null)
 const effective = computed(() => selected.value ?? props.inherited ?? DEFAULT_THEME)
+const inheritedPaletteName = computed(() => BUILTIN_PALETTES.find(item => `builtin:${item.slug}` === (props.inherited ?? DEFAULT_THEME).palette)?.name ?? (props.inherited ?? DEFAULT_THEME).palette)
 const palette = computed(() => props.modelValue === 'bare' ? 'bare' : selected.value?.palette ?? 'inherit')
 const dimensionsDisabled = computed(() => props.disabled || !selected.value)
 const modes = [{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'auto', label: 'Auto' }]
@@ -33,6 +34,7 @@ function dimension(key: 'mode' | 'style', value: string) {
       <RadioGroupRoot class="theme-picker__palettes" :aria-labelledby="`${id}-palette`" :model-value="palette" :disabled="disabled" @update:model-value="choose">
         <div v-if="inherit" class="theme-picker__inherit">
           <RadioGroupItem value="inherit" aria-label="Inherit" class="theme-picker__option">Inherit</RadioGroupItem>
+          <span class="theme-picker__inherited-palette">{{ inheritedPaletteName }}</span>
           <p v-if="unavailable" class="theme-picker__unavailable">Theme unavailable — inherited</p>
         </div>
         <RadioGroupItem v-if="bare" value="bare" aria-label="No frame" class="theme-picker__option">No frame</RadioGroupItem>
@@ -62,5 +64,6 @@ function dimension(key: 'mode' | 'style', value: string) {
 .theme-picker__line { color: var(--ld-text-primary); }
 .theme-picker__dot { width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--ld-accent); }
 .theme-picker__inherit { grid-column: 1 / -1; }
+.theme-picker__inherited-palette { margin-left: 0.5rem; color: var(--ld-text-secondary); font-size: 0.875rem; }
 .theme-picker__unavailable { margin: 0.375rem 0 0; color: var(--ld-text-secondary); font-size: 0.875rem; }
 </style>

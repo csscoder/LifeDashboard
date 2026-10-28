@@ -91,3 +91,16 @@ it('marks an unavailable stored palette as inherited', async () => {
   expect(ui.button('Inherit').props['aria-checked']).toBe(true)
   expect(ui.nodes().filter(n => n.props.role === 'radiogroup').slice(1).every(n => n.props['data-disabled'] !== undefined)).toBe(true)
 })
+
+it('shows the inherited palette while retaining inherited mode and style', async () => {
+  const ui = await mount({ inherit: true, inherited: { palette: 'builtin:gruvbox', mode: 'light', style: 'glass' } })
+  expect(ui.text()).toContain('Gruvbox')
+  const inherit = ui.button('Inherit')
+  expect(inherit.props['aria-checked']).toBe(true)
+  expect(inherit.parent!.children.map(n => n.text).join(' ')).toContain('Gruvbox')
+  for (const value of ['light', 'glass']) {
+    const radio = ui.nodes().find(n => n.props.role === 'radio' && n.props.value === value)!
+    expect(radio.props['aria-checked']).toBe(true)
+    expect(radio.props['data-disabled']).toBeDefined()
+  }
+})
