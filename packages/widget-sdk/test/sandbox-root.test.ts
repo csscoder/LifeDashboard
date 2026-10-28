@@ -57,7 +57,7 @@ async function runtime(mount?: unknown, modals?: Record<string, Component>) {
   events.dispatchEvent(Object.assign(new Event('message'), {
     source: parent, ports: [port2],
     data: { t: 'ld:init', context: {
-      size: { w: 2, h: 2 }, sizeClass: 'm', frame: 'framed', theme: { id: 'test', scheme: 'dark', tokens: {} },
+      variant: '', size: { w: 2, h: 2 }, sizeClass: 'm', frame: 'framed', theme: { id: 'test', scheme: 'dark', tokens: {} },
       rootFontSize: 16, config: {}, locale: 'en', visible: true,
     }, ...(mount === undefined ? {} : { mount }) },
   }))

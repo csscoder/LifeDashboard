@@ -302,6 +302,8 @@ export function sizeClass(size: Size): SizeClass {
 }
 
 export interface WidgetContext {
+  /** Resolved look id, or an empty string when no variants are declared. @since sdk 5 */
+  variant: string
   size: Size
   sizeClass: SizeClass
   /**

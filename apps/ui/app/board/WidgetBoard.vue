@@ -632,6 +632,7 @@ defineExpose({
             :source="instance.source"
             :size="placement"
             :theme-id="look.themeId"
+            :variant="instance.appearance?.variant ?? null"
             :skin="look.skin"
             :foreign="look.foreign"
             :shadow="instance.appearance?.shadow"

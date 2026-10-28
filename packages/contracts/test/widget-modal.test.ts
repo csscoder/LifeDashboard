@@ -97,7 +97,7 @@ describe('parseModalMount', () => {
 describe('InitMessage modal mount type', () => {
   it('allows an optional validated mount alongside context', () => {
     const context: InitMessage['context'] = {
-      size: { w: 2, h: 2 }, sizeClass: 's', frame: 'frameless',
+      variant: '', size: { w: 2, h: 2 }, sizeClass: 's', frame: 'frameless',
       theme: { id: 'default', scheme: 'light', tokens: {} },
       rootFontSize: 16, config: {}, locale: 'en', visible: true,
     }

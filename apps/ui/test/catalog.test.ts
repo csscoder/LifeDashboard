@@ -47,6 +47,13 @@ const clock: InstalledPackage = {
 }
 
 describe('catalog', () => {
+  it('reports variants only for versions that declare them', () => {
+    const variants = { default: 'arabic', items: [{ id: 'arabic', title: 'Arabic' }, { id: 'roman', title: 'Roman' }] }
+    const pkg = { ...clock, versions: [{ ...clock.versions[0]!, manifest: { ...clock.versions[0]!.manifest, variants } }, clock.versions[1]!] }
+    expect(describeSource({ kind: 'package', packageId: clock.id, version: '2.0.0' }, [pkg])?.variants).toEqual(variants)
+    expect(describeSource({ kind: 'package', packageId: clock.id, version: '1.0.0' }, [pkg])).not.toHaveProperty('variants')
+  })
+
   it('re-exports the built-in manifests from contracts', () => {
     expect(findBuiltinWidget('placeholder')?.sizing).toEqual({ default: { w: 4, h: 4 }, min: { w: 1, h: 1 }, max: { w: 24, h: 100 } })
     expect(findBuiltinWidget('toString')).toBeUndefined()

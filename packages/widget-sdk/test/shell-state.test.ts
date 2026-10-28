@@ -10,7 +10,7 @@ import {
 
 const counter = JSON.parse(readFileSync(new URL('./fixtures/counter/widget.json', import.meta.url), 'utf8')) as WidgetPackageManifest
 const themeIds = ['builtin:glass', 'builtin:paper']
-const state: ShellState = { w: 4, h: 3, theme: 'builtin:glass', frame: 'framed', confirm: 'allow' }
+const state: ShellState = { variant: '', w: 4, h: 3, theme: 'builtin:glass', frame: 'framed', confirm: 'allow' }
 const theme: DevTheme = { id: themeIds[0]!, name: 'Glass', mode: 'dark', skin: 'glass', tokens: { '--ld-widget-padding': '1rem' } }
 
 it('matches production theme classes for every built-in theme, a user theme, and invalid formats', async () => {
@@ -44,7 +44,7 @@ it('starts in the manifest frame and lets the URL override it', () => {
 
 it('serializes every control in order and round-trips valid state', () => {
   expect(serializeShellState(state)).toBe('?w=4&h=3&theme=builtin%3Aglass&frame=framed&confirm=allow')
-  const changed: ShellState = { w: 1, h: 4, theme: 'builtin:paper', frame: 'frameless', confirm: 'decline' }
+  const changed: ShellState = { variant: '', w: 1, h: 4, theme: 'builtin:paper', frame: 'frameless', confirm: 'decline' }
   expect(parseShellState(serializeShellState(changed), counter, themeIds)).toEqual(changed)
   expect(describeShell(state)).toBe('w=4 h=3 theme=builtin:glass frame=framed')
 })
@@ -69,7 +69,7 @@ it('builds production context and normalizes config without exposing secret valu
     { locale: 'ru-RU', rootFontSize: 20 },
   )
   expect(context([])).toEqual({
-    size: { w: 2, h: 3 }, sizeClass: 's', frame: 'frameless',
+    variant: '', size: { w: 2, h: 3 }, sizeClass: 's', frame: 'frameless',
     theme: { id: theme.id, scheme: 'dark', tokens: theme.tokens },
     config: { city: 'Perm', count: 3, apiKey: false }, locale: 'ru-RU', rootFontSize: 20, visible: true,
   })
@@ -139,4 +139,16 @@ it('keeps the newest log entries and truncates long messages with an ellipsis', 
   const cut = appendLogEntry([], { id: 1, message: 'y'.repeat(100_000) })[0]!.message
   expect(cut).toHaveLength(LOG_MESSAGE_LIMIT)
   expect(cut.endsWith('…')).toBe(true)
+})
+
+it('resolves the URL look and omits it for manifests without variants', () => {
+  const manifest = { ...counter, variants: { default: 'arabic', items: [{ id: 'arabic', title: 'Arabic' }, { id: 'roman', title: 'Roman' }] } }
+  expect(parseShellState('?variant=roman', manifest, themeIds).variant).toBe('roman')
+  for (const query of ['?variant=gone', '']) expect(parseShellState(query, manifest, themeIds).variant).toBe('arabic')
+  const resolved = parseShellState('?variant=roman', manifest, themeIds)
+  expect(serializeShellState(resolved, manifest)).toContain('variant=roman')
+  expect(describeShell(resolved)).toContain(' variant=roman')
+  expect(shellContext(resolved, theme, undefined, {}, new Set(), { locale: 'en', rootFontSize: 16 }).variant).toBe('roman')
+  expect(parseShellState('?variant=roman', counter, themeIds).variant).toBe('')
+  expect(serializeShellState(resolved, counter)).not.toContain('variant')
 })

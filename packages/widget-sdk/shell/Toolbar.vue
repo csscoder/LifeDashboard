@@ -24,6 +24,11 @@ function update(key: keyof ShellState, event: Event) {
         <option v-for="theme in themes" :key="theme.id" :value="theme.id">{{ theme.name }}</option>
       </select>
     </label>
+    <label v-if="manifest.variants">Look
+      <select :value="state.variant" @change="update('variant', $event)">
+        <option v-for="item in manifest.variants.items" :key="item.id" :value="item.id">{{ item.title }}</option>
+      </select>
+    </label>
     <label>Frame
       <select :value="state.frame" @change="update('frame', $event)">
         <option value="framed">framed</option>

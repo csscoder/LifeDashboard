@@ -1,3 +1,4 @@
+import { resolveVariant } from '@lifedashboard/contracts/widget-variants'
 import { sizeClass, type WidgetContext } from '@lifedashboard/contracts/widget-gateway'
 import type { WidgetPackageManifest } from '@lifedashboard/contracts/widget-package'
 import { normalizeConfig, type SettingsSchema } from '@lifedashboard/contracts/widget-settings'
@@ -7,6 +8,7 @@ import type { DevTheme } from './themes.ts'
 export interface ShellState {
   w: number
   h: number
+  variant: string
   theme: string
   frame: 'framed' | 'frameless'
   confirm: ConfirmMode
@@ -24,6 +26,7 @@ export function parseShellState(search: string, manifest: WidgetPackageManifest,
   const theme = params.get('theme')
   const frameParam = params.get('frame')
   return {
+    variant: resolveVariant(manifest.variants, params.get('variant')),
     w: dimension('w'), h: dimension('h'),
     theme: theme !== null && themeIds.includes(theme) ? theme : themeIds[0] ?? '',
     frame: frameParam === 'framed' || frameParam === 'frameless' ? frameParam : manifest.frame ?? 'framed',
@@ -31,12 +34,12 @@ export function parseShellState(search: string, manifest: WidgetPackageManifest,
   }
 }
 
-export function serializeShellState(state: ShellState): string {
-  return `?${new URLSearchParams({ w: String(state.w), h: String(state.h), theme: state.theme, frame: state.frame, confirm: state.confirm })}`
+export function serializeShellState(state: ShellState, manifest?: Pick<WidgetPackageManifest, 'variants'>): string {
+  return `?${new URLSearchParams({ w: String(state.w), h: String(state.h), theme: state.theme, frame: state.frame, confirm: state.confirm, ...(manifest?.variants ? { variant: state.variant } : {}) })}`
 }
 
 export function describeShell(state: ShellState): string {
-  return `w=${state.w} h=${state.h} theme=${state.theme} frame=${state.frame}`
+  return `w=${state.w} h=${state.h} theme=${state.theme} frame=${state.frame}${state.variant ? ` variant=${state.variant}` : ''}`
 }
 
 export function frameSizePx(state: ShellState, cellPx: number, gapPx: number): { width: number; height: number } {
@@ -53,6 +56,7 @@ export function shellContext(
 ): WidgetContext {
   const size = { w: state.w, h: state.h }
   return {
+    variant: state.variant,
     size, sizeClass: sizeClass(size), frame: state.frame,
     theme: { id: theme.id, scheme: theme.mode, tokens: theme.tokens },
     config: normalizeConfig(settings, rawConfig, secretsSet),

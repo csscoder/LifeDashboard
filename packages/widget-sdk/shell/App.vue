@@ -199,7 +199,7 @@ function onMessage(event: MessageEvent) {
 
 function updateState(next: ShellState) {
   if (!info.value) return
-  state.value = parseShellState(serializeShellState(next), info.value.manifest, info.value.themes.map((theme) => theme.id))
+  state.value = parseShellState(serializeShellState(next, info.value.manifest), info.value.manifest, info.value.themes.map((theme) => theme.id))
 }
 
 function loadConfig(current: DevInfo) {
@@ -253,7 +253,7 @@ async function poll() {
     if (!previous || previous.revision !== next.revision) {
       const expected = invalidate()
       info.value = next
-      state.value = parseShellState(state.value ? serializeShellState(state.value) : location.search, next.manifest, next.themes.map((theme) => theme.id))
+      state.value = parseShellState(state.value ? serializeShellState(state.value, next.manifest) : location.search, next.manifest, next.themes.map((theme) => theme.id))
       loadConfig(next)
       await nextTick()
       if (disposed || expected !== generation) return
@@ -270,7 +270,7 @@ async function poll() {
 }
 
 watch([state, context, modalContext], () => {
-  if (state.value) history.replaceState(null, '', serializeShellState(state.value) + location.hash)
+  if (state.value) history.replaceState(null, '', serializeShellState(state.value, info.value?.manifest) + location.hash)
   if (context.value) bridge?.push(context.value)
   if (modalContext.value) modalBridge?.push(modalContext.value)
 }, { deep: true, flush: 'post' })

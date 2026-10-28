@@ -7,6 +7,7 @@ import { createPortClient } from '../src/port-client.ts'
 import { createWidget, provideInProcessWidget, useWidget, WidgetError, type Widget, type WidgetCall } from '../src/widget.ts'
 
 const CONTEXT: WidgetContext = {
+  variant: '',
   size: { w: 3, h: 3 },
   sizeClass: 'm',
   frame: 'framed',
@@ -177,6 +178,16 @@ describe.each([
     expect(current.calls).toEqual([['data.query', { a: 1 }]])
   })
 
+  it('exposes a read-only variant that follows the host', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    current = await create()
+    expect(current.widget.context.variant).toBe('')
+    current.patch({ variant: 'roman' })
+    await vi.waitFor(() => expect(current!.widget.context.variant).toBe('roman'))
+    ;(current.widget.context as WidgetContext).variant = 'arabic'
+    expect(current.widget.context.variant).toBe('roman')
+  })
+
   it('exposes a read-only context that follows the host', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     current = await create()
@@ -193,6 +204,8 @@ describe.each([
 
   it('types nested context fields as read-only', () => {
     const mutate = (widget: Widget) => {
+      // @ts-expect-error The host owns the variant.
+      widget.context.variant = ''
       // @ts-expect-error The host owns nested size fields.
       widget.context.size.w = 10
       // @ts-expect-error The host owns theme tokens.

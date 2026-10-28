@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import type { WidgetVariants } from '@lifedashboard/contracts/widget-variants'
 import type { WidgetSource } from '@lifedashboard/contracts/board'
 import { BUILTIN_WIDGETS, findBuiltinWidget } from '@lifedashboard/contracts/builtin-widgets'
 import type { WidgetSizing } from '@lifedashboard/contracts/grid'
@@ -23,6 +24,7 @@ export interface SourceInfo {
   sizing: WidgetSizing
   // The sandbox document of a package version; null for built-in widgets.
   hash: string | null
+  variants?: WidgetVariants
   settings?: SettingsSchema
   // Set only when the package version's manifest declares it; absent means framed.
   frame?: 'framed' | 'frameless'
@@ -61,13 +63,14 @@ export function describeSource(source: WidgetSource, packages: readonly Installe
   }
   const version = packages.find((pkg) => pkg.id === source.packageId)?.versions.find((item) => item.version === source.version)
   if (!version) return null
-  const { frame } = version.manifest
+  const { frame, variants } = version.manifest
   return {
     title: version.manifest.title,
     sizing: version.manifest.sizing,
     hash: version.hash,
     settings: version.manifest.settings,
     ...(frame ? { frame } : {}),
+    ...(variants ? { variants } : {}),
   }
 }
 

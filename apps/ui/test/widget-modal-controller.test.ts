@@ -95,3 +95,15 @@ it('allows retry only for an error record and freezes its key when closing', asy
  m.retry(id); expect(m.retryVersion.value).toBe(1)
  finish(); await pending; await closing; m.dispose()
 })
+
+it('keeps the active modal on the caller variant as it changes', async () => {
+ const m = createDashboardModals()
+ const caller = { ...context, variant: 'roman' }
+ try {
+ m.registerCaller({ owner: owner('w1'), context: () => caller, restart: async () => {} })
+ await m.open('w1', { view: 'workspace' })
+ expect(m.context()?.variant).toBe('roman')
+ caller.variant = 'arabic'
+ expect(m.context()?.variant).toBe('arabic')
+ } finally { m.dispose() }
+})

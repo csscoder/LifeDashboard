@@ -27,6 +27,7 @@ export function useWidgetContext(source: {
   themeId: () => string
   // True when the widget's theme differs from the board's: comfort.css swaps surface-1 and blur.
   foreign: () => boolean
+  variant: () => string
   config: () => Record<string, unknown>
   frame: () => Element | null
   frameMode: () => WidgetContext['frame']
@@ -39,6 +40,7 @@ export function useWidgetContext(source: {
     theme: { id: source.themeId(), scheme: themeMeta(source.themeId()).mode, tokens: {} },
     rootFontSize: 16,
     config: source.config(),
+    variant: source.variant(),
     locale: navigator.language,
     visible: document.visibilityState === 'visible' && typeof IntersectionObserver === 'undefined',
   })
@@ -74,6 +76,9 @@ export function useWidgetContext(source: {
   )
   watch(source.config, (config) => {
     context.config = config
+  })
+  watch(source.variant, (variant) => {
+    context.variant = variant
   })
   watch(source.frameMode, (frame) => {
     context.frame = frame

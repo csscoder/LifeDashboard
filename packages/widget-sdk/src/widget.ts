@@ -12,6 +12,9 @@ export type WidgetCall = (op: string, input: unknown) => Promise<unknown>
  */
 export interface WidgetConfig {}
 
+export interface WidgetVariantMap {}
+export type WidgetVariantId = [keyof WidgetVariantMap] extends [never] ? '' : Extract<keyof WidgetVariantMap, string>
+
 export class WidgetError extends Error {
   readonly code: WidgetErrorCode
 
@@ -38,7 +41,7 @@ export interface Widget {
    * Reactive, read-only context owned by the host; secret config values are set/unset booleans.
    * Requires no permission; has no operation limits and never rejects.
    */
-  readonly context: DeepReadonly<Omit<WidgetContext, 'config'> & { config: WidgetConfig }>
+  readonly context: DeepReadonly<Omit<WidgetContext, 'config' | 'variant'> & { config: WidgetConfig; variant: WidgetVariantId }>
   /**
    * Instance-local persistence; requires `state`. See get/set for limits and WidgetError codes.
    */

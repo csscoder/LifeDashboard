@@ -28,6 +28,7 @@ afterEach(() => {
 
 function setup(foreign: boolean, config: () => Record<string, unknown> = () => ({})) {
   const flag = ref(foreign)
+  const variant = ref('roman')
   const frameMode = ref<'framed' | 'frameless'>('frameless')
   const scope = effectScope()
   scopes.push(scope)
@@ -37,14 +38,26 @@ function setup(foreign: boolean, config: () => Record<string, unknown> = () => (
       themeId: () => 'builtin:glass',
       foreign: () => flag.value,
       config,
+      variant: () => variant.value,
       frame: () => ({}) as Element,
       frameMode: () => frameMode.value,
     }),
   )!
-  return { flag, frameMode, context }
+  return { flag, frameMode, variant, context }
 }
 
 describe('useWidgetContext', () => {
+  it('starts with the resolved variant and follows changes', async () => {
+    const { variant, context } = setup(false)
+    expect(context.variant).toBe('roman')
+    variant.value = 'arabic'
+    await nextTick()
+    expect(context.variant).toBe('arabic')
+    variant.value = ''
+    await nextTick()
+    expect(context.variant).toBe('')
+  })
+
   it('reports the frame mode and follows source changes in both directions', async () => {
     const { frameMode, context } = setup(false)
     expect(context.frame).toBe('frameless')

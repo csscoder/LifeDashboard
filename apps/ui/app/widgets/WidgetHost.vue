@@ -2,6 +2,7 @@
 import { computed, nextTick, onUnmounted, useId, useTemplateRef, watch } from 'vue'
 import type { DropShadow, WidgetSource } from '@lifedashboard/contracts/board'
 import type { Size } from '@lifedashboard/contracts/grid'
+import { resolveVariant } from '@lifedashboard/contracts/widget-variants'
 import { normalizeConfig } from '@lifedashboard/contracts/widget-settings'
 import { provideInProcessWidget } from '@lifedashboard/widget-sdk'
 import { api } from '../api'
@@ -29,6 +30,7 @@ const props = defineProps<{
   shadow?: DropShadow | null
   widgetId?: string
   config?: Record<string, unknown>
+  variant?: string | null
 }>()
 
 const frame = useTemplateRef<{ $el: Element }>('frameBox')
@@ -38,6 +40,7 @@ const renderer = computed(() => (props.source.kind === 'builtin' ? builtinWidget
 const flags = useSecretFlags(() => props.widgetId)
 const context = useWidgetContext({
   size: () => props.size,
+  variant: () => resolveVariant(info.value?.variants, props.variant),
   themeId: () => props.themeId,
   foreign: () => props.foreign,
   config: () => normalizeConfig(info.value?.settings, props.config ?? {}, flags.value),

@@ -4,6 +4,7 @@ import * as Vue from 'vue'
 import { compileScript, parse } from 'vue/compiler-sfc'
 import { afterEach, expect, it, vi } from 'vitest'
 import * as gateway from '@lifedashboard/contracts/widget-gateway'
+import * as variants from '@lifedashboard/contracts/widget-variants'
 import { compileSfc } from './helpers/sfc-renderer'
 import { useWidgetContext } from '../app/widgets/context'
 
@@ -61,7 +62,7 @@ it('pauses an offscreen widget and a hidden tab, resumes only when both are visi
   let context!: gateway.WidgetContext
   const mounted = mount({ setup() {
     context = useWidgetContext({ size: () => ({ w: 3, h: 3 }), themeId: () => 'builtin:paper', foreign: () => false,
-      config: () => ({}), frame: () => frame, frameMode: () => 'framed' })
+      config: () => ({}), variant: () => '', frame: () => frame, frameMode: () => 'framed' })
     return () => Vue.h('div')
   } })
   await Vue.nextTick()
@@ -107,7 +108,7 @@ it('renders and copies an installed widget exception with its exact package vers
     if (!(id in modules)) throw new Error(`Unexpected import ${id}`)
     return modules[id]
   }, exports)
-  const context: gateway.WidgetContext = { size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16,
+  const context: gateway.WidgetContext = { variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16,
     theme: { id: 'builtin:paper', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: true }
   const host = mount({ render: () => Vue.h(exports.default!, { widgetId: 'widget', hash: 'hash', title: 'Probe', packageId: 'dev.test.probe', version: '1.2.3', context }) })
   await Vue.nextTick(); await Vue.nextTick(); hello()
@@ -126,7 +127,7 @@ it('renders and copies an installed widget exception with its exact package vers
 })
 
 // Compile the real host; replace only HTTP and the browser window handshake registration.
-async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean; dialog?: boolean; onController?: (controller: ReturnType<typeof import('../app/widgets/modals').createDashboardModals>) => void } = {}) {
+async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean; dialog?: boolean; variants?: variants.WidgetVariants; onController?: (controller: ReturnType<typeof import('../app/widgets/modals').createDashboardModals>) => void } = {}) {
   const broker = await import('../app/widgets/broker')
   const { createDashboardModals } = await import('../app/widgets/modals')
   const controller = createDashboardModals()
@@ -159,7 +160,7 @@ async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean
   }
   const exports: { default?: Vue.Component } = {}
   new Function('require', 'exports', code)((id: string) => { if (!(id in modules)) throw new Error(`Unexpected import ${id}`); return modules[id] }, exports)
-  const context = Vue.reactive<gateway.WidgetContext>({ size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, theme: { id: 'builtin:paper', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: false })
+  const context = Vue.reactive<gateway.WidgetContext>({ variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, theme: { id: 'builtin:paper', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: false })
   if (!hosts) controller.registerCaller({ owner: { widgetId: 'widget', runtimeId: 'widget', hash: 'hash', title: 'Probe', packageId: 'dev.test', version: '1' }, context: () => context, restart: async () => {} })
   let Host: Vue.Component | undefined
   if (hosts) {
@@ -172,7 +173,8 @@ async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean
     const hostModules = { ...modules,
       '@lifedashboard/contracts/widget-settings': await import('@lifedashboard/contracts/widget-settings'),
       '@lifedashboard/widget-sdk': await import('@lifedashboard/widget-sdk'),
-      './catalog': { describeSource: () => ({ title: 'Probe', hash: 'hash' }) },
+      './catalog': { describeSource: () => ({ title: 'Probe', hash: 'hash', ...(hostProps.source.version === '1' && options.variants ? { variants: options.variants } : {}) }) },
+      '@lifedashboard/contracts/widget-variants': variants,
       './context': { useWidgetContext }, './registry': { builtinWidgetRenderers: new Map() },
       './secret-flags': { useSecretFlags: () => Vue.ref(new Set()) },
       './SandboxWidget.vue': { ...exports, __esModule: true },
@@ -187,7 +189,7 @@ async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean
   if (options.dialog) vi.stubGlobal('document', { activeElement: null, querySelector: () => fallback })
   const Dialog = options.dialog ? compileSfc(new URL('../app/widgets/WidgetModal.vue', import.meta.url), {}) : null
   const modalContent = () => modalVisible.value && controller.activeModal.value ? Vue.h(exports.default!, { key: controller.retryVersion.value, widgetId: 'widget', surface: 'modal', surfaceId: 'modal-1', mount: { view: 'workspace', props: { n: 1 } }, hash: 'hash', title: 'Probe', packageId: 'dev.test', version: '1', context: controller.context()! }) : null
-  const hostProps = Vue.reactive({ source: { kind: 'package' as const, packageId: 'dev.test', version: '1' }, size: { w: 3, h: 3 }, themeId: 'builtin:paper' })
+  const hostProps = Vue.reactive({ source: { kind: 'package' as const, packageId: 'dev.test', version: '1' }, size: { w: 3, h: 3 }, themeId: 'builtin:paper', variant: 'roman' })
   const mounted = mount({ render: () => Vue.h('main', hosts ? [Vue.h(Host!, { ...hostProps, widgetId: 'widget' }), Vue.h(Host!, { ...hostProps, widgetId: 'sibling' })] : [
     Vue.h(exports.default!, { widgetId: 'widget', surfaceId: 'widget', hash: 'hash', title: 'Probe', packageId: 'dev.test', version: '1', context }),
     Dialog ? Vue.h(Dialog, { record: controller.activeModal.value, error: controller.error.value, onClose: controller.close, onRetry: controller.retry }, { default: modalContent }) : modalContent(),
@@ -356,7 +358,7 @@ it('ends a late-created session after SandboxWidget unmount without attaching a 
  '../confirmations': await import('../app/confirmations'), '../toasts': { showToast() {} }, './modals': { widgetModals: controller }, './broker': { ...broker, listenForHello } }
  const exports: { default?: Vue.Component } = {}
  new Function('require', 'exports', code)((id: string) => { if (!(id in modules)) throw new Error(`Unexpected import ${id}`); return modules[id] }, exports)
- const context: gateway.WidgetContext = { size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, theme: { id: 'builtin:paper', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: true }
+ const context: gateway.WidgetContext = { variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, theme: { id: 'builtin:paper', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: true }
  const mounted = mount({ render: () => Vue.h(exports.default!, { widgetId: 'late', hash: 'hash', title: 'Probe', packageId: 'dev.test', version: '1', context }) })
  mounted.app.unmount(); resolveSession({ ok: true, data: { widgetSession: 'late-secret', grants: [] } })
  await vi.waitFor(() => expect(ended).toEqual(['late-secret']))
@@ -412,4 +414,23 @@ it('keeps error retry inert through the real dialog and adapter while a modal ca
  complete({ ok: true, data: { revision: 1 } })
  await vi.waitFor(() => { expect(f.controller.activeModal.value).toBeNull(); expect(f.ended).toEqual(['host-secret-1']) })
  } finally { complete?.({ ok: true, data: { revision: 1 } }); f.cleanup() }
+})
+
+it('drops the look when the version has no variants and defaults an unavailable look', async () => {
+ const plain = await surfaceFixture(true)
+ try {
+ expect(plain.hostProps.variant).toBe('roman')
+ expect(plain.frames[0]!.contentWindow.postMessage.mock.calls[0]![0].context.variant).toBe('')
+ } finally { plain.cleanup() }
+ const f = await surfaceFixture(true, { variants: { default: 'arabic', items: [{ id: 'arabic', title: 'Arabic' }, { id: 'roman', title: 'Roman' }] } })
+ try {
+ expect(f.frames[0]!.contentWindow.postMessage.mock.calls[0]![0].context.variant).toBe('roman')
+ f.hostProps.variant = 'gone'
+ await vi.waitFor(() => expect(f.messages[0]).toContainEqual({ t: 'context', patch: expect.objectContaining({ variant: 'arabic' }) }))
+ f.hostProps.source = { kind: 'package', packageId: 'dev.test', version: '2' }
+ await Vue.nextTick()
+ await f.call(0, 'modal.open', { view: 'workspace' })
+ expect(f.controller.context()?.variant).toBe('')
+ expect(f.hostProps.variant).toBe('gone')
+ } finally { f.cleanup() }
 })
