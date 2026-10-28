@@ -136,10 +136,10 @@ defineExpose({ open, close, isOpen })
     </SettingsRow>
     <SettingsRow label="Shadow"><UiSwitch :model-value="shadow !== null" @update:model-value="setShadowOn" /></SettingsRow>
     <template v-if="shadow">
-      <SettingsRow v-for="item in offsets" :key="item.key" :label="item.label" :value="`${shadow[item.key]} px`">
+      <SettingsRow v-for="item in offsets" :native-label="false" :key="item.key" :label="item.label" :value="`${shadow[item.key]} px`">
         <UiSlider :aria-label="item.label" :model-value="shadow[item.key]" :min="item.limits[0]" :max="item.limits[1]" @update:model-value="setShadow(item.key, $event)" />
       </SettingsRow>
-      <SettingsRow label="Opacity" :value="`${percent} %`">
+      <SettingsRow :native-label="false" label="Opacity" :value="`${percent} %`">
         <UiSlider aria-label="Opacity" :model-value="percent" :min="0" :max="100" @update:model-value="setShadow('opacity', $event / 100)" />
       </SettingsRow>
       <SettingsRow label="Color"><UiColorField aria-label="Color" :model-value="shadow.color" @update:model-value="setShadow('color', $event)" /></SettingsRow>

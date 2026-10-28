@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { useFieldBridge } from './field-bridge'
 import { SliderRoot, SliderTrack, SliderRange, SliderThumb } from 'reka-ui'
 defineOptions({ inheritAttrs: false })
-withDefaults(defineProps<{ modelValue: number; min: number; max: number; step?: number; disabled?: boolean }>(), { step: 1 })
+const props = withDefaults(defineProps<{ modelValue: number; min: number; max: number; step?: number; disabled?: boolean }>(), { step: 1 })
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
+const { control, disabled, bindings } = useFieldBridge(props)
 function update(value: number[] | undefined) {
   if (value?.[0] !== undefined) emit('update:modelValue', value[0])
 }
@@ -11,7 +13,7 @@ function update(value: number[] | undefined) {
 <template>
   <SliderRoot class="ui-slider" :model-value="[modelValue]" :min="min" :max="max" :step="step" :disabled="disabled" @update:model-value="update">
     <SliderTrack class="ui-slider__track"><SliderRange class="ui-slider__range" /></SliderTrack>
-    <SliderThumb v-bind="$attrs" class="ui-slider__thumb" />
+    <SliderThumb ref="control" v-bind="bindings()" class="ui-slider__thumb" />
   </SliderRoot>
 </template>
 

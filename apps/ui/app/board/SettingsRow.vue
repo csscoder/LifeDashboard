@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { FieldRoot, FieldLabel, FieldDescription, FieldError } from 'reka-ui'
-defineProps<{ label: string; required?: boolean; description?: string; error?: string | null; value?: string; warning?: boolean }>()
+withDefaults(defineProps<{ label: string; required?: boolean; description?: string; error?: string | null; value?: string; warning?: boolean; nativeLabel?: boolean }>(), { nativeLabel: true })
 </script>
 
 <template>
   <FieldRoot class="settings-row" :invalid="!!error" :required="required">
-    <FieldLabel class="settings-row__label">{{ label }}<template v-if="required"> *<span class="settings-row__visually-hidden"> required</span></template></FieldLabel>
+    <FieldLabel :native-label="nativeLabel" class="settings-row__label">{{ label }}<template v-if="required"> *<span class="settings-row__visually-hidden"> required</span></template></FieldLabel>
     <slot />
     <FieldDescription v-if="value !== undefined" as="output" class="settings-row__value" :class="{ 'settings-row__warning': warning }">{{ value }}</FieldDescription>
     <FieldDescription v-if="description" class="settings-row__description">{{ description }}</FieldDescription>

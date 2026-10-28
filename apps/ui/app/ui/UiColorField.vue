@@ -1,20 +1,28 @@
 <script setup lang="ts">
+import { useFieldBridge } from './field-bridge'
 import { ColorFieldRoot, ColorFieldInput } from 'reka-ui'
 defineOptions({ inheritAttrs: false })
-defineProps<{ modelValue: string; disabled?: boolean }>()
+const props = defineProps<{ modelValue: string; disabled?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
-let rawText = ''
+const { control, disabled, bindings } = useFieldBridge(props)
+let rawText: string | undefined
 function recordInput(event: Event) {
   rawText = (event.target as HTMLInputElement).value
 }
+function recordStep(event: KeyboardEvent | WheelEvent) {
+  // Stepping uses the current model, not the uncommitted text (including rejected alpha).
+  if ('deltaY' in event || ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(event.key)) rawText = undefined
+}
 function update(value: string | null) {
-  if (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) && /^#?[0-9a-f]{6}$/i.test(rawText.trim())) emit('update:modelValue', value.toLowerCase())
+  const typed = rawText
+  rawText = undefined
+  if (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) && (typed === undefined || /^#?[0-9a-f]{6}$/i.test(typed.trim()))) emit('update:modelValue', value.toLowerCase())
 }
 </script>
 
 <template>
   <ColorFieldRoot :model-value="modelValue" :disabled="disabled" @update:model-value="update">
-    <ColorFieldInput v-bind="$attrs" class="ui-color-field" @input.capture="recordInput" />
+    <ColorFieldInput ref="control" v-bind="bindings()" class="ui-color-field" @input.capture="recordInput" @keydown.capture="recordStep" @wheel.capture="recordStep" />
   </ColorFieldRoot>
 </template>
 

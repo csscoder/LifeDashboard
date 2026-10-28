@@ -26,6 +26,16 @@ describe('WidgetConfigForm controls', () => {
     expect(ui.nodes().filter(n => n.tag === 'UiNumberField').map(n => n.props.integer)).toEqual([true, false])
     expect(ui.nodes().filter(n => n.tag === 'UiTextField')[1]!.props.type).toBe('password')
   })
+  it('initializes and resets the password model to an empty string', async () => {
+    const ui = mount()
+    const password = () => ui.nodes().find(n => n.tag === 'UiTextField' && n.props.type === 'password')!
+    expect(password().props['model-value'] ?? password().props.modelValue).toBe('')
+    password().props['onUpdate:modelValue']('draft secret')
+    await Vue.nextTick()
+    ui.props.widgetId = 'another-widget'
+    await Vue.nextTick()
+    expect(password().props['model-value'] ?? password().props.modelValue).toBe('')
+  })
   it('marks only required unset secret status as a warning', async () => {
     const ui = mount()
     ui.props.schema.required = ['token']

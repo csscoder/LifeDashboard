@@ -83,7 +83,7 @@ function messageFor(key: string): string | null {
     >
       <template v-if="setting.type === 'secret'">
         <UiTextField
-          v-model="passwords[key]!" type="password" autocomplete="new-password"
+          :model-value="passwords[key] ?? ''" @update:model-value="passwords[key] = $event" type="password" autocomplete="new-password"
           :minlength="SECRET_MIN_LENGTH" :disabled="!widgetId || missing || pending[key]"
           :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
         />

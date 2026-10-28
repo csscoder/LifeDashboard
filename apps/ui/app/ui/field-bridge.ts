@@ -1,9 +1,9 @@
 import { computed, mergeProps, onBeforeUnmount, onMounted, ref, useAttrs, watch } from 'vue'
 import { injectFieldRootContext } from 'reka-ui'
 
-// Reka's switch and number controls do not yet participate in FieldRoot.
+// These Reka controls do not yet participate in FieldRoot.
 // Keep the bridge optional so these controls also work outside settings forms.
-export function useFieldBridge(props: { modelValue: number | boolean; disabled?: boolean }) {
+export function useFieldBridge(props: { modelValue: number | boolean | string; disabled?: boolean }) {
   const field = injectFieldRootContext(null)
   const attrs = useAttrs()
   const control = ref<{ $el: HTMLElement } | null>(null)
