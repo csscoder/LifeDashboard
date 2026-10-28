@@ -368,6 +368,8 @@ describe('theme choice migration', () => {
       [{ themeId: null, shadow: null, variant: 'roman' }, { theme: null, shadow: null, variant: 'roman' }],
       [{ themeId: 'builtin:nope', shadow: null, variant: 'roman' }, { theme: null, shadow: null, variant: 'roman' }],
       [{ shadow, variant: null }, { shadow, variant: null }],
+      [{ theme: null, themeId: 'builtin:paper', shadow: null }, { theme: null, shadow: null }],
+      [{ theme: { palette: 'builtin:future-palette', mode: 'auto', style: 'glass' }, themeId: 'builtin:paper', shadow }, { theme: { palette: 'builtin:future-palette', mode: 'auto', style: 'glass' }, shadow }],
     ]
     for (const [i, [before]] of fixtures.entries()) previous.prepare('INSERT INTO widgets (id,screen_id,source_kind,source_type,config,config_version,appearance,x,y,w,h) VALUES (?, ?, ?, ?, ?, 1, ?, 0,0,2,2)').run(`w${i}`, SEED_SCREEN_ID, 'builtin', 'placeholder', '{}', JSON.stringify(before))
     previous.prepare('INSERT INTO widgets (id,screen_id,source_kind,source_type,config,config_version,appearance,x,y,w,h) VALUES (?, ?, ?, ?, ?, 1, ?, 0,0,2,2)').run('bad', SEED_SCREEN_ID, 'builtin', 'placeholder', '{}', 'not json')

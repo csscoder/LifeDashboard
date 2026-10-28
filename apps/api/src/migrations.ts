@@ -64,7 +64,7 @@ function migrateThemeChoices(db: DatabaseSync): void {
     try { appearance = JSON.parse(row.appearance) } catch { continue }
     if (appearance === null || typeof appearance !== 'object' || Array.isArray(appearance) || !Object.hasOwn(appearance, 'themeId')) continue
     const parsed = appearance as Record<string, unknown>
-    parsed.theme = legacyTheme(parsed.themeId)
+    if (!Object.hasOwn(parsed, 'theme')) parsed.theme = legacyTheme(parsed.themeId)
     delete parsed.themeId
     write.run(JSON.stringify(parsed), row.id)
   }
