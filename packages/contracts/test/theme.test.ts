@@ -20,3 +20,9 @@ it('prefers theme over themeId including null and rejects bare when disallowed',
   expect(readTheme({ themeId: 'builtin:bare' }, false).ok).toBe(false)
   expect(readTheme({}, false)).toEqual({ ok: true, value: null })
 })
+it.each(['a', 'a1-', 'a'.repeat(32)])('accepts palette slug %s within the boundaries', (slug) => {
+  expect(isThemeChoice({ ...gruvbox, palette: `builtin:${slug}` })).toBe(true)
+})
+it.each(['', '1', '-foo', 'a'.repeat(33)])('rejects palette slug %s outside the boundaries', (slug) => {
+  expect(isThemeChoice({ ...gruvbox, palette: `builtin:${slug}` })).toBe(false)
+})
