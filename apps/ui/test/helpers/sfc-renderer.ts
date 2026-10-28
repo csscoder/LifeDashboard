@@ -5,6 +5,8 @@ import { compileScript, parse } from 'vue/compiler-sfc'
 import { afterEach } from 'vitest'
 
 export interface HostNode {
+  readonly nodeName: string
+  readonly nextElementSibling: HostNode | null
   tag: string
   text: string
   props: Record<string, any>
@@ -19,6 +21,11 @@ export interface HostNode {
   rect: { left: number; top: number; width: number; height: number }
   hidePopover(): void
   matches(selector: string): boolean
+  dataset: Record<string, string>
+  addEventListener(type: string, listener: EventListenerOrEventListenerObject): void
+  removeEventListener(type: string, listener: EventListenerOrEventListenerObject): void
+  dispatchEvent(event: Event): boolean
+  click(): void
   focus(): void
   scrollIntoView(): void
   querySelectorAll(selector: string): HostNode[]
@@ -27,9 +34,32 @@ export interface HostNode {
   getBoundingClientRect(): HostNode['rect']
 }
 const descendants = (el: HostNode): HostNode[] => [el, ...el.children.flatMap(descendants)]
-const node = (tag: string, text = ''): HostNode => Vue.markRaw<HostNode>({
+const node = (tag: string, text = ''): HostNode => {
+  const listeners = new Map<string, Set<EventListenerOrEventListenerObject>>()
+  return Vue.markRaw<HostNode>({
   tag, text, props: {}, children: [], parent: null, open: false, focused: false, style: {},
   rect: { left: 0, top: 0, width: 0, height: 0 },
+  get nodeName() { return this.tag },
+  get nextElementSibling() { const siblings = this.parent?.children ?? []; return siblings.slice(siblings.indexOf(this) + 1).find(n => !n.tag.startsWith('#')) ?? null },
+  dataset: {},
+  addEventListener(type, listener) { if (!listeners.has(type)) listeners.set(type, new Set()); listeners.get(type)!.add(listener) },
+  removeEventListener(type, listener) { listeners.get(type)?.delete(listener) },
+  dispatchEvent(event) {
+    if (!event.target) Object.defineProperty(event, 'target', { configurable: true, value: this })
+    Object.defineProperty(event, 'currentTarget', { configurable: true, value: this })
+    const name = event.type[0]!.toUpperCase() + event.type.slice(1)
+    for (const key of [`on${name}Capture`, `on${name}`]) {
+      const handlers = this.props[key]
+      for (const handler of Array.isArray(handlers) ? handlers : handlers ? [handlers] : []) handler(event)
+    }
+    for (const listener of listeners.get(event.type) ?? []) {
+      if (typeof listener === 'function') listener.call(this, event); else listener.handleEvent(event)
+    }
+    if (event.bubbles && this.parent) this.parent.dispatchEvent(event)
+    else if (event.bubbles && typeof window !== 'undefined') window.dispatchEvent?.(event)
+    return !event.defaultPrevented
+  },
+  click() { if (this.props.disabled === undefined || this.props.disabled === false) this.dispatchEvent(new Event('click', { bubbles: true, cancelable: true })) },
   get isConnected() { return this.parent !== null },
   showModal() { this.open = true; this.focus() },
   close() { this.open = false; queueMicrotask(() => this.props.onClose?.(new Event('close'))) },
@@ -39,7 +69,7 @@ const node = (tag: string, text = ''): HostNode => Vue.markRaw<HostNode>({
     // The custom renderer has no browser focus manager.
     const descriptor = Object.getOwnPropertyDescriptor(document, 'activeElement')
     if (descriptor?.writable) (document as any).activeElement = this
-  } },
+  } this.dispatchEvent(new Event('focus')); this.dispatchEvent(new Event('focusin', { bubbles: true })) },
   scrollIntoView() {},
   querySelector(selector) {
     return this.children.flatMap(descendants).find(el => selector.startsWith('.')
@@ -57,10 +87,11 @@ const node = (tag: string, text = ''): HostNode => Vue.markRaw<HostNode>({
     return null
   },
 })
+}
 const renderer = Vue.createRenderer<HostNode, HostNode>({
   createElement: node, createText: (text) => node('#text', text), createComment: (text) => node('#comment', text),
   setText: (el, text) => { el.text = text }, setElementText: (el, text) => { el.text = text; el.children = [] },
-  patchProp: (el, key, _old, value) => { el.props[key] = value },
+  patchProp: (el, key, _old, value) => { el.props[key] = value; if (key.startsWith('data-')) { const dataKey = key.slice(5).replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()); if (value === undefined || value === null) delete el.dataset[dataKey]; else el.dataset[dataKey] = String(value) } },
   parentNode: (el) => el.parent, nextSibling: (el) => el.parent?.children[el.parent.children.indexOf(el) + 1] ?? null,
   insert(el, parent, anchor) {
     if (el.parent) el.parent.children.splice(el.parent.children.indexOf(el), 1)
