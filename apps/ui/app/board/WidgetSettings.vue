@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useId, useTemplateRef, watch, type Component } from 'vue'
+import { computed, ref, useTemplateRef, watch, type Component } from 'vue'
 import {
   BARE_THEME_ID,
   DEFAULT_SHADOW,
@@ -9,7 +9,14 @@ import {
 } from '@lifedashboard/contracts/board'
 import type { SettingsSchema } from '@lifedashboard/contracts/widget-settings'
 import { BUILTIN_THEMES } from '../theme/builtin'
-import { panelPosition, styleValue, withShadow, withStyle } from './widget-settings'
+import { panelPosition, styleValue, withShadow, withStyle, withVariant } from './widget-settings'
+import { resolveVariant, type WidgetVariants } from '@lifedashboard/contracts/widget-variants'
+import { Separator } from 'reka-ui'
+import SettingsRow from './SettingsRow.vue'
+import UiButton from '../ui/UiButton.vue'
+import UiSwitch from '../ui/UiSwitch.vue'
+import UiSlider from '../ui/UiSlider.vue'
+import UiColorField from '../ui/UiColorField.vue'
 import UiSelect from '../ui/UiSelect.vue'
 import WidgetConfigForm from './WidgetConfigForm.vue'
 
@@ -17,6 +24,7 @@ import WidgetConfigForm from './WidgetConfigForm.vue'
 // «⚙» and «×» stay clear. It sits in the top layer, so the board never clips it; light dismiss and Esc
 // are native (spec «Host UI»).
 const props = defineProps<{
+  variants?: WidgetVariants
   appearance: WidgetAppearance | undefined
   schema: SettingsSchema | undefined
   config: Record<string, unknown>
@@ -36,7 +44,6 @@ const emit = defineEmits<{
 }>()
 
 const panel = useTemplateRef<HTMLElement>('panelBox')
-const uid = useId()
 const selectedVersion = ref(props.version)
 watch(() => [props.widgetId, props.version], () => { selectedVersion.value = props.version })
 const shadow = computed(() => props.appearance?.shadow ?? null)
@@ -89,14 +96,12 @@ function onToggle(event: ToggleEvent) {
   emit('toggle', opened)
 }
 
-const valueOf = (event: Event) => (event.target as HTMLInputElement | HTMLSelectElement).value
-
 function setStyle(value: string) {
   emit('change', withStyle(props.appearance, value))
 }
 
-function setShadowOn(event: Event) {
-  emit('change', withShadow(props.appearance, (event.target as HTMLInputElement).checked ? DEFAULT_SHADOW : null))
+function setShadowOn(enabled: boolean) {
+  emit('change', withShadow(props.appearance, enabled ? DEFAULT_SHADOW : null))
 }
 
 function setShadow<K extends keyof DropShadow>(key: K, value: DropShadow[K]) {
@@ -118,56 +123,29 @@ defineExpose({ open, close, isOpen })
     @focusout="onFocusOut"
   >
     <template v-if="versions.length > 0">
-      <div class="settings__row">
-        <label class="settings__label" :for="`${uid}-version`">Version</label>
-        <UiSelect :id="`${uid}-version`" v-model="selectedVersion" :options="versionOptions" />
-      </div>
-      <button type="button" class="settings__reset" :disabled="selectedVersion === version" @click="emit('version', selectedVersion)">Apply version</button>
+      <h2 class="settings__heading">Package</h2>
+      <SettingsRow label="Version"><UiSelect v-model="selectedVersion" :options="versionOptions" /></SettingsRow>
+      <UiButton :disabled="selectedVersion === version" @click="emit('version', selectedVersion)">Apply version</UiButton>
       <p class="settings__version-hint">Changing the version keeps the board changes and the widget data. Secrets whose binding changed must be set again.</p>
+      <Separator class="settings__separator" />
     </template>
-    <div class="settings__row">
-      <label class="settings__label" :for="`${uid}-style`">Style</label>
-      <UiSelect :id="`${uid}-style`" :model-value="styleValue(appearance)" :options="styleOptions" @update:model-value="setStyle" />
-    </div>
-    <label class="settings__row">
-      <span class="settings__label">Shadow</span>
-      <input type="checkbox" :checked="shadow !== null" @change="setShadowOn" />
-    </label>
+    <h2 class="settings__heading">Appearance</h2>
+    <SettingsRow label="Style"><UiSelect :model-value="styleValue(appearance)" :options="styleOptions" @update:model-value="setStyle" /></SettingsRow>
+    <SettingsRow v-if="variants" label="Look">
+      <UiSelect :model-value="resolveVariant(variants, appearance?.variant)" :options="variants.items.map(item => ({ value: item.id, label: item.title }))" @update:model-value="emit('change', withVariant(appearance, $event))" />
+    </SettingsRow>
+    <SettingsRow label="Shadow"><UiSwitch :model-value="shadow !== null" @update:model-value="setShadowOn" /></SettingsRow>
     <template v-if="shadow">
-      <!-- The value sits outside the label, so a slider's accessible name does not change while it is dragged. -->
-      <div v-for="item in offsets" :key="item.key" class="settings__row">
-        <label class="settings__label" :for="`${uid}-${item.key}`">{{ item.label }}</label>
-        <input
-          :id="`${uid}-${item.key}`"
-          type="range"
-          class="settings__control"
-          :min="item.limits[0]"
-          :max="item.limits[1]"
-          step="1"
-          :value="shadow[item.key]"
-          @input="setShadow(item.key, Number(valueOf($event)))"
-        />
-        <output class="settings__value">{{ shadow[item.key] }} px</output>
-      </div>
-      <label class="settings__row">
-        <span class="settings__label">Color</span>
-        <input type="color" :value="shadow.color" @input="setShadow('color', valueOf($event))" />
-      </label>
-      <div class="settings__row">
-        <label class="settings__label" :for="`${uid}-opacity`">Opacity</label>
-        <input
-          :id="`${uid}-opacity`"
-          type="range"
-          class="settings__control"
-          min="0"
-          max="100"
-          step="1"
-          :value="percent"
-          @input="setShadow('opacity', Number(valueOf($event)) / 100)"
-        />
-        <output class="settings__value">{{ percent }} %</output>
-      </div>
+      <SettingsRow v-for="item in offsets" :key="item.key" :label="item.label" :value="`${shadow[item.key]} px`">
+        <UiSlider :aria-label="item.label" :model-value="shadow[item.key]" :min="item.limits[0]" :max="item.limits[1]" @update:model-value="setShadow(item.key, $event)" />
+      </SettingsRow>
+      <SettingsRow label="Opacity" :value="`${percent} %`">
+        <UiSlider aria-label="Opacity" :model-value="percent" :min="0" :max="100" @update:model-value="setShadow('opacity', $event / 100)" />
+      </SettingsRow>
+      <SettingsRow label="Color"><UiColorField aria-label="Color" :model-value="shadow.color" @update:model-value="setShadow('color', $event)" /></SettingsRow>
     </template>
+    <Separator class="settings__separator" />
+    <h2 class="settings__heading">Widget</h2>
     <component
       :is="editor"
       v-if="editor && schema"
@@ -185,9 +163,8 @@ defineExpose({ open, close, isOpen })
       :secrets="secrets"
       @change="emit('config', $event)"
     />
-    <div class="settings__footer">
-      <button type="button" class="settings__reset" @click="emit('reset')">Reset widget settings</button>
-    </div>
+    <Separator class="settings__separator" />
+    <div class="settings__footer"><UiButton @click="emit('reset')">Reset to defaults</UiButton></div>
   </div>
 </template>
 
@@ -218,68 +195,8 @@ defineExpose({ open, close, isOpen })
   gap: 0.375rem;
 }
 
-.settings__row {
-  display: grid;
-  grid-template-columns: 6.5rem 1fr 2.75rem;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 1.75rem;
-}
-
-.settings__row > input[type='checkbox'] {
-  justify-self: start;
-  margin: 0;
-}
-
-/* Deep: the widget's own settings form is a child component. */
-.settings :deep(input) {
-  accent-color: var(--ld-accent);
-}
-
-.settings__label {
-  color: var(--ld-text-secondary);
-}
-
-.settings__version-hint {
-  margin: 0;
-  font-size: 0.75rem;
-  line-height: 1rem;
-  color: var(--ld-text-secondary);
-}
-
-.settings__control {
-  min-width: 0;
-}
-
-/* The select has no value column: it spans the control and value columns so long names fit. */
-.settings__row :deep(.ui-select-field) {
-  grid-column: 2 / -1;
-}
-
-.settings__footer {
-  padding-top: 0.5rem;
-  border-top: var(--ld-border-width) solid var(--ld-border-default);
-}
-
-.settings__value {
-  text-align: end;
-  font-variant-numeric: tabular-nums;
-}
-
-.settings__reset {
-  justify-self: start;
-  padding: 0.125rem 0.625rem;
-  border: var(--ld-border-width) solid var(--ld-border-default);
-  border-radius: var(--ld-radius-control);
-  background: var(--ld-surface-3);
-  color: var(--ld-text-primary);
-  font: inherit;
-  cursor: pointer;
-}
-
-.settings input:focus-visible,
-.settings__reset:focus-visible {
-  outline: 0.125rem solid var(--ld-focus-ring);
-  outline-offset: 0.125rem;
-}
+.settings__heading { margin: 0; font: inherit; font-weight: 600; }
+.settings__version-hint { margin: 0; font-size: 0.75rem; line-height: 1rem; color: var(--ld-text-secondary); }
+.settings__separator { height: var(--ld-border-width); background: var(--ld-border-default); margin: 0.5rem 0; }
+.settings__footer { display: flex; }
 </style>
