@@ -1,6 +1,6 @@
 import postcss, { type Declaration, type Root } from 'postcss'
 import { composite, contrastRatio, parseColor, toRgba, type Rgba } from './color'
-import { OPAQUE_TOKENS, OPTIONAL_TOKENS, REQUIRED_TOKENS, STATUSES, type ThemeMode, type TokenSpec } from './contract'
+import { OPAQUE_TOKENS, OPTIONAL_TOKENS, REQUIRED_TOKENS, STATUSES, type ColorScheme, type TokenSpec } from './contract'
 
 export interface ThemeError {
   rule: string
@@ -167,6 +167,7 @@ function contrastErrors(values: Map<string, string>): ThemeError[] {
         check('text-primary', `${state} over ${surface}`, over(state, bases), 4.5)
       check('focus-ring', surface, bases, 3)
     }
+    for (const [surface, bases] of surfaces) check('link', surface, bases, 4.5)
     check('accent-text', 'surface-1', surface1, 4.5)
     check('accent-text', 'accent-subtle over surface-1', over('accent-subtle', surface1), 4.5)
     for (const s of STATUSES) {
@@ -187,7 +188,7 @@ function contrastErrors(values: Map<string, string>): ThemeError[] {
  * classes, known tokens with valid values, the opacity rules and the WCAG contrast matrix.
  * Messages name the rule and the allowed alternative, for an AI repair loop.
  */
-export function validateThemeCss(css: string, { slug, mode }: { slug: string; mode: ThemeMode }): ThemeValidation {
+export function validateThemeCss(css: string, { slug, mode }: { slug: string; mode: ColorScheme }): ThemeValidation {
   const errors: ThemeError[] = []
   const fail = (rule: string, message: string): ThemeValidation => {
     errors.push({ rule, message })
@@ -247,6 +248,9 @@ export function validateThemeCss(css: string, { slug, mode }: { slug: string; mo
   const [regular, medium, strong] = ['weight-regular', 'weight-medium', 'weight-strong'].map((name) => Number(values.get(name)))
   if (!(regular! < medium! && medium! < strong!))
     errors.push({ rule: 'value', message: 'weight-regular < weight-medium < weight-strong is required' })
+  const sizes = ['size-h1', 'size-h2', 'size-h3', 'size-body', 'size-small'].map((name) => parseFloat(values.get(name)!))
+  if (!sizes.every((size, index) => index === 0 || sizes[index - 1]! > size))
+    errors.push({ rule: 'value', message: 'size-h1 > size-h2 > size-h3 > size-body > size-small is required' })
   if (errors.length) return { ok: false, errors }
 
   for (const name of OPAQUE_TOKENS)

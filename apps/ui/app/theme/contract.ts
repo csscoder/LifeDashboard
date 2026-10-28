@@ -1,13 +1,13 @@
-export const CONTRACT_VERSION = 1
+export const CONTRACT_VERSION = 2
 
-export const SKINS = ['glass', 'solid', 'paper'] as const
+export const SKINS = ['solid', 'glass'] as const
 export type SkinId = (typeof SKINS)[number]
-export type ThemeMode = 'light' | 'dark'
+export type ColorScheme = 'light' | 'dark'
 
 export interface ThemeMeta {
   id: string
   name: string
-  mode: ThemeMode
+  mode: ColorScheme
   skin: SkinId
 }
 
@@ -33,13 +33,17 @@ export const REQUIRED_TOKENS: Readonly<Record<string, TokenSpec>> = {
   ...colors(['text-primary', 'text-secondary', 'text-muted', 'text-disabled']),
   ...colors(['border-subtle', 'border-default', 'border-strong']),
   'border-width': rem(0, 0.125),
-  ...colors(['accent', 'accent-hover', 'accent-active', 'accent-subtle', 'accent-text', 'on-accent']),
+  ...colors(['accent', 'accent-hover', 'accent-active', 'accent-subtle', 'accent-text', 'on-accent', 'link']),
   ...colors(STATUSES.flatMap((s) => [s, `${s}-subtle`, `${s}-text`, `on-${s}`])),
   'focus-ring': color,
   'radius-widget': rem(0, 2),
   'radius-card': rem(0, 2),
   'radius-control': rem(0, 2),
   'radius-pill': { type: 'length', unit: 'px', min: 0, max: 999 },
+  'font-heading': { type: 'font' },
+  'font-body': { type: 'font' },
+  ...Object.fromEntries(['size-h1', 'size-h2', 'size-h3', 'size-body', 'size-small'].map((name) => [name, { type: 'length', unit: 'em', min: 0.75, max: 3 } as const])),
+  'leading-heading': num(1, 1.6),
   'font-ui': { type: 'font' },
   'font-mono': { type: 'font' },
   'font-display': { type: 'font' },
@@ -83,6 +87,7 @@ export const OPAQUE_TOKENS: readonly string[] = [
   'accent-hover',
   'accent-active',
   'accent-text',
+  'link',
   'on-accent',
   'focus-ring',
   ...STATUSES.flatMap((s) => [s, `${s}-text`, `on-${s}`]),

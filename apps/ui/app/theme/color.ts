@@ -75,3 +75,30 @@ export function contrastRatio(a: Rgba, b: Rgba): number {
   const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
   return (high + 0.05) / (low + 0.05)
 }
+
+
+/** Six-digit sRGB hex → OKLCH (Björn Ottosson's OKLab matrices). */
+export function hexToOklch(hex: string): Oklch {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) throw new Error('Expected a #rrggbb colour')
+  const r = linear(parseInt(hex.slice(1, 3), 16) / 255)
+  const g = linear(parseInt(hex.slice(3, 5), 16) / 255)
+  const b = linear(parseInt(hex.slice(5, 7), 16) / 255)
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
+  const labB = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+  const c = Math.hypot(a, labB)
+  return {
+    l: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    c,
+    h: c < 1e-4 ? 0 : (Math.atan2(labB, a) * 180 / Math.PI + 360) % 360,
+    alpha: 1,
+  }
+}
+
+/** Stable CSS literal with compact, rounded channels. */
+export function formatOklch({ l, c, h, alpha }: Oklch): string {
+  const round = (value: number, digits: number) => Number(value.toFixed(digits))
+  return `oklch(${round(l, 4)} ${round(c, 4)} ${round(h, 2)}${alpha < 1 ? ` / ${round(alpha, 4)}` : ''})`
+}

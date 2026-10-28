@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { composite, contrastRatio, parseColor, toRgba, type Rgba } from '../app/theme/color'
+import { composite, contrastRatio, hexToOklch, formatOklch, parseColor, toRgba, type Rgba } from '../app/theme/color'
 
 const rgb = (r: number, g: number, b: number): Rgba => ({ r: r / 255, g: g / 255, b: b / 255, alpha: 1 })
 
@@ -95,5 +95,34 @@ describe('contrastRatio', () => {
 
   it('is symmetric', () => {
     expect(contrastRatio(rgb(255, 255, 255), rgb(118, 118, 118))).toBe(contrastRatio(rgb(118, 118, 118), rgb(255, 255, 255)))
+  })
+})
+
+
+describe('hexToOklch', () => {
+  it('converts white to neutral lightness one', () => {
+    const color = hexToOklch('#ffffff')
+    expect(color.l).toBeCloseTo(1, 3)
+    expect(color.c).toBeLessThan(0.001)
+    expect(color.h).toBe(0)
+    expect(color.alpha).toBe(1)
+  })
+  it.each(['#1e1e2e', '#fbf1c7', '#d3869b'])('round trips %s through sRGB', (hex) => {
+    const color = toRgba(hexToOklch(hex))
+    for (const [i, channel] of [color.r, color.g, color.b].entries())
+      expect(Math.abs(channel * 255 - parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16))).toBeLessThan(1)
+  })
+  it.each(['#fff', '#ffffffff', 'ffffff', '#gggggg', ' #ffffff'])('rejects %s', (hex) => {
+    expect(() => hexToOklch(hex)).toThrow()
+  })
+})
+
+describe('formatOklch', () => {
+  it('formats translucent colours', () => {
+    expect(formatOklch({ l: 0.5, c: 0.1, h: 280, alpha: 0.5 })).toBe('oklch(0.5 0.1 280 / 0.5)')
+  })
+  it('rounds channels and omits opaque alpha', () => {
+    expect(formatOklch({ l: 0.512345, c: 0.123456, h: 280.12345, alpha: 1 })).toBe('oklch(0.5123 0.1235 280.12)')
+    expect(formatOklch({ l: 0.5, c: 0.1, h: 280, alpha: 0.512345 })).toBe('oklch(0.5 0.1 280 / 0.5123)')
   })
 })

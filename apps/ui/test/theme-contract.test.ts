@@ -12,6 +12,18 @@ const nameOf = (id: string) => id.slice('builtin:'.length)
 const withToken = (css: string, token: string, value: string) =>
   css.replace(new RegExp(`(--ld-${token}:)[^;]*;`), `$1 ${value};`)
 
+const withNewTokens = (css: string) => css.replace(/}\s*$/, `
+  --ld-font-heading: system-ui, sans-serif;
+  --ld-font-body: system-ui, sans-serif;
+  --ld-size-h1: 2em;
+  --ld-size-h2: 1.5em;
+  --ld-size-h3: 1.25em;
+  --ld-size-body: 1em;
+  --ld-size-small: 0.875em;
+  --ld-leading-heading: 1.2;
+  --ld-link: var(--ld-accent-text);
+}`)
+
 describe('built-in themes', () => {
   it.each(BUILTIN_THEMES.map((theme) => [theme.id, theme] as const))('%s passes the contract', (_, theme) => {
     expect(validateThemeCss(themeCss(nameOf(theme.id)), { slug: nameOf(theme.id), mode: theme.mode })).toEqual({ ok: true })
@@ -19,8 +31,8 @@ describe('built-in themes', () => {
 })
 
 describe('validateThemeCss', () => {
-  const base = themeCss('obsidian')
-  const glass = themeCss('glass')
+  const base = withNewTokens(themeCss('obsidian'))
+  const glass = withNewTokens(themeCss('glass'))
 
   it.each([
     ['an extra rule', `${base}\n.widget__box { opacity: 0 }`, 'single-block', /exactly one rule/],
@@ -42,6 +54,9 @@ describe('validateThemeCss', () => {
     ['an unquoted font family', withToken(base, 'font-ui', 'Inter, sans-serif'), 'value', /--ld-font-ui: .* quoted family names/],
     ['a quoted font family containing a raw newline', withToken(base, 'font-ui', '"x\n} .app__header { display: none } .y { --a: "'), 'value', /--ld-font-ui: .* quoted family names/s],
     ['a quoted font family containing <', withToken(base, 'font-ui', '"<\/style><x>"'), 'value', /--ld-font-ui: .* quoted family names/],
+    ['sizes out of order', withToken(base, 'size-h2', '2.5em'), 'value', /size-h1 > size-h2 > size-h3 > size-body > size-small/],
+    ['low link contrast', withToken(base, 'link', 'var(--ld-surface-2)'), 'contrast', /link on surface-2/],
+    ['a missing heading font', base.replace(/--ld-font-heading:[^;]*;/, ''), 'missing', /--ld-font-heading is required/],
     ['weights out of order', withToken(base, 'weight-medium', '300'), 'value', /weight-regular < weight-medium < weight-strong/],
     ['a var() in surface-1-solid', withToken(base, 'surface-1-solid', 'var(--ld-surface-2)'), 'value', /surface-1-solid must be an oklch\(\) literal, not var\(\)/],
     [
@@ -73,7 +88,7 @@ describe('validateThemeCss', () => {
     const result = validateThemeCss(css, { slug: 'obsidian', mode: 'dark' })
     expect(result.ok).toBe(false)
     if (result.ok) return
-    expect(result.errors.find((error) => error.rule === rule)?.message).toMatch(message)
+    expect(result.errors).toEqual(expect.arrayContaining([expect.objectContaining({ rule, message: expect.stringMatching(message) })]))
   })
 
   it('rejects a theme that passes translucent mode but fails solid mode', () => {
