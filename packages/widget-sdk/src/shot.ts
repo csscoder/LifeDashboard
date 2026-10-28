@@ -4,10 +4,11 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import type { WidgetSizing } from '@lifedashboard/contracts/grid'
+import type { WidgetVariants } from '@lifedashboard/contracts/widget-variants'
 import { DEV_PATHS, startDevServer, type DevInfo } from './dev/server.ts'
 
 export type ShotFrame = 'framed' | 'frameless'
-export interface ShotCombo { w: number; h: number; theme: string; frame: ShotFrame }
+export interface ShotCombo { w: number; h: number; theme: string; frame: ShotFrame; variant?: string }
 export interface ShotOptions {
   sizes?: { w: number; h: number }[]
   themes?: string[]
@@ -20,7 +21,7 @@ export interface ShotOptions {
 const RENDER_TIMEOUT_MS = 15_000
 const START_TIMEOUT_MS = 20_000
 
-export function shotCombos(sizing: WidgetSizing, themeIds: readonly string[], options: Pick<ShotOptions, 'sizes' | 'themes' | 'frames'>): ShotCombo[] {
+export function shotCombos(sizing: WidgetSizing, themeIds: readonly string[], options: Pick<ShotOptions, 'sizes' | 'themes' | 'frames'>, look: { variants?: WidgetVariants; frame?: ShotFrame } = {}): ShotCombo[] {
   const range = `${sizing.min.w}x${sizing.min.h}…${sizing.max.w}x${sizing.max.h}`
   const sizes = options.sizes ?? [sizing.min, sizing.default, sizing.max]
   for (const size of sizes) {
@@ -32,12 +33,19 @@ export function shotCombos(sizing: WidgetSizing, themeIds: readonly string[], op
     if (!themeIds.includes(theme)) throw new Error(`Unknown theme ${theme}. Fix: use one of ${themeIds.join(', ')}.`)
   }
   const unique = [...new Map(sizes.map((size) => [`${size.w}x${size.h}`, size])).values()]
-  return unique.flatMap(({ w, h }) => (options.themes ?? themeIds).flatMap((theme) =>
+  const combos: ShotCombo[] = unique.flatMap(({ w, h }) => (options.themes ?? themeIds).flatMap((theme) =>
     (options.frames ?? ['framed', 'frameless'] as const).map((frame) => ({ w, h, theme, frame }))))
+  const theme = (options.themes ?? themeIds)[0]
+  if (theme !== undefined) {
+    for (const { id } of look.variants?.items ?? []) {
+      combos.push({ ...sizing.default, theme, frame: look.frame ?? 'framed', variant: id })
+    }
+  }
+  return combos
 }
 
 export function shotFileName(combo: ShotCombo): string {
-  return `${combo.w}x${combo.h}-${combo.theme.replace(/^builtin:/, '')}-${combo.frame}.png`
+  return `${combo.w}x${combo.h}-${combo.theme.replace(/^builtin:/, '')}-${combo.frame}${combo.variant === undefined ? '' : `-${combo.variant}`}.png`
 }
 
 const BROWSERS: Record<string, string[]> = {
@@ -146,7 +154,7 @@ export async function takeShots(dir: string, options: ShotOptions = {}): Promise
   let chrome: Awaited<ReturnType<typeof launch>> | undefined
   try {
     const info = await (await fetch(new URL(DEV_PATHS.api.slice(1) + 'info', server.url))).json() as DevInfo
-    const combos = shotCombos(info.manifest.sizing, info.themes.map((theme) => theme.id), options)
+    const combos = shotCombos(info.manifest.sizing, info.themes.map((theme) => theme.id), options, { variants: info.manifest.variants, frame: info.manifest.frame })
     const out = join(root, '.ld-widget', 'shots')
     await mkdir(out, { recursive: true })
     chrome = await launch(browser)
@@ -162,7 +170,7 @@ export async function takeShots(dir: string, options: ShotOptions = {}): Promise
       const results: { file: string; rendered: boolean }[] = []
       for (const combo of combos) {
         const loaded = cdp.next('Page.loadEventFired')
-        await send('Page.navigate', { url: `${server.url}?w=${combo.w}&h=${combo.h}&theme=${encodeURIComponent(combo.theme)}&frame=${combo.frame}` })
+        await send('Page.navigate', { url: `${server.url}?w=${combo.w}&h=${combo.h}&theme=${encodeURIComponent(combo.theme)}&frame=${combo.frame}${combo.variant === undefined ? '' : `&variant=${encodeURIComponent(combo.variant)}`}` })
         await loaded
         const started = Date.now()
         let rendered = false

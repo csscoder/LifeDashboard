@@ -16,6 +16,16 @@ describe('shotCombos', () => {
     expect(combos.map((combo) => `${combo.w}x${combo.h}`)).toEqual(expect.arrayContaining(['2x2', '4x3', '6x6']))
   })
 
+  it.each([undefined, 'frameless'] as const)('appends each variant at default size and first selected theme (frame: %s)', (frame) => {
+    const variants = { default: 'classic', items: ['classic', 'roman', 'digital'].map((id) => ({ id, title: id })) }
+    const options = { themes: ['builtin:paper'], sizes: [{ w: 2, h: 2 }], frames: ['framed'] as const }
+    const base = shotCombos(sizing, themes, { ...options, frames: [...options.frames] })
+    expect(shotCombos(sizing, themes, { ...options, frames: [...options.frames] }, { variants, frame })).toEqual([
+      ...base,
+      ...variants.items.map(({ id }) => ({ w: 4, h: 3, theme: 'builtin:paper', frame: frame ?? 'framed', variant: id })),
+    ])
+  })
+
   it('drops duplicate sizes when min, default or max are equal', () => {
     const square = { default: { w: 2, h: 2 }, min: { w: 2, h: 2 }, max: { w: 2, h: 2 } }
     expect(shotCombos(square, ['builtin:paper'], { frames: ['framed'] })).toEqual([{ w: 2, h: 2, theme: 'builtin:paper', frame: 'framed' }])
@@ -36,6 +46,10 @@ describe('shotCombos', () => {
 
 it('names a shot after its size, theme and frame', () => {
   expect(shotFileName({ w: 4, h: 3, theme: 'builtin:paper', frame: 'frameless' })).toBe('4x3-paper-frameless.png')
+})
+
+it('includes the variant in the shot filename', () => {
+  expect(shotFileName({ w: 6, h: 6, theme: 'builtin:glass', frame: 'frameless', variant: 'roman' })).toBe('6x6-glass-frameless-roman.png')
 })
 
 describe('findBrowser', () => {

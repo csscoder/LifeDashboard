@@ -64,6 +64,24 @@ it('renders an empty interface without settings', () => {
   expect(renderConfigDeclaration(undefined)).toBe(emptyDeclaration)
 })
 
+const variants = { default: 'classic', items: [{ id: 'classic', title: 'Classic' }, { id: 'roman', title: 'Roman' }] }
+
+it('renders variant keys in manifest order in the config module', () => {
+  expect(renderConfigDeclaration(undefined, variants)).toBe(emptyDeclaration.replace('  interface WidgetConfig {}', `  interface WidgetConfig {}
+  interface WidgetVariantMap {
+    "classic": true
+    "roman": true
+  }`))
+})
+
+it('parses variants when writing the declaration and rejects invalid defaults', async () => {
+  const dir = await project({ variants })
+  await writeConfigDeclaration(dir)
+  expect(await readFile(join(dir, CONFIG_DECLARATION_FILE), 'utf8')).toBe(renderConfigDeclaration(undefined, variants))
+  await writeFile(join(dir, 'widget.json'), JSON.stringify({ variants: { ...variants, default: 'gone' } }))
+  await expect(writeConfigDeclaration(dir)).rejects.toThrow('Invalid widget.json: manifest.variants.default must be one of the item ids')
+})
+
 it('writes widget-env.d.ts in a temp project without settings', async () => {
   const dir = await project()
   expect(CONFIG_DECLARATION_FILE).toBe('widget-env.d.ts')
@@ -106,10 +124,10 @@ it('leaves widget-env.d.ts in the project after building a counter copy', async 
   expect(await readFile(join(dir, CONFIG_DECLARATION_FILE), 'utf8')).toBe(emptyDeclaration)
 }, 30_000)
 
-it('compiles the generated declaration and typed read-only config with workspace tsc', async () => {
+it.each([false, true])('compiles generated config and variant types (variants: %s)', async (hasVariants) => {
   const dir = await project()
   await mkdir(join(dir, 'src'))
-  await writeFile(join(dir, CONFIG_DECLARATION_FILE), renderConfigDeclaration(settings))
+  await writeFile(join(dir, CONFIG_DECLARATION_FILE), renderConfigDeclaration(settings, hasVariants ? variants : undefined))
   await writeFile(join(dir, 'package.json'), JSON.stringify({ type: 'module' }))
   await writeFile(join(dir, 'tsconfig.json'), JSON.stringify({
     compilerOptions: {
@@ -120,7 +138,11 @@ it('compiles the generated declaration and typed read-only config with workspace
     include: ['src/main.ts', 'widget-env.d.ts'],
   }))
   await writeFile(join(dir, 'src', 'main.ts'), `import { useWidget, type WidgetConfig } from '@lifedashboard/widget-sdk'
-const { config } = useWidget().context
+const widget = useWidget()
+const { config } = widget.context
+${hasVariants ? `const v: 'classic' | 'roman' = widget.context.variant
+// @ts-expect-error Undeclared variant ids are rejected.
+const bad: typeof widget.context.variant = 'gothic'` : `const v: '' = widget.context.variant`}
 const mode: 'a' | "b'c" | 'd\\ne' = config.mode
 const city: string = config.city
 const count: number = config.count

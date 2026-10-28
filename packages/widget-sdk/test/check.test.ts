@@ -72,6 +72,17 @@ it('returns only a manifest problem before generating or scanning anything', asy
   expect(JSON.parse(await readFile(join(dir, '.ld-widget/check.json'), 'utf8'))).toEqual(result)
 })
 
+it('reports a manifest problem for a variant default absent from items', async () => {
+  const dir = await project()
+  const path = join(dir, 'widget.json')
+  const manifest = JSON.parse(await readFile(path, 'utf8'))
+  manifest.variants = { default: 'gone', items: [{ id: 'classic', title: 'Classic' }, { id: 'roman', title: 'Roman' }] }
+  await writeFile(path, JSON.stringify(manifest))
+  expect((await checkWidget(dir, deps)).problems).toEqual([{
+    rule: 'manifest', message: expect.stringContaining('manifest.variants.default must be one of the item ids'),
+  }])
+})
+
 it('reports a nonexistent project without creating any files', async () => {
   const parent = await mkdtemp(join(tmpdir(), 'ld-widget-missing-'))
   dirs.push(parent)
