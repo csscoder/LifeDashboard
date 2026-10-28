@@ -1,12 +1,14 @@
 <script setup lang="ts">
+import { useFieldBridge } from './field-bridge'
 import { SwitchRoot, SwitchThumb } from 'reka-ui'
 defineOptions({ inheritAttrs: false })
-defineProps<{ modelValue: boolean; disabled?: boolean }>()
+const props = defineProps<{ modelValue: boolean; disabled?: boolean }>()
+const { control, disabled, bindings } = useFieldBridge(props)
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 </script>
 
 <template>
-  <SwitchRoot v-bind="$attrs" class="ui-switch" :model-value="modelValue" :disabled="disabled" @update:model-value="emit('update:modelValue', $event)">
+  <SwitchRoot ref="control" v-bind="bindings()" class="ui-switch" :model-value="modelValue" :disabled="disabled" @update:model-value="emit('update:modelValue', $event)">
     <SwitchThumb class="ui-switch__thumb" />
   </SwitchRoot>
 </template>

@@ -1,3 +1,4 @@
+import { useFieldBridge } from '../app/ui/field-bridge'
 import * as Vue from 'vue'
 import { numberFormatOptions } from '../app/ui/number-format'
 import { DEFAULT_SHADOW, parseScreenBoard } from '@lifedashboard/contracts/board'
@@ -11,7 +12,7 @@ const reka = Object.fromEntries([
   'NumberFieldRoot', 'NumberFieldInput', 'ColorFieldRoot', 'ColorFieldInput', 'FieldControl',
 ].map(name => [name, part(name)]))
 Object.assign(reka, { Primitive: Vue.defineComponent({ props: ['as'], setup: (props, { slots }) => () => Vue.h(props.as, null, slots.default?.()) }) })
-const compile = (name: string) => compileSfc(new URL(`../app/ui/${name}.vue`, import.meta.url), { 'reka-ui': reka, './number-format': { numberFormatOptions } })
+const compile = (name: string) => compileSfc(new URL(`../app/ui/${name}.vue`, import.meta.url), { 'reka-ui': reka, './field-bridge': { useFieldBridge }, './number-format': { numberFormatOptions } })
 const attrs = { id: 'setting', 'aria-describedby': 'hint' }
 
 for (const control of [

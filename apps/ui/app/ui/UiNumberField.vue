@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { useFieldBridge } from './field-bridge'
 import { ref } from 'vue'
 import { NumberFieldRoot, NumberFieldInput } from 'reka-ui'
 import { numberFormatOptions } from './number-format'
 defineOptions({ inheritAttrs: false })
 const props = defineProps<{ modelValue: number; integer: boolean; min?: number; max?: number; disabled?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
+const { control, disabled, bindings } = useFieldBridge(props)
 const revision = ref(0)
 function update(value: number | null | undefined) {
   if (typeof value !== 'number' || !Number.isFinite(value) || (props.integer && !Number.isInteger(value)) || (props.min !== undefined && value < props.min) || (props.max !== undefined && value > props.max)) {
@@ -17,7 +19,7 @@ function update(value: number | null | undefined) {
 
 <template>
   <NumberFieldRoot :key="revision" :model-value="modelValue" :step="integer ? 1 : undefined" :step-snapping="integer" :format-options="numberFormatOptions(integer)" :min="min" :max="max" :disabled="disabled" @update:model-value="update">
-    <NumberFieldInput v-bind="$attrs" class="ui-number-field" />
+    <NumberFieldInput ref="control" v-bind="bindings()" class="ui-number-field" />
   </NumberFieldRoot>
 </template>
 

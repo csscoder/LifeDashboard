@@ -78,6 +78,7 @@ function messageFor(key: string): string | null {
       :label="setting.title" :required="isRequiredSetting(schema, key)"
       :description="setting.description"
       :value="setting.type === 'secret' ? (secrets.has(key) ? 'set' : 'not set') : undefined"
+      :warning="setting.type === 'secret' && isRequiredSetting(schema, key) && !secrets.has(key)"
       :error="setting.type === 'secret' ? messageFor(key) : null"
     >
       <template v-if="setting.type === 'secret'">

@@ -26,6 +26,18 @@ describe('WidgetConfigForm controls', () => {
     expect(ui.nodes().filter(n => n.tag === 'UiNumberField').map(n => n.props.integer)).toEqual([true, false])
     expect(ui.nodes().filter(n => n.tag === 'UiTextField')[1]!.props.type).toBe('password')
   })
+  it('marks only required unset secret status as a warning', async () => {
+    const ui = mount()
+    ui.props.schema.required = ['token']
+    await Vue.nextTick()
+    const row = () => ui.nodes().find(n => n.tag === 'SettingsRow' && n.props.label === 'Token')!
+    expect(row().props.warning).toBe(true)
+    expect(row().props.value).toBe('not set')
+    ui.props.secrets.add('token')
+    await Vue.nextTick()
+    expect(row().props.warning).toBe(false)
+    expect(row().props.value).toBe('set')
+  })
   it('merges switch updates and text commits, preserving consecutive edits', () => {
     const ui = mount()
     ui.nodes().find(n => n.tag === 'UiSwitch')!.props['onUpdate:modelValue'](true)
