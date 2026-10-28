@@ -97,7 +97,7 @@ describe('stylesheets', () => {
   it('layers.css declares the layer order first', () => {
     const first = postcss.parse(styleFile('layers.css')).nodes.find((node) => node.type !== 'comment')
     expect(first?.type === 'atrule' && first.name === 'layer' && first.params).toBe(
-      'ld.reset, ld.frame, ld.skin, ld.theme, ld.utilities, ld.widget, ld.comfort',
+      'ld.reset, ld.base, ld.frame, ld.skin, ld.theme, ld.utilities, ld.widget, ld.comfort',
     )
   })
 

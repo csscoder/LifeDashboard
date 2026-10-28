@@ -1,0 +1,95 @@
+@layer ld.base {
+  :where(.ld-content) {
+    color: var(--ld-text-primary);
+    font-family: var(--ld-font-body);
+    font-size: var(--ld-size-body);
+    line-height: var(--ld-leading);
+    letter-spacing: var(--ld-tracking);
+  }
+
+  :where(.ld-content) :where(h1, h2, h3, h4, h5, h6) {
+    font-family: var(--ld-font-heading);
+    line-height: var(--ld-leading-heading);
+    color: var(--ld-text-primary);
+    margin: 0 0 0.5em;
+  }
+
+  :where(.ld-content) :where(h1, h2) {
+    font-weight: var(--ld-weight-strong);
+  }
+
+  :where(.ld-content) :where(h1) {
+    font-size: var(--ld-size-h1);
+  }
+
+  :where(.ld-content) :where(h2) {
+    font-size: var(--ld-size-h2);
+  }
+
+  :where(.ld-content) :where(h3, h4, h5, h6) {
+    font-size: var(--ld-size-h3);
+    font-weight: var(--ld-weight-medium);
+  }
+
+  :where(.ld-content) :where(p, ul, ol) {
+    font-size: var(--ld-size-body);
+    margin: 0 0 0.75em;
+  }
+
+  :where(.ld-content) :where(ul, ol) {
+    padding-left: 1.25em;
+  }
+
+  :where(.ld-content) :where(:last-child) {
+    margin-bottom: 0;
+  }
+
+  :where(.ld-content) :where(small) {
+    font-size: var(--ld-size-small);
+    color: var(--ld-text-secondary);
+  }
+
+  :where(.ld-content) :where(a) {
+    color: var(--ld-link);
+    font-weight: var(--ld-weight-medium);
+    text-decoration: none;
+  }
+
+  :where(.ld-content) :where(a):hover {
+    text-decoration: underline;
+  }
+
+  :where(.ld-content) :where(a):focus-visible {
+    outline: 0.125rem solid var(--ld-focus-ring);
+    outline-offset: 0.125rem;
+  }
+
+  :where(.ld-content) :where(code, pre) {
+    font-family: var(--ld-font-mono);
+    font-size: var(--ld-size-small);
+    background: var(--ld-surface-2);
+    border-radius: var(--ld-radius-control);
+    padding: 0.1em 0.3em;
+  }
+
+  :where(.ld-content) :where(pre) {
+    display: block;
+    padding: 0.75em;
+    overflow: auto;
+  }
+
+  :where(.ld-content) :where(pre code) {
+    background: none;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  :where(.ld-content) :where(hr) {
+    border-top: var(--ld-border-width) solid var(--ld-border-subtle);
+    margin: 1em 0;
+  }
+
+  :where(.ld-content) :where(strong, b) {
+    font-weight: var(--ld-weight-strong);
+  }
+}

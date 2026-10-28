@@ -5,7 +5,7 @@
   .space,
   .widget {
     color: var(--ld-text-primary);
-    font-family: var(--ld-font-ui);
+    font-family: var(--ld-font-body);
     line-height: var(--ld-leading);
     letter-spacing: var(--ld-tracking);
     /* Optional tokens must not leak from the Space theme into a widget theme that omits them.

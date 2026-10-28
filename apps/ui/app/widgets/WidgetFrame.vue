@@ -29,7 +29,7 @@ const wrapperStyle = computed(() => {
   <div :class="classes">
     <div class="widget__wrapper" :style="wrapperStyle">
       <div class="widget__box">
-        <div class="widget__body">
+        <div class="widget__body ld-content">
           <slot />
         </div>
       </div>

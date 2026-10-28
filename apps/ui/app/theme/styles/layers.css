@@ -2,8 +2,9 @@
  * This depends on Nuxt's app entry importing #build/css (nuxt.config css, including this file)
  * before #build/plugins, where @unocss/nuxt injects uno.css.
  */
-@layer ld.reset, ld.frame, ld.skin, ld.theme, ld.utilities, ld.widget, ld.comfort;
+@layer ld.reset, ld.base, ld.frame, ld.skin, ld.theme, ld.utilities, ld.widget, ld.comfort;
 
+@import './content.css';
 @import './frame.css';
 @import './skins/glass.css';
 @import './skins/solid.css';
