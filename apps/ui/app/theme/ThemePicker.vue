@@ -51,7 +51,8 @@ function dimension(key: 'mode' | 'style', value: string) {
 .theme-picker { display: grid; gap: 1rem; }
 .theme-picker fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .theme-picker legend { margin-bottom: 0.5rem; color: var(--ld-text-primary); }
-.theme-picker__palettes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
+.theme-picker__palettes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 6rem), 1fr)); gap: 0.5rem; }
+.theme-picker__tile { overflow-wrap: anywhere; }
 .theme-picker__tile, .theme-picker__option { padding: 0.5rem; border: 1px solid var(--ld-border-default); border-radius: var(--ld-radius-control); background: var(--ld-bg); color: var(--ld-text-primary); cursor: pointer; }
 .theme-picker__tile[data-state="checked"], .theme-picker__option[data-state="checked"] { outline: 2px solid var(--ld-accent); outline-offset: 2px; }
 .theme-picker__tile:focus-visible, .theme-picker__option:focus-visible { outline: 2px solid var(--ld-focus-ring); outline-offset: 2px; }
