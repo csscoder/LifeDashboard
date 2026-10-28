@@ -1,42 +1,41 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useWidget } from '@lifedashboard/widget-sdk'
-import { handAngles } from './clock.ts'
+import { clockTimeZone, handAngles } from './clock.ts'
 import { useClock } from './use-clock.ts'
 
 const widget = useWidget()
 const { now, reducedMotion } = useClock(() => widget.context.visible)
-const angles = computed(() => handAngles(new Date(now.value), !reducedMotion.value))
+const zone = computed(() => clockTimeZone(widget.context.config.zone ?? 'UTC'))
+const angles = computed(() => handAngles(new Date(now.value), !reducedMotion.value, zone.value))
 const second = computed(() => Math.floor(now.value / 1000))
 const date = computed(() => new Date(second.value * 1000))
-const dateFormat = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-const timeFormat = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
-const accessibleFormat = new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'short' })
-const dateLabel = computed(() => dateFormat.format(date.value))
-const timeLabel = computed(() => timeFormat.format(date.value))
-const accessibleLabel = computed(() => `Local time: ${accessibleFormat.format(date.value)}`)
+const dateLabel = computed(() => new Intl.DateTimeFormat('en-GB', { timeZone: zone.value, weekday: 'short', day: 'numeric', month: 'short' }).format(date.value))
+const timeLabel = computed(() => new Intl.DateTimeFormat('en-GB', { timeZone: zone.value, hour: '2-digit', minute: '2-digit', hour12: false }).format(date.value))
+const accessibleLabel = computed(() => `${zone.value}: ${new Intl.DateTimeFormat('en-GB', { timeZone: zone.value, dateStyle: 'full', timeStyle: 'short' }).format(date.value)}`)
+const numerals = computed(() => widget.context.variant === 'roman' ? ['XII', 'III', 'VI', 'IX'] : ['12', '3', '6', '9'])
 </script>
 
 <template>
-  <main class="clock">
+  <main class="clock" :class="`clock--${widget.context.variant}`">
     <svg class="clock__dial" viewBox="0 0 320 320" role="img" :aria-label="accessibleLabel">
       <circle class="clock__rim" cx="160" cy="160" r="149" />
       <g aria-hidden="true">
         <line
-          v-for="tick in 60"
+          v-for="tick in (widget.context.variant === 'minimal' ? 12 : 60)"
           :key="tick"
           class="clock__tick"
-          :class="{ 'clock__tick--hour': (tick - 1) % 5 === 0 }"
-          x1="160" y1="15" x2="160" :y2="(tick - 1) % 5 === 0 ? 25 : 19"
-          :transform="`rotate(${(tick - 1) * 6} 160 160)`"
+          :class="{ 'clock__tick--hour': (widget.context.variant === 'minimal' || (tick - 1) % 5 === 0) }"
+          x1="160" y1="15" x2="160" :y2="(widget.context.variant === 'minimal' || (tick - 1) % 5 === 0) ? 25 : 19"
+          :transform="`rotate(${(tick - 1) * (widget.context.variant === 'minimal' ? 30 : 6)} 160 160)`"
         />
-        <g class="clock__numbers">
-          <text x="160" y="58">12</text>
-          <text x="266" y="170">3</text>
-          <text x="160" y="286">6</text>
-          <text x="54" y="170">9</text>
+        <g v-if="widget.context.variant !== 'minimal'" class="clock__numbers">
+          <text x="160" y="58">{{ numerals[0] }}</text>
+          <text x="266" y="170">{{ numerals[1] }}</text>
+          <text x="160" y="286">{{ numerals[2] }}</text>
+          <text x="54" y="170">{{ numerals[3] }}</text>
         </g>
-        <text class="clock__label" x="160" y="94">LOCAL TIME</text>
+        <text class="clock__label" x="160" y="94">{{ zone }}</text>
         <text class="clock__date" x="160" y="217">{{ dateLabel }}</text>
         <text class="clock__time" x="160" y="241">{{ timeLabel }}</text>
         <line class="clock__hand clock__hand--hour" x1="160" y1="170" x2="160" y2="92" :transform="`rotate(${angles.hour} 160 160)`" />
@@ -147,4 +146,17 @@ const accessibleLabel = computed(() => `Local time: ${accessibleFormat.format(da
 .clock__pin {
   fill: var(--ld-accent);
 }
+.clock--minimal .clock__rim,
+.clock--minimal .clock__label,
+.clock--minimal .clock__date,
+.clock--minimal .clock__time,
+.clock--minimal .clock__hand--second { display: none; }
+.clock--minimal .clock__hand--hour { stroke-width: 3; }
+.clock--minimal .clock__hand--minute { stroke-width: 1.5; }
+.clock--minimal .clock__tick { stroke-width: 2; }
+.clock--roman .clock__numbers { font-family: var(--ld-font-display); font-size: calc(24px * var(--ld-font-scale)); }
+.clock--roman .clock__hand { stroke-linecap: square; }
+.clock--roman .clock__hand--hour { stroke-width: 7; }
+.clock--roman .clock__hand--minute { stroke-width: 4; }
+.clock--roman .clock__rim { stroke: var(--ld-border-strong); stroke-width: 2; }
 </style>

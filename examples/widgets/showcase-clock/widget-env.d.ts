@@ -2,5 +2,13 @@
 import '@lifedashboard/widget-sdk'
 
 declare module '@lifedashboard/widget-sdk' {
-  interface WidgetConfig {}
+  interface WidgetConfig {
+    /** Time zone */
+    zone: string
+  }
+  interface WidgetVariantMap {
+    "classic": true
+    "minimal": true
+    "roman": true
+  }
 }
