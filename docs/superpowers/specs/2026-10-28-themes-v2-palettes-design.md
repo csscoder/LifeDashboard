@@ -201,7 +201,7 @@ Alpha values and backdrop lightness are starting values; the contrast tests are 
 
 ### Built-in widgets
 
-`PlaceholderWidget.vue` and `clocks/analog_1` use semantic elements and `--ld-*` tokens only; any literal colour, font name or px font size in them is replaced.
+`PlaceholderWidget.vue` and `clocks/analog_1` use semantic elements and `--ld-*` tokens for text and UI; any literal colour, font name or px font size there is replaced. Decorative artwork keeps its material colours: the analog clock's wood and brass hands are illustration, not content (user decision 2026-10-28).
 
 ## Theme picker UI
 
@@ -223,7 +223,7 @@ Style    ( Solid | Glass )           ← UiRadioGroup
 
 ## SDK and agent knowledge
 
-- `packages/widget-sdk/scripts/build.ts` imports the generator instead of reading theme CSS files. `dist/dev/themes.json` holds 44 entries `{ id: 'builtin:<key>', name: '<Palette> <Mode> <Style>', mode, skin: style, tokens }`. Dev shell `?theme=<key>`; its theme select lists all entries. The frame rules embed `skins/solid.css`, `skins/glass.css`, `skins/bare.css` and `content.css`.
+- `packages/widget-sdk/scripts/build.ts` imports the generator instead of reading theme CSS files. `dist/dev/themes.json` holds 44 entries `{ id: 'builtin:<key>', name: '<Palette> <Mode> <Style>', mode, skin: style, tokens }`. Dev shell keeps its parameter format: `?theme=builtin:<key>`, the same id as `context.theme.id` (user decision 2026-10-28); its theme select lists all entries. The frame rules embed `skins/solid.css`, `skins/glass.css`, `skins/bare.css` and `content.css`.
 - `ld-widget shot` without `--theme` captures the four reference combinations `builtin:lifedashboard-{light,dark}-{solid,glass}`; `--theme all` captures all 44; repeated `--theme builtin:<key>` stays allowed.
 - `docs-src/design.md`:
   - «Theme tokens» names the choice model (palette, mode, style) and lists the new tokens in the Type group.

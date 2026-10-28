@@ -42,8 +42,8 @@
 - Copy is English and matches the existing UI strings. Keep «Theme not found, showing the default theme» and «Could not save the theme».
 - Between Task 1 and Task 8, `pnpm typecheck` and the full `apps/ui` suite may fail because fields are renamed. Each task runs the test files it names. Task 8 restores a green `pnpm -C apps/ui typecheck` and `pnpm -C apps/ui test`; Task 11 runs everything.
 - Commit messages: `type(scope): subject`, with at most a two-line body and no attribution trailers.
-- Deviation from the spec (confirm at plan review): the analog clock's wood/brass hand artwork keeps its material colours. It is illustration, not content text. The spec line «Built-in widgets» applies to text and UI, and `PlaceholderWidget` already uses token utilities.
-- Clarification of the spec: the dev shell keeps its existing `?theme=<id>` parameter format, so the value is `builtin:<key>`, not a bare key.
+- Built-in widgets: text and UI use tokens; decorative artwork keeps its material colours (the analog clock's wood/brass hands). `PlaceholderWidget` already uses token utilities. No built-in widget code changes are expected; Task 11 confirms it.
+- Dev shell and `ld-widget shot --theme` use theme ids `builtin:<key>`, the same as `context.theme.id`.
 
 ## Review Focus
 
@@ -155,6 +155,8 @@ In `space.test.ts`:
   - widget appearance `{"themeId":"builtin:bare","shadow":null}` → `{"theme":"bare","shadow":null}`;
   - `{"themeId":"builtin:glass","shadow":{…}}` → `theme` equals the glass choice and the shadow is kept;
   - `{"themeId":null,"shadow":null,"variant":"roman"}` → `theme: null`, `variant` kept;
+  - `{"themeId":"builtin:nope","shadow":null,"variant":"roman"}` → `theme: null`, `variant` kept;
+  - `{"shadow":{…},"variant":null}` (no theme field) is left unchanged; GET returns it with `theme: null` and the shadow;
   - a row with appearance `'not json'` is left unchanged and the migration does not throw.
 
   In `spaces.test.ts`:
@@ -171,7 +173,7 @@ In `space.test.ts`:
   - For each row with non-null `theme_id`, set `theme = JSON.stringify(legacyTheme(theme_id))` unless the mapping is `null` or `'bare'`.
   - For each `widgets` row with non-null `appearance`, `JSON.parse` it inside `try`. If the object has `themeId`, set `theme = legacyTheme(themeId)`, delete `themeId` and write it back. Skip rows that fail to parse.
 
-  Update `spaces.ts` to select `theme`, write `theme` (`JSON.stringify` or NULL) in `updateSpace` and the board save, and `JSON.parse` on read.
+  Update `spaces.ts` to select `theme`; the widget appearance read becomes `normalizeAppearance({ ...parsed, theme: parsed.theme ?? null, variant: parsed.variant ?? null })`; write `theme` (`JSON.stringify` or NULL) in `updateSpace` and the board save, and `JSON.parse` on read.
 
 - [ ] **Step 4: Run** `pnpm -C apps/api test` and `pnpm -C apps/api typecheck`. Expected: PASS.
 
@@ -292,7 +294,7 @@ it('throws with palette, mode, style and token when no text colour passes', () =
 })
 ```
 
-Replace the «built-in themes» block in `theme-contract.test.ts` with the per-combination test above, and use `themeRule(allThemeCombos()[1]!)` (key `lifedashboard-dark-solid`) as the base fixture for the negative cases. Update the selector expectations to that key.
+Replace the «built-in themes» block in `theme-contract.test.ts` with the per-combination test above, and use `themeRule(allThemeCombos()[1]!)` (key `lifedashboard-dark-solid`) as the `base` fixture for the negative cases and `themeRule(allThemeCombos()[0]!)` (key `lifedashboard-dark-glass`) as the `glass` fixture of «rejects a theme that passes translucent mode but fails solid mode» (slug `lifedashboard-dark-glass`). Update the selector expectations to those keys. No test may read `styles/themes/glass.css`, `obsidian.css` or `paper.css` after this task.
 
 - [ ] **Step 2: Run** `pnpm -C apps/ui test -- theme-generate theme-contract`. Expected: FAIL (the modules do not exist).
 
@@ -389,6 +391,10 @@ it('marks a different choice foreign and keeps the board key for bare', () => {
   expect(resolveWidgetLook({ theme: g('dark', 'solid'), shadow: null, variant: null }, board, 'dark')).toEqual({ themeId: 'builtin:gruvbox-dark-solid', skin: 'solid', foreign: true })
   expect(resolveWidgetLook({ theme: 'bare', shadow: null, variant: null }, board, 'dark')).toEqual({ themeId: board, skin: 'bare', foreign: false })
 })
+it.each([['undefined', undefined], ['null theme', { theme: null, shadow: null, variant: null }], ['unknown palette', { theme: { palette: 'builtin:nord', mode: 'dark', style: 'solid' }, shadow: null, variant: null }]] as const)(
+  'a widget with %s inherits a non-default board', (_, appearance) => {
+    expect(resolveWidgetLook(appearance, 'builtin:gruvbox-light-solid', 'dark')).toEqual({ themeId: 'builtin:gruvbox-light-solid', skin: 'solid', foreign: false })
+  })
 it('reads combination meta', () => {
   expect(themeMeta('builtin:rose-pine-light-solid')).toEqual({ id: 'builtin:rose-pine-light-solid', mode: 'light', skin: 'solid' })
 })
@@ -421,7 +427,7 @@ Keep the existing storage edge cases (throwing `getItem`/`setItem`, unknown fiel
 - Produces: `<ThemePicker v-model="value" :inherit="boolean" :bare="boolean" :inherited="ThemeChoice" :unavailable="boolean" :disabled="boolean" />`, where `value` is `ThemeChoice | 'bare' | null`.
   - `unavailable` shows «Theme unavailable — inherited» under Inherit for a stored unknown palette, which the picker treats as Inherit.
 
-- [ ] **Step 1: Write failing tests** with `@vue/test-utils`, following `ui-controls-reka.test.ts`:
+- [ ] **Step 1: Write failing tests** with the existing `compileSfc` / `mountComponent` helpers from `apps/ui/test/helpers/sfc-renderer.ts` (no `@vue/test-utils`; pass `reka-ui` and the `Ui*` modules as compile imports the way `ui-controls-reka.test.ts` does; dispatch `click` and `keydown` events on the rendered DOM):
   - Renders 11 palette radios with accessible names equal to the palette names.
   - Each tile has the class `widget--theme-<slug>-<resolved mode>-solid`.
   - Starting from `null` with `inherit` and `inherited = {gruvbox, light, solid}`, clicking the «Catppuccin» tile emits `{ palette: 'builtin:catppuccin', mode: 'light', style: 'solid' }`.
@@ -471,7 +477,7 @@ Keep the existing storage edge cases (throwing `getItem`/`setItem`, unknown fiel
 - [ ] **Step 1: Update or write failing tests:**
   - `widget-context.test.ts`: with a stubbed `matchMedia` and a widget whose resolved id changes from `builtin:gruvbox-dark-glass` to `builtin:gruvbox-light-glass`, `context.theme` becomes `{ id: 'builtin:gruvbox-light-glass', scheme: 'light', tokens: … }` after `nextTick` (Review Focus 5).
   - `space-sync.test.ts`: a space with `theme: {palette: 'builtin:nord', …}` resolves to the dashboard theme. Saving its icon sends a patch without `theme` (Review Focus 1).
-  - `settings-panel.test.ts`: choosing a tile emits `theme` with the choice.
+  - `settings-panel.test.ts`: choosing a tile emits `theme` with the choice; on a fresh profile (no stored appearance) the panel opens with Mode and Style enabled and `DEFAULT_THEME` selected.
   - `screen-dots.test.ts`: the picker shows Inherit, and the emitted choice goes into the draft.
   - `widget-settings.test.ts`: `withStyle(undefined, 'bare')` equals `{ theme: 'bare', shadow: null, variant: null }`.
   - Replace legacy ids in every remaining fixture.
@@ -483,7 +489,8 @@ Keep the existing storage edge cases (throwing `getItem`/`setItem`, unknown fiel
   - `scheme = useColorScheme()`;
   - `themeId = computed(() => resolveTheme([screenTheme, spaceTheme, dashboardTheme.value], scheme.value))`;
   - `themeNotice` when the stored palette is not in `BUILTIN_PALETTE_IDS`;
-  - `selectTheme(choice)` saves `{ schemaVersion: 2, theme: choice }`.
+  - `selectTheme(choice)` saves `{ schemaVersion: 2, theme: choice }`;
+  - `SettingsPanel` receives `shownDashboardTheme = computed(() => dashboardTheme.value && BUILTIN_PALETTE_IDS.has(dashboardTheme.value.palette) ? dashboardTheme.value : DEFAULT_THEME)`; the raw `dashboardTheme` (possibly null or unknown) stays for the notice and is not rewritten until the user picks.
 
   The dashboard picker passes `inherited = DEFAULT_THEME` and no `inherit`. Space and screen pickers pass `inherit` and `inherited` = the choice resolved one scope up. The widget picker passes `inherit`, `bare` and `inherited` = the board choice. Delete the legacy CSS files and their imports.
 
@@ -501,7 +508,9 @@ Keep the existing storage edge cases (throwing `getItem`/`setItem`, unknown fiel
   - `packages/widget-sdk/scripts/build.ts` — themes from `allThemeCombos()`; skins `['bare', 'glass', 'solid']`; append `content.css` to `frameRules`;
   - `packages/widget-sdk/src/shot.ts` — default themes and `all`;
   - `packages/widget-sdk/src/cli.ts` — help text for `--theme all`;
-  - `packages/widget-sdk/scripts/docs.ts` — `THEME_IDS` from `allThemeCombos()` filtered to the four reference ids, plus one line on the key format.
+  - `packages/widget-sdk/scripts/docs.ts` — `THEME_IDS` from `allThemeCombos()` filtered to the four reference ids, plus one line on the key format;
+  - `packages/widget-sdk/docs-src/workflow.md` — the example id only;
+  - `packages/widget-sdk/docs/*.md` — regenerated by `pnpm -C packages/widget-sdk run docs`.
 - Test: `packages/widget-sdk/test/sandbox-root.test.ts`, `shot.test.ts`, `dev-assets.test.ts`, `shell-state.test.ts`, `dev-parity.test.ts`, and the other files from `grep -rlE "builtin:(glass|paper|obsidian)" packages/widget-sdk/test`
 
 **Interfaces:**
@@ -522,7 +531,7 @@ Keep the existing storage edge cases (throwing `getItem`/`setItem`, unknown fiel
   - `sandbox.ts`: import `../../../apps/ui/app/theme/styles/content.css?raw`; in `followContext`, prepend `<style>` = `'@layer ld.base;\n' + css` to `document.head` and add the body class.
   - `shot.ts`: the default is `SHOT_DEFAULT_THEMES` filtered to the known `themeIds`; `'all'` expands to all.
 
-- [ ] **Step 4: Run** `pnpm -C packages/widget-sdk run build`, then `pnpm -C packages/widget-sdk test` and `pnpm -C packages/widget-sdk typecheck`. Expected: PASS.
+- [ ] **Step 4: Run** `pnpm -C packages/widget-sdk run docs` (re-renders `docs/` from `docs-src/` with the new `THEME_TOKENS` and `THEME_IDS`; the build's `checkDocs()` and the test global setup's `pnpm pack` fail on stale docs), then `pnpm -C packages/widget-sdk run build`, `pnpm -C packages/widget-sdk test` and `pnpm -C packages/widget-sdk typecheck`. Expected: PASS. Also replace `builtin:paper` in the `docs-src/workflow.md` example with `builtin:lifedashboard-light-solid` in this task. Task 10 edits the prose and renders again.
 - [ ] **Step 5: Commit** `feat(widget-sdk): palette themes in the dev shell and base content styles in the sandbox`
 
 ---
@@ -532,7 +541,6 @@ Keep the existing storage edge cases (throwing `getItem`/`setItem`, unknown fiel
 **Files:**
 - Modify:
   - `packages/widget-sdk/docs-src/design.md` — «Theme tokens» (choice model, new Type tokens); new «Typography and content»; «em, rem and rootFontSize»;
-  - `packages/widget-sdk/docs-src/workflow.md` — the example `?theme=builtin:lifedashboard-light-solid`;
   - `packages/create-widget/template/AGENTS.md` — three short rules;
   - `docs/theme-contract.md` — rewrite for v2;
   - `README.md` — Appearance rows and themes list.
