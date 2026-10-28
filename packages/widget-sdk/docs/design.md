@@ -44,7 +44,9 @@ Read the current values from `context.theme.tokens`, or use the CSS variables di
 - `--ld-ease-standard`
 - `--ld-edge-highlight`
 - `--ld-focus-ring`
+- `--ld-font-body`
 - `--ld-font-display`
+- `--ld-font-heading`
 - `--ld-font-mono`
 - `--ld-font-scale`
 - `--ld-font-ui`
@@ -53,6 +55,8 @@ Read the current values from `context.theme.tokens`, or use the CSS variables di
 - `--ld-info-subtle`
 - `--ld-info-text`
 - `--ld-leading`
+- `--ld-leading-heading`
+- `--ld-link`
 - `--ld-on-accent`
 - `--ld-on-danger`
 - `--ld-on-info`
@@ -65,6 +69,11 @@ Read the current values from `context.theme.tokens`, or use the CSS variables di
 - `--ld-scrim`
 - `--ld-shadow-raised`
 - `--ld-shadow-widget`
+- `--ld-size-body`
+- `--ld-size-h1`
+- `--ld-size-h2`
+- `--ld-size-h3`
+- `--ld-size-small`
 - `--ld-state-active`
 - `--ld-state-hover`
 - `--ld-state-selected`

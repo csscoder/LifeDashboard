@@ -18,7 +18,7 @@ vi.mock('../../contracts/node_modules/undici/index.js', async (importOriginal) =
 })
 
 const origin = 'https://service.example'
-const shell = 'w=4 h=3 theme=builtin:glass frame=framed'
+const shell = 'w=4 h=3 theme=builtin:lifedashboard-dark-glass frame=framed'
 const secret = '0123456789abcdef'
 const shortSecret = '0123456789'
 const secretError = 'The secret must be at least 16 characters without control characters or surrounding spaces'

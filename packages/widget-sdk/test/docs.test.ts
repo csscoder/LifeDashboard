@@ -133,7 +133,7 @@ describe('page content', () => {
     const workflow = (await freshDocs()).get('workflow.md')!
     for (const param of ['`w`', '`h`', '`theme`', '`frame`', '`confirm`']) expect(workflow).toContain(param)
     for (const theme of BUILTIN_THEMES) expect(workflow).toContain(`\`${theme.id}\``)
-    expect(workflow).toContain('?w=4&h=3&theme=builtin:paper&frame=frameless')
+    expect(workflow).toContain('?w=4&h=3&theme=builtin:lifedashboard-light-solid&frame=frameless')
   })
 
   it('design.md and the clock recipe size square content from the smaller side', async () => {

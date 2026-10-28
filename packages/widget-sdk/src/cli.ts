@@ -6,7 +6,7 @@ import { checkWidget } from './check.ts'
 import { startDevServer } from './dev/server.ts'
 import { takeShots, type ShotOptions } from './shot.ts'
 
-const usage = 'Usage: ld-widget <build|check|dev|shot> [dir] [options]'
+const usage = 'Usage: ld-widget <build|check|dev|shot> [dir] [options]\nshot: --theme <id|all> (default: four LifeDashboard reference themes)'
 const commands: Record<string, (args: string[]) => Promise<number>> = {
   async dev(args) {
     let dir: string | undefined

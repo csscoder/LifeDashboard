@@ -9,16 +9,16 @@ import {
 } from '../src/dev/shell-state.ts'
 
 const counter = JSON.parse(readFileSync(new URL('./fixtures/counter/widget.json', import.meta.url), 'utf8')) as WidgetPackageManifest
-const themeIds = ['builtin:glass', 'builtin:paper']
-const state: ShellState = { variant: '', w: 4, h: 3, theme: 'builtin:glass', frame: 'framed', confirm: 'allow' }
+const themeIds = ['builtin:lifedashboard-dark-glass', 'builtin:lifedashboard-light-solid']
+const state: ShellState = { variant: '', w: 4, h: 3, theme: 'builtin:lifedashboard-dark-glass', frame: 'framed', confirm: 'allow' }
 const theme: DevTheme = { id: themeIds[0]!, name: 'Glass', mode: 'dark', skin: 'glass', tokens: { '--ld-widget-padding': '1rem' } }
 
 it('matches production theme classes for every built-in theme, a user theme, and invalid formats', async () => {
-  const [{ themeClass: productionThemeClass }, { BUILTIN_THEME_IDS }] = await Promise.all([
+  const [{ themeClass: productionThemeClass }, { allThemeCombos }] = await Promise.all([
     import(new URL('../../../apps/ui/app/theme/resolve.ts', import.meta.url).href),
-    import(new URL('../../../apps/ui/app/theme/builtin.ts', import.meta.url).href),
+    import(new URL('../../../apps/ui/app/theme/generate.ts', import.meta.url).href),
   ])
-  for (const id of [...BUILTIN_THEME_IDS, 'user:12345678-1234-4234-8234-123456789abc']) {
+  for (const id of [...allThemeCombos().map(({ id }: { id: string }) => id), 'user:12345678-1234-4234-8234-123456789abc']) {
     expect(themeClass(id)).toBe(productionThemeClass(id))
   }
   const unknown = 'unknown:theme'
@@ -43,10 +43,10 @@ it('starts in the manifest frame and lets the URL override it', () => {
 })
 
 it('serializes every control in order and round-trips valid state', () => {
-  expect(serializeShellState(state)).toBe('?w=4&h=3&theme=builtin%3Aglass&frame=framed&confirm=allow')
-  const changed: ShellState = { variant: '', w: 1, h: 4, theme: 'builtin:paper', frame: 'frameless', confirm: 'decline' }
+  expect(serializeShellState(state)).toBe('?w=4&h=3&theme=builtin%3Alifedashboard-dark-glass&frame=framed&confirm=allow')
+  const changed: ShellState = { variant: '', w: 1, h: 4, theme: 'builtin:lifedashboard-light-solid', frame: 'frameless', confirm: 'decline' }
   expect(parseShellState(serializeShellState(changed), counter, themeIds)).toEqual(changed)
-  expect(describeShell(state)).toBe('w=4 h=3 theme=builtin:glass frame=framed')
+  expect(describeShell(state)).toBe('w=4 h=3 theme=builtin:lifedashboard-dark-glass frame=framed')
 })
 
 it('sizes the outer frame using cell size and the current root-font gap', () => {

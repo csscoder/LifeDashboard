@@ -40,7 +40,7 @@ const node = (tag: string, text = ''): HostNode => {
   tag, text, props: {}, children: [], parent: null, open: false, focused: false, style: {},
   rect: { left: 0, top: 0, width: 0, height: 0 },
   get nodeName() { return this.tag },
-  get nextElementSibling() { const siblings = this.parent?.children ?? []; return siblings.slice(siblings.indexOf(this) + 1).find(n => !n.tag.startsWith('#')) ?? null },
+  get nextElementSibling() { const siblings = this.parent?.children ?? []; return siblings.slice(siblings.indexOf(this) + 1).find((n: HostNode) => !n.tag.startsWith('#')) ?? null },
   dataset: {},
   addEventListener(type, listener) { if (!listeners.has(type)) listeners.set(type, new Set()); listeners.get(type)!.add(listener) },
   removeEventListener(type, listener) { listeners.get(type)?.delete(listener) },

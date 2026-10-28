@@ -37,16 +37,18 @@ describe('theme and CSS extraction', () => {
 
 describe('built dev assets', () => {
   it('ships built-in themes in production order with their metadata and all resolved required tokens', async () => {
-    const { BUILTIN_THEMES } = await import(pathToFileURL(join(root, '../../apps/ui/app/theme/builtin.ts')).href)
+    const { allThemeCombos } = await import(pathToFileURL(join(root, '../../apps/ui/app/theme/generate.ts')).href)
+    const BUILTIN_THEMES = allThemeCombos().map(({ id, name, mode, style: skin }: any) => ({ id, name, mode, skin }))
     const themes: DevTheme[] = JSON.parse(await asset('themes.json'))
-    expect(themes.map(({ id }) => id)).toEqual(['builtin:glass', 'builtin:obsidian', 'builtin:paper'])
+    expect(themes).toHaveLength(44)
+    expect(themes[0]!.id).toBe('builtin:lifedashboard-dark-glass')
     expect(themes.map(({ tokens: _tokens, ...meta }) => meta)).toEqual(BUILTIN_THEMES)
     for (const theme of themes) {
       for (const name of Object.keys(REQUIRED_TOKENS)) {
         expect(theme.tokens[`--ld-${name}`], `${theme.id}: --ld-${name}`).toBeTruthy()
       }
       for (const value of Object.values(theme.tokens)) expect(value).not.toContain('var(')
-      expect(theme.tokens).toEqual(extractThemeTokens(await ui(`app/theme/styles/themes/${theme.id.slice('builtin:'.length)}.css`)))
+      expect(theme.tokens).toEqual(allThemeCombos().find(({ id }: { id: string }) => id === theme.id)!.tokens)
     }
   })
 
@@ -81,10 +83,11 @@ describe('built dev assets', () => {
     const sandbox = sandboxStyle.match(/^\.sandbox \{[^}]*\}/m)![0]
     const frame = sandboxStyle.match(/^\.sandbox__frame \{[^}]*\}/m)![0]
     const parts = [order, reset, await ui('app/theme/styles/frame.css')]
-    for (const skin of ['bare', 'glass', 'paper', 'solid']) parts.push(await ui(`app/theme/styles/skins/${skin}.css`))
-    parts.push(sandbox, frame)
+    for (const skin of ['bare', 'glass', 'solid']) parts.push(await ui(`app/theme/styles/skins/${skin}.css`))
+    parts.push(await ui('app/theme/styles/content.css'), sandbox, frame)
     const css = await asset('frame.css')
     expect(css).toBe(parts.join('\n\n') + '\n')
+    expect(css).toContain('.ld-content')
     expect(css).not.toContain('@import')
     expect(css).not.toContain('.sandbox__frame--waiting')
   })

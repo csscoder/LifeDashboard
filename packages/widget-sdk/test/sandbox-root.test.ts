@@ -42,13 +42,14 @@ async function runtime(mount?: unknown, modals?: Record<string, Component>) {
   const parent = { postMessage: vi.fn() }
   const style = () => ({ setProperty() {}, removeProperty() {} })
   const html = { style: style() }
-  const body = { style: style() }
+  const body = { style: style(), classList: new Set<string>() }
+  const head = { firstElementChild: undefined as { tagName: string; textContent?: string } | undefined, prepend(element: any) { this.firstElementChild = element } }
   const app = { style: style() }
   vi.stubGlobal('window', {})
   vi.stubGlobal('parent', parent)
   vi.stubGlobal('addEventListener', events.addEventListener.bind(events))
   vi.stubGlobal('removeEventListener', events.removeEventListener.bind(events))
-  vi.stubGlobal('document', { documentElement: html, body, createElement: () => ({}), getElementById: () => app })
+  vi.stubGlobal('document', { documentElement: html, body, head, createElement: (tag: string) => ({ tagName: tag.toUpperCase() }), getElementById: () => app })
   await import('../src/sandbox.ts')
   const { port1, port2 } = new MessageChannel()
   ports.push(port1, port2)
@@ -62,7 +63,7 @@ async function runtime(mount?: unknown, modals?: Record<string, Component>) {
     }, ...(mount === undefined ? {} : { mount }) },
   }))
   await new Promise((resolve) => setTimeout(resolve, 20))
-  return { events, messages, html, body, app }
+  return { events, messages, html, body, app, head }
 }
 async function workspace() {
   const { defineComponent, h } = await import('vue')
@@ -115,4 +116,12 @@ it('forwards unconsumed Escape only', async () => {
   compact.events.dispatchEvent(key())
   await new Promise((resolve) => setTimeout(resolve, 20))
   expect(compact.messages).toEqual([])
+})
+
+it('prepends base content CSS and marks the body as content', async () => {
+  const { head, body } = await runtime()
+  expect(head.firstElementChild?.tagName).toBe('STYLE')
+  expect(head.firstElementChild?.textContent).toMatch(/^@layer ld.base;/)
+  expect(head.firstElementChild?.textContent).toContain(':where(.ld-content)')
+  expect(body.classList.has('ld-content')).toBe(true)
 })

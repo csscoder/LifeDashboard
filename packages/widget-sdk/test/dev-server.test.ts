@@ -68,7 +68,7 @@ it('routes call, log, info and reset and forwards shell state', async () => {
   const reset = vi.fn()
   const info = { revision: 3, manifest: {}, themes: [], secrets: {}, settingsProblems: [] } as unknown as DevInfo
   const api = createDevApi({ gateway: { call, reset: vi.fn() }, log, reset, info: () => info })
-  const shell = 'w=4 h=3 theme=builtin:glass frame=framed'
+  const shell = 'w=4 h=3 theme=builtin:lifedashboard-dark-glass frame=framed'
   const response = await request(api, '/@ld/api/call', 'POST', JSON.stringify({ op: 'state.get', input: {}, confirm: 'allow', shell }))
   expect(JSON.parse(response.output)).toEqual({ ok: true, value: { data: null, revision: 0 } })
   expect(call).toHaveBeenCalledExactlyOnceWith('state.get', {}, 'allow', shell)

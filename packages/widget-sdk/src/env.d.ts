@@ -4,3 +4,8 @@ declare module '@lifedashboard/widget-entry' {
   export const modals: Record<string, import('vue').Component> | undefined
   export default component
 }
+
+declare module '*.css?raw' {
+  const css: string
+  export default css
+}

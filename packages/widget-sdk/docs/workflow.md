@@ -29,11 +29,14 @@ The dev server starts the shell. The shell shows the widget in a frame, at sizes
   - `frame`: `framed` or `frameless`. A missing value uses the manifest `frame`.
   - `confirm`: `allow` or `decline`, the answer the shell gives to confirmations.
 
-  Example: `?w=4&h=3&theme=builtin:paper&frame=frameless`. Built-in theme ids:
+  Example: `?w=4&h=3&theme=builtin:lifedashboard-light-solid&frame=frameless`. Built-in theme ids:
 
-- `builtin:glass`: dark
-- `builtin:obsidian`: dark
-- `builtin:paper`: light
+- `builtin:lifedashboard-dark-glass`: dark
+- `builtin:lifedashboard-dark-solid`: dark
+- `builtin:lifedashboard-light-glass`: light
+- `builtin:lifedashboard-light-solid`: light
+
+Theme keys use `builtin:<palette>-<dark|light>-<glass|solid>`.
 
 - The shell and `.ld-widget/dev.log` need a browser. Without an open browser, take screenshots and look at each image:
 
@@ -42,7 +45,7 @@ The dev server starts the shell. The shell shows the widget in a frame, at sizes
   ```
 
   - It starts its own dev server and an installed Chromium-based browser in headless mode, waits until the widget has rendered, and writes one image of the widget area per combination to `.ld-widget/shots/`, named `<w>x<h>-<theme>-<frame>.png`. It prints each path.
-  - By default it takes min, default and max size, every built-in theme, framed and frameless. Narrow it with `--size 4x3`, `--theme builtin:paper` and `--frame frameless`; each option can repeat.
+  - By default it takes min, default and max size, every built-in theme, framed and frameless. Narrow it with `--size 4x3`, `--theme builtin:lifedashboard-light-solid` and `--frame frameless`; each option can repeat.
   - `--wait <ms>` sets how long it waits after the first render, 1000 by default. Raise it for a widget that loads data or animates in, for example `--wait 5000`.
   - It finds Chrome, Chromium, Edge or Brave in the usual places. Set `LD_BROWSER` to the browser's path if it is elsewhere.
   - Runtime errors and overflow are written to `.ld-widget/dev.log` as with an open browser.

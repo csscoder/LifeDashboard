@@ -7,6 +7,8 @@ import type { WidgetSizing } from '@lifedashboard/contracts/grid'
 import type { WidgetVariants } from '@lifedashboard/contracts/widget-variants'
 import { DEV_PATHS, startDevServer, type DevInfo } from './dev/server.ts'
 
+export const SHOT_DEFAULT_THEMES: readonly string[] = ['builtin:lifedashboard-dark-glass', 'builtin:lifedashboard-dark-solid', 'builtin:lifedashboard-light-glass', 'builtin:lifedashboard-light-solid']
+
 export type ShotFrame = 'framed' | 'frameless'
 export interface ShotCombo { w: number; h: number; theme: string; frame: ShotFrame; variant?: string }
 export interface ShotOptions {
@@ -30,12 +32,13 @@ export function shotCombos(sizing: WidgetSizing, themeIds: readonly string[], op
     }
   }
   for (const theme of options.themes ?? []) {
-    if (!themeIds.includes(theme)) throw new Error(`Unknown theme ${theme}. Fix: use one of ${themeIds.join(', ')}.`)
+    if (theme !== 'all' && !themeIds.includes(theme)) throw new Error(`Unknown theme ${theme}. Fix: use one of ${themeIds.join(', ')}.`)
   }
+  const themes = options.themes?.includes('all') ? themeIds : options.themes ?? SHOT_DEFAULT_THEMES.filter((id) => themeIds.includes(id))
   const unique = [...new Map(sizes.map((size) => [`${size.w}x${size.h}`, size])).values()]
-  const combos: ShotCombo[] = unique.flatMap(({ w, h }) => (options.themes ?? themeIds).flatMap((theme) =>
+  const combos: ShotCombo[] = unique.flatMap(({ w, h }) => themes.flatMap((theme) =>
     (options.frames ?? ['framed', 'frameless'] as const).map((frame) => ({ w, h, theme, frame }))))
-  const theme = (options.themes ?? themeIds)[0]
+  const theme = themes[0]
   if (theme !== undefined) {
     for (const { id } of look.variants?.items ?? []) {
       combos.push({ ...sizing.default, theme, frame: look.frame ?? 'framed', variant: id })

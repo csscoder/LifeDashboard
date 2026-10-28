@@ -35,7 +35,7 @@ const ports: MessagePort[] = []
 afterEach(() => { unmountComponents(); for (const port of ports.splice(0)) port.close(); vi.unstubAllGlobals(); vi.useRealTimers() })
 async function setup() {
  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
- const info: DevInfo = { revision: 1, manifest: { id: 'dev.test.modal', version: '1.0.0', title: 'Modal test', author: 'Test', sdk: 4, entry: 'index.js', styles: [], permissions: ['state'], sizing: { default: { w: 4, h: 3 }, min: { w: 1, h: 1 }, max: { w: 8, h: 8 } } }, themes: [{ id: 'builtin:paper', name: 'Paper', mode: 'light', skin: 'paper', tokens: {} }], secrets: {}, settingsProblems: [] }
+ const info: DevInfo = { revision: 1, manifest: { id: 'dev.test.modal', version: '1.0.0', title: 'Modal test', author: 'Test', sdk: 4, entry: 'index.js', styles: [], permissions: ['state'], sizing: { default: { w: 4, h: 3 }, min: { w: 1, h: 1 }, max: { w: 8, h: 8 } } }, themes: [{ id: 'builtin:lifedashboard-light-solid', name: 'LifeDashboard Light Solid', mode: 'light', skin: 'solid', tokens: {} }], secrets: {}, settingsProblems: [] }
  const gateway = createDevGateway({ manifest: () => info.manifest, secrets: () => new Map(), log() {} })
  const win = new EventTarget()
  const doc = Object.assign(new EventTarget(), { documentElement: { dataset: {} }, activeElement: null, visibilityState: 'visible' })

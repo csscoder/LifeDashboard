@@ -35,7 +35,7 @@ it.each([['unknown'], ['dev', '--port'], ['dev', '--port', 'no'], ['dev', '--por
   expect(result.error).toBeUndefined()
   expect(result.status).toBe(2)
   expect(result.stdout).toBe('')
-  expect(result.stderr).toBe('Usage: ld-widget <build|check|dev|shot> [dir] [options]\n')
+  expect(result.stderr).toBe('Usage: ld-widget <build|check|dev|shot> [dir] [options]\nshot: --theme <id|all> (default: four LifeDashboard reference themes)\n')
 })
 
 it('dev --poll observes manifest edits when native filesystem events are unavailable', async () => {

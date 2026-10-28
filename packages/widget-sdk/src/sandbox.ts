@@ -4,6 +4,7 @@ import { parseModalMount } from '@lifedashboard/contracts/widget-modal'
 import { createWidgetModal } from './modal.ts'
 import { createPortClient } from './port-client.ts'
 import { applyTokens } from './theme.ts'
+import contentCss from '../../../apps/ui/app/theme/styles/content.css?raw'
 import { createWidget, WIDGET_KEY } from './widget.ts'
 
 // Widget code imports '@lifedashboard/widget-sdk', which the import map resolves to this module.
@@ -16,6 +17,10 @@ function report(port: MessagePort, error: unknown): void {
 
 // Theme and scale come from the host: the frame inherits nothing from the dashboard (spec «Theme and size»).
 function followContext(context: WidgetContext): void {
+  const style = document.createElement('style')
+  style.textContent = '@layer ld.base;\n' + contentCss
+  document.head.prepend(style)
+  document.body.classList.add('ld-content')
   const root = document.documentElement
   root.style.background = 'transparent'
   let applied: string[] = []

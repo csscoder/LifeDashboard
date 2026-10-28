@@ -55,7 +55,8 @@ describe('assets', () => {
   })
 
   it('covers the built-in themes with every required token', async () => {
-    const { BUILTIN_THEMES } = await import(pathToFileURL(join(repo, 'apps/ui/app/theme/builtin.ts')).href)
+    const { allThemeCombos } = await import(pathToFileURL(join(repo, 'apps/ui/app/theme/generate.ts')).href)
+    const BUILTIN_THEMES = allThemeCombos()
     const themes: DevTheme[] = JSON.parse(await dist('themes.json'))
     expect(themes.map(({ id }) => id)).toEqual(BUILTIN_THEMES.map(({ id }: { id: string }) => id))
     for (const theme of themes) {
@@ -69,7 +70,7 @@ describe('assets', () => {
     const sources = [
       extractCssBlock(await ui('app/theme/styles/layers.css'), '@layer ld.reset'),
       await ui('app/theme/styles/frame.css'),
-      ...await Promise.all(['bare', 'glass', 'paper', 'solid'].map((skin) => ui(`app/theme/styles/skins/${skin}.css`))),
+      ...await Promise.all(['bare', 'glass', 'solid'].map((skin) => ui(`app/theme/styles/skins/${skin}.css`))),
       sandboxStyle.match(/^\.sandbox \{[^}]*\}/m)![0],
       sandboxStyle.match(/^\.sandbox__frame \{[^}]*\}/m)![0],
     ]
