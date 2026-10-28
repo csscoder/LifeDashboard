@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 2,
+  "feature": {
+    "id": "widget-settings-and-looks",
+    "name": "Widget settings and looks",
+    "slug": "widget-settings-and-looks"
+  },
+  "status": "completed",
+  "completedAt": "2026-10-28",
+  "git": {
+    "repositoryRoot": ".",
+    "branch": "main",
+    "commit": "d76a02c733aba207b9a4f33d45c3b74e3bb277b0",
+    "headDescribe": "d76a02c",
+    "workingTree": "clean",
+    "statusSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contentStateSha256": "5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456",
+    "treeStateSha256": "eae3f04b048523e128c2ffdad4a8c71b2c27ec16d8e74ed0aa282365b673305c",
+    "indexStateSha256": "88be3962473e2305d1f63c7dc6d55066adbb276f58e93211fef526b58e65e0ad",
+    "tags": []
+  },
+  "artifacts": {
+    "spec": {
+      "sourcePath": "docs/superpowers/specs/2026-10-28-widget-settings-and-looks-design.md",
+      "archivePath": "spec.md",
+      "sha256": "415497b3d06f178c45ba900aa909ea898ed2d52471a758f4aa1597027acbf7cb",
+      "provenance": {
+        "kind": "file",
+        "external": false,
+        "commit": null
+      }
+    },
+    "plan": {
+      "sourcePath": "docs/superpowers/plans/2026-10-28-widget-settings-and-looks.md",
+      "archivePath": "plan.md",
+      "sha256": "c5f32e561573f4e87fbdd87183e1d70c803b4592638c89167fa6316ef9417ff7",
+      "provenance": {
+        "kind": "file",
+        "external": false,
+        "commit": null
+      }
+    },
+    "outcome": {
+      "archivePath": "outcome.md",
+      "sha256": "815fcaacb79c569142cdcc2fa9f191801f1e33aa15e46e620ffac16e21267f8f"
+    }
+  },
+  "areas": [
+    "apps/ui",
+    "apps/api",
+    "packages/contracts",
+    "packages/widget-sdk",
+    "packages/create-widget",
+    "examples/widgets/showcase-clock"
+  ],
+  "tags": [],
+  "assessment": {
+    "sourcesRead": true,
+    "finalArtifacts": true,
+    "featureMatch": true,
+    "evidenceReviewed": true,
+    "secretsReviewed": true,
+    "basis": "The spec and plan were written, Codex-reviewed (spec APPROVE_WITH_FIXES, plan APPROVE after three rounds) and approved in this session; the plan names the spec as its source. After the whole-branch review both were revised for the colour picker and color setting (spec section 'Revision 2026-10-28', plan Task 13) and committed in 5ea4420 on feat/widget-settings-and-looks, which was fast-forwarded into main. Implementation commits 9b9a68a..d44b3a9 were reviewed against both documents in this session; typecheck, tests, build and an Orca browser check were observed directly. Completion date: the fast-forward merge into main in this session. The documents contain no credentials; the reviewed code keeps secret values server-side.",
+    "evidence": [
+      "ev-review",
+      "ev-checks",
+      "ev-browser",
+      "ev-merge"
+    ]
+  },
+  "evidence": [
+    {
+      "id": "ev-review",
+      "kind": "session",
+      "reference": "Claude Code session 1874f057-6404-4bf3-b464-3f643682e0c1, whole-branch review of feat/widget-settings-and-looks (git diff main...HEAD at f7020e2) on 2026-10-28",
+      "inspected": true,
+      "summary": "Read the contracts, API, runtime, SDK, docs, template and UI diffs against the plan. Contracts and API matched the plan. Found an empty Widget heading for widgets without settings, a double divider above the settings form, misaligned slider tracks and a reformatted showcase-clock widget.json; fixed in 322db5f with a test for the hidden Widget block.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    },
+    {
+      "id": "ev-checks",
+      "kind": "session",
+      "reference": "Claude Code session 1874f057-6404-4bf3-b464-3f643682e0c1, background runs in the feature worktree on 2026-10-28",
+      "inspected": true,
+      "summary": "At f7020e2: pnpm typecheck, pnpm test and pnpm build each exited 0 (2438 tests). After the colour picker and color setting changes: pnpm typecheck and pnpm test exited 0 (contracts 653, widget-sdk 400, ui 802, api 405, create-widget 51, examples pass); a later apps/ui test run passed 802 tests and apps/ui typecheck exited 0.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    },
+    {
+      "id": "ev-browser",
+      "kind": "session",
+      "reference": "Claude Code session 1874f057-6404-4bf3-b464-3f643682e0c1, Orca built-in browser on an isolated dev instance (ports 3010/3011, scratch database) on 2026-10-28",
+      "inspected": true,
+      "summary": "Installed showcase-clock 1.1.0 (sdk 5, variants accepted). Look switched classic/minimal/roman live; a committed time zone moved the clock; alpha hex #11223380 was rejected and #ff0000 accepted; built-in clock editor showed Switch, RadioGroup and Selects; Reset showed the exact confirmation copy and restored look, zone and style. The colour picker rendered its saturation/brightness gradient, hue slider, opacity slider (keyboard lowered it to 44%) and checkerboard swatch.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    },
+    {
+      "id": "ev-merge",
+      "kind": "session",
+      "reference": "Claude Code session 1874f057-6404-4bf3-b464-3f643682e0c1, git merge --ff-only feat/widget-settings-and-looks on main on 2026-10-28",
+      "inspected": true,
+      "summary": "main was fast-forwarded from 51e7f61 to 5ea4420 with the user's approval; the user's lockfile change was reapplied unchanged and later committed with the hermes-tasks removal in d76a02c.",
+      "sha256": null,
+      "external": false,
+      "validation": "agent-attested-session"
+    }
+  ],
+  "implementation": {
+    "status": "completed",
+    "evidence": [
+      "ev-review",
+      "ev-merge"
+    ]
+  },
+  "review": {
+    "status": "approved",
+    "evidence": [
+      "ev-review"
+    ]
+  },
+  "verification": {
+    "status": "passed",
+    "evidence": [
+      "ev-checks",
+      "ev-browser"
+    ],
+    "checks": [
+      {
+        "command": "pnpm typecheck (feature worktree, after the colour picker changes)",
+        "result": "passed",
+        "exitCode": 0,
+        "evidence": [
+          "ev-checks"
+        ]
+      },
+      {
+        "command": "pnpm test (feature worktree, after the colour picker changes)",
+        "result": "passed",
+        "exitCode": 0,
+        "evidence": [
+          "ev-checks"
+        ]
+      },
+      {
+        "command": "pnpm build (feature worktree at f7020e2, before the review fixes)",
+        "result": "passed",
+        "exitCode": 0,
+        "evidence": [
+          "ev-checks"
+        ]
+      },
+      {
+        "command": "Manual check in the Orca built-in browser: looks, time zone, colour input, built-in clock editor, reset and the colour picker",
+        "result": "passed",
+        "exitCode": null,
+        "evidence": [
+          "ev-browser"
+        ]
+      }
+    ]
+  },
+  "outcomeRecord": {
+    "scope": [
+      {
+        "text": "Manifest variants (2–16 looks, id pattern, plain-text titles, default) with sdk 5; resolveVariant falls back to the default for null or unknown ids; context.variant is reactive and typed from widget.json; ld-widget check validates and ld-widget shot captures every look.",
+        "evidence": [
+          "ev-review",
+          "ev-checks"
+        ]
+      },
+      {
+        "text": "WidgetAppearance.variant stored per instance; the API normalizes legacy appearance rows to variant null; the settings panel has a Look select and Reset to defaults clears style, shadow, look and options while API keys stay set.",
+        "evidence": [
+          "ev-review",
+          "ev-browser"
+        ]
+      },
+      {
+        "text": "reka-ui upgraded to 2.11.0; the settings panel (Package, Appearance, Widget, footer) and built-in editors use Ui* controls on reka-ui Switch, Slider, RadioGroup, NumberField, ColorField, Field and Primitive buttons, styled by the screen theme.",
+        "evidence": [
+          "ev-review",
+          "ev-browser"
+        ]
+      },
+      {
+        "text": "A color setting type (#rrggbb, sdk 5) drawn with UiColorField; UiColorField opens a reka-ui popover with ColorArea, hue ColorSlider and an optional opacity ColorSlider, with a checkerboard swatch; shadow opacity moved into the picker.",
+        "evidence": [
+          "ev-checks",
+          "ev-browser"
+        ]
+      },
+      {
+        "text": "SDK docs and the create-widget AGENTS.md template teach settings storage, reset, secrets, color settings and looks; showcase-clock 1.1.0 demonstrates three looks and a time zone setting.",
+        "evidence": [
+          "ev-review",
+          "ev-browser"
+        ]
+      }
+    ],
+    "decisions": [
+      {
+        "text": "The settings panel follows the resolved screen theme, never the widget's own style; screen themes cannot be No frame, so no fallback is needed.",
+        "evidence": [
+          "ev-review"
+        ]
+      },
+      {
+        "text": "Looks are a first-class manifest field with context.variant stored in WidgetAppearance, not a convention on top of settings; an unknown stored id shows the default and is never rewritten.",
+        "evidence": [
+          "ev-review"
+        ]
+      },
+      {
+        "text": "Reset keeps secrets; the confirmation says so and points to Clear.",
+        "evidence": [
+          "ev-review",
+          "ev-browser"
+        ]
+      },
+      {
+        "text": "Colour for widget authors is a host-drawn color setting rather than a Vue component exported from the SDK, so reka-ui stays out of the sandbox (user decision during review).",
+        "evidence": [
+          "ev-review"
+        ]
+      },
+      {
+        "text": "Opacity is a separate number beside #rrggbb, not an 8-digit hex, so board data and the API contract did not change (user decision during review).",
+        "evidence": [
+          "ev-review"
+        ]
+      }
+    ],
+    "deviations": {
+      "status": "recorded",
+      "evidence": [
+        "ev-review"
+      ],
+      "items": [
+        {
+          "change": "A field-bridge helper connects reka Switch, Slider, NumberField and ColorField to FieldRoot labels and descriptions.",
+          "reason": "Its code comment says these reka controls do not yet participate in FieldRoot.",
+          "effect": "Labels, descriptions and errors associate with these controls as with FieldControl.",
+          "evidence": [
+            "ev-review"
+          ]
+        },
+        {
+          "change": "Task 13 added after review: hidden empty Widget block, aligned rows, color setting type, colour picker with opacity; the Opacity row was removed from the shadow block.",
+          "reason": "Review findings and the user's request for a reka-ui colour picker.",
+          "effect": "Spec and plan were revised before the merge.",
+          "evidence": [
+            "ev-review",
+            "ev-browser"
+          ]
+        }
+      ]
+    },
+    "excludedScope": [
+      {
+        "text": "Out of scope per spec: enum labels, variant previews, variants for ClockAnalog1, reka-ui in the dev shell, clearing secrets on reset, alpha in color settings, an SDK-exported colour picker component.",
+        "evidence": [
+          "ev-review"
+        ]
+      }
+    ],
+    "followUps": [
+      {
+        "text": "The plan's throwaway secret-probe package and the browser check of number and secret fields were not observed in this session; those fields are covered by unit tests only.",
+        "evidence": [
+          "ev-browser"
+        ]
+      },
+      {
+        "text": "No example declares a color setting, so its panel row was not seen in the browser.",
+        "evidence": [
+          "ev-browser"
+        ]
+      }
+    ],
+    "risks": [
+      {
+        "text": "Reset to defaults on a frameless widget clears its No frame style, so it gets the board's framed theme; this predates the feature and the spec keeps it.",
+        "evidence": [
+          "ev-browser"
+        ]
+      }
+    ]
+  },
+  "archiveStatus": "complete",
+  "skill": {
+    "name": "archive-plan",
+    "version": "1.1.1"
+  },
+  "archiveRoot": ".project-history/features",
+  "incompleteReason": null,
+  "warnings": [
+    "URL/session evidence is agent-attested; the helper does not fetch or independently verify it."
+  ],
+  "requestFingerprint": "f21d0aa33710156bd19940262f9b7ed5c6e34474be333a212bdd3ecb39446de3",
+  "archivedAt": "2026-10-28T16:04:10Z",
+  "revision": 1,
+  "supersedes": null,
+  "revisionReason": null,
+  "integrity": {
+    "algorithm": "sha256",
+    "metadataSha256": "af456490a523b1b573c5d9237e885ff2e1a66b3bb9ba0d7055a67a87c5e934a3"
+  }
+}
