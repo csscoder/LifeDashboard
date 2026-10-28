@@ -1,4 +1,4 @@
-import { BARE_THEME_ID, isThemeId } from './board.ts'
+import { readTheme, type ThemeChoice } from './theme.ts'
 import { HIDDEN_TEXT, fail, isRecord, unknownKey, type ParseResult } from './parse.ts'
 
 export const SPACE_LIMITS = { spaces: 20, screens: 20, title: 40 } as const
@@ -29,7 +29,7 @@ export interface SpaceSummary {
   title: string
   icon: string
   color: SpaceColor
-  themeId: string | null
+  theme: ThemeChoice | null
   position: number
   revision: number
 }
@@ -38,7 +38,7 @@ export interface SpacePatch {
   title?: string
   icon?: string
   color?: SpaceColor
-  themeId?: string | null
+  theme?: ThemeChoice | null
 }
 
 export interface DeleteRequest {
@@ -47,7 +47,7 @@ export interface DeleteRequest {
 
 export type AddScreenRequest = DeleteRequest
 
-const PATCH_KEYS = ['title', 'icon', 'color', 'themeId']
+const PATCH_KEYS = ['title', 'icon', 'color', 'theme', 'themeId']
 
 function isSpaceColor(value: unknown): value is SpaceColor {
   return typeof value === 'string' && Object.keys(SPACE_COLORS).includes(value)
@@ -76,9 +76,10 @@ export function parseSpacePatch(raw: unknown): ParseResult<SpacePatch> {
     if (!isSpaceColor(raw.color)) return fail('color must be one of the space colours')
     patch.color = raw.color
   }
-  if (raw.themeId !== undefined) {
-    if (raw.themeId !== null && (!isThemeId(raw.themeId) || raw.themeId === BARE_THEME_ID)) return fail('invalid space themeId')
-    patch.themeId = raw.themeId
+  if (Object.hasOwn(raw, 'theme') || Object.hasOwn(raw, 'themeId')) {
+    const theme = readTheme(raw, false)
+    if (!theme.ok || theme.value === 'bare') return fail('invalid space theme')
+    patch.theme = theme.value
   }
   if (Object.keys(patch).length === 0) return fail('nothing to change')
   return { ok: true, value: patch }

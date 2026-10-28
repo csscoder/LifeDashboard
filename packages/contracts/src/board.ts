@@ -1,3 +1,4 @@
+import { readTheme, type ThemeChoice } from './theme.ts'
 import { GRID_COLS, ROWS, inBounds, overlaps, type Rect } from './grid.ts'
 import { fail, isRecord, type ParseResult } from './parse.ts'
 import { isVariantId } from './widget-variants.ts'
@@ -19,7 +20,7 @@ export interface DropShadow {
 
 // Host-owned look of one widget; never part of `config` (spec 2026-10-09-widget-appearance).
 export interface WidgetAppearance {
-  themeId: string | null // null: inherit the board theme; BARE_THEME_ID: no frame
+  theme: ThemeChoice | 'bare' | null // null: inherit the board theme; bare: no frame
   shadow: DropShadow | null // null: the theme's own shadow
   variant: string | null // null: the widget's default look
 }
@@ -34,7 +35,6 @@ export interface WidgetInstance {
   appearance?: WidgetAppearance
 }
 
-export const BARE_THEME_ID = 'builtin:bare'
 export const SHADOW_LIMITS = { x: [-32, 32], y: [-32, 32], blur: [0, 48] } as const
 export const DEFAULT_SHADOW: DropShadow = { x: 0, y: 8, blur: 16, color: '#000000', opacity: 0.5 }
 
@@ -79,7 +79,7 @@ export interface ScreenBoard {
   id: string
   // Configured rows (ROWS.min..ROWS.max); placements may lie below them (base design §7.4).
   rows: number
-  themeId?: string | null // absent/null: inherit the space theme
+  theme?: ThemeChoice | null // absent/null: inherit the space theme
   background?: ScreenBackground | null
   instances: WidgetInstance[]
   layout: WidgetPlacement[]
@@ -108,10 +108,10 @@ export function isUuid(value: unknown): value is string {
  * both build it here, so boards compare equal as JSON (isSameBoard).
  */
 export function normalizeAppearance(appearance: WidgetAppearance | null | undefined): WidgetAppearance | undefined {
-  if (!appearance || (appearance.themeId === null && appearance.shadow === null && appearance.variant === null)) return undefined
+  if (!appearance || (appearance.theme === null && appearance.shadow === null && appearance.variant === null)) return undefined
   const { shadow } = appearance
   return {
-    themeId: appearance.themeId,
+    theme: appearance.theme,
     shadow: shadow && { x: shadow.x, y: shadow.y, blur: shadow.blur, color: shadow.color, opacity: shadow.opacity },
     variant: appearance.variant,
   }
@@ -125,8 +125,8 @@ export function parseScreenBoard(raw: unknown): ParseResult<ScreenBoard> {
   if (typeof rows !== 'number' || !Number.isInteger(rows) || rows < ROWS.min || rows > ROWS.max) {
     return fail(`rows must be an integer ${ROWS.min}..${ROWS.max}`)
   }
-  const themeId = raw.themeId
-  if (themeId != null && (!isThemeId(themeId) || themeId === BARE_THEME_ID)) return fail('invalid screen themeId')
+  const theme = readTheme(raw, false)
+  if (!theme.ok || theme.value === 'bare') return fail('invalid screen theme')
   const background = parseScreenBackground(raw.background)
   if (background === null) return fail('invalid screen background')
   if (!Array.isArray(raw.instances) || !Array.isArray(raw.layout)) return fail('instances and layout must be arrays')
@@ -144,7 +144,7 @@ export function parseScreenBoard(raw: unknown): ParseResult<ScreenBoard> {
     }
     if (!isRecord(item.config)) return fail(`instances[${index}]: config must be an object`)
     const appearance = parseAppearance(item.appearance)
-    if (appearance === null) return fail(`instances[${index}]: invalid appearance`)
+    if (appearance === null) return fail(`instances[${index}]: invalid widget appearance`)
     ids.add(item.id)
     // appearance goes last, as spaces.ts reads it back: isSameBoard compares JSON.
     instances.push({ id: item.id, source, configVersion: version, config: item.config, ...(appearance && { appearance }) })
@@ -169,7 +169,7 @@ export function parseScreenBoard(raw: unknown): ParseResult<ScreenBoard> {
   const unplaced = instances.find((instance) => !placed.has(instance.id))
   if (unplaced) return fail(`instance "${unplaced.id}" has no placement`)
 
-  return { ok: true, value: { id: raw.id, rows, ...(themeId != null && { themeId }), ...(background && { background }), instances, layout } }
+  return { ok: true, value: { id: raw.id, rows, ...(theme.value !== null && { theme: theme.value }), ...(background && { background }), instances, layout } }
 }
 
 export function parseWidgetSource(raw: unknown): WidgetSource | null {
@@ -185,25 +185,19 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0
 }
 
-const BUILTIN_THEME = /^builtin:[a-z0-9-]+$/
 const HEX_COLOR = /^#[0-9a-f]{6}$/i
 
 // undefined: nothing set (absent, null or all three fields null); null: invalid.
 function parseAppearance(raw: unknown): WidgetAppearance | undefined | null {
   if (raw === undefined || raw === null) return undefined
   if (!isRecord(raw)) return null
-  const { themeId, shadow } = raw
-  if (themeId !== null && !isThemeId(themeId)) return null
+  const { shadow } = raw
+  const theme = readTheme(raw, true)
+  if (!theme.ok) return null
   if (shadow !== null && !isDropShadow(shadow)) return null
   const variant = raw.variant ?? null
   if (variant !== null && !isVariantId(variant)) return null
-  return normalizeAppearance({ themeId, shadow, variant })
-}
-
-// A well-formed unknown id is valid: rendering treats it as unset, the stored reference stays.
-export function isThemeId(value: unknown): value is string {
-  if (typeof value !== 'string') return false
-  return BUILTIN_THEME.test(value) || (value.startsWith('user:') && isUuid(value.slice('user:'.length)))
+  return normalizeAppearance({ theme: theme.value, shadow, variant })
 }
 
 function isDropShadow(value: unknown): value is DropShadow {

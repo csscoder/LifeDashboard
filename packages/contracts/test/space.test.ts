@@ -18,12 +18,14 @@ describe('parseSpacePatch', () => {
     expect(parseSpacePatch({ icon: '⭐', color: 'pink' })).toEqual({ ok: true, value: { icon: '⭐', color: 'pink' } })
   })
 
-  it.each([null, 'builtin:paper', 'builtin:future-theme', 'user:00000000-0000-4000-8000-00000000000a'])('accepts theme assignment %j', (themeId) => {
-    expect(parseSpacePatch({ themeId })).toEqual({ ok: true, value: { themeId } })
+  it('accepts a theme choice and maps legacy paper', () => {
+    const theme = { palette: 'builtin:gruvbox', mode: 'auto', style: 'glass' }
+    expect(parseSpacePatch({ theme })).toEqual({ ok: true, value: { theme } })
+    expect(parseSpacePatch({ themeId: 'builtin:paper' })).toEqual({ ok: true, value: { theme: { palette: 'builtin:lifedashboard', mode: 'light', style: 'solid' } } })
   })
 
-  it.each(['builtin:bare', 'paper', 'builtin:', 'user:invalid', 7, {}])('rejects invalid space theme %j', (themeId) => {
-    expect(parseSpacePatch({ themeId })).toEqual({ ok: false, error: 'invalid space themeId' })
+  it.each(['bare', 'paper', 7, {}])('rejects invalid space theme %j', (theme) => {
+    expect(parseSpacePatch({ theme })).toEqual({ ok: false, error: 'invalid space theme' })
   })
 
   it.each([

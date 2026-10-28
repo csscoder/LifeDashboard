@@ -6,9 +6,9 @@ const background = { mediaId: id, kind: 'video', opacity: 1, dim: .35, pattern: 
 const screen = { id, rows: 12, instances: [], layout: [] }
 describe('screen backgrounds', () => {
   it('preserves canonical background before instances', () => {
-    const parsed = parseScreenBoard({ ...screen, themeId: 'builtin:obsidian', background })
-    expect(parsed).toEqual({ ok: true, value: { id, rows: 12, themeId: 'builtin:obsidian', background, instances: [], layout: [] } })
-    if (parsed.ok) expect(Object.keys(parsed.value)).toEqual(['id', 'rows', 'themeId', 'background', 'instances', 'layout'])
+    const parsed = parseScreenBoard({ ...screen, theme: { palette: 'builtin:lifedashboard', mode: 'dark', style: 'solid' }, background })
+    expect(parsed).toEqual({ ok: true, value: { id, rows: 12, theme: { palette: 'builtin:lifedashboard', mode: 'dark', style: 'solid' }, background, instances: [], layout: [] } })
+    if (parsed.ok) expect(Object.keys(parsed.value)).toEqual(['id', 'rows', 'theme', 'background', 'instances', 'layout'])
   })
   it('omits absent and null backgrounds', () => {
     expect(parseScreenBoard({ ...screen, background: null })).toEqual(parseScreenBoard(screen))

@@ -47,20 +47,23 @@ describe('parseScreenBoard', () => {
     expect(parseScreenBoard(structuredClone(valid))).toEqual({ ok: true, value: valid })
   })
 
-  it.each(['builtin:paper', 'builtin:future-theme', `user:${A}`])('keeps screen theme %s in canonical order', (themeId) => {
-    const result = parseScreenBoard({ ...valid, themeId })
-    expect(result.ok && JSON.stringify(result.value)).toBe(JSON.stringify({
-      id: SCREEN, rows: 10, themeId, instances: valid.instances, layout: valid.layout,
-    }))
+  it('maps a legacy screen theme and removes themeId', () => {
+    expect(parseScreenBoard({ ...valid, themeId: 'builtin:glass' })).toEqual({ ok: true, value: {
+      id: SCREEN, rows: 10, theme: { palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' }, instances: valid.instances, layout: valid.layout,
+    } })
+  })
+
+  it('keeps an unknown syntactically valid palette', () => {
+    const theme = { palette: 'builtin:nord', mode: 'dark', style: 'solid' }
+    expect(parseScreenBoard({ ...valid, theme })).toEqual({ ok: true, value: { id: SCREEN, rows: 10, theme, instances: valid.instances, layout: valid.layout } })
   })
 
   it('omits a null screen theme for inheritance', () => {
-    expect(parseScreenBoard({ ...valid, themeId: null })).toEqual({ ok: true, value: valid })
+    expect(parseScreenBoard({ ...valid, theme: null })).toEqual({ ok: true, value: valid })
   })
 
-  it.each(['builtin:bare', 'paper', 'builtin:', 'user:invalid', 7, {}])('rejects invalid screen theme %j', (themeId) => {
-    const result = parseScreenBoard({ ...valid, themeId })
-    expect(result).toEqual({ ok: false, error: 'invalid screen themeId' })
+  it.each(['bare', 'paper', 7, {}])('rejects invalid screen theme %j', (theme) => {
+    expect(parseScreenBoard({ ...valid, theme })).toEqual({ ok: false, error: 'invalid screen theme' })
   })
 
   it('accepts an unknown source.type', () => {
@@ -134,7 +137,8 @@ describe('parseScreenBoard', () => {
 })
 
 describe('widget appearance', () => {
-  const look = { themeId: 'builtin:paper', shadow: { x: 0, y: 8, blur: 16, color: '#1a2B3c', opacity: 0.5 }, variant: null }
+  const paper = { palette: 'builtin:lifedashboard', mode: 'light', style: 'solid' } as const
+  const look = { theme: paper, shadow: { x: 0, y: 8, blur: 16, color: '#1a2B3c', opacity: 0.5 }, variant: null }
   const withLook = (appearance: unknown) => mutated((d) => { d.instances[0].appearance = appearance })
   const first = (raw: unknown) => {
     const result = parseScreenBoard(raw)
@@ -144,12 +148,12 @@ describe('widget appearance', () => {
 
   it('parses a stored appearance without variant', () => {
     expect(first(withLook({ themeId: 'builtin:paper', shadow: null })).appearance)
-      .toEqual({ themeId: 'builtin:paper', shadow: null, variant: null })
+      .toEqual({ theme: paper, shadow: null, variant: null })
   })
 
   it('keeps a variant-only appearance and omits an all-null appearance', () => {
     expect(first(withLook({ themeId: null, shadow: null, variant: 'roman' })).appearance)
-      .toEqual({ themeId: null, shadow: null, variant: 'roman' })
+      .toEqual({ theme: null, shadow: null, variant: 'roman' })
     expect(first(withLook({ themeId: null, shadow: null, variant: null }))).not.toHaveProperty('appearance')
   })
 
@@ -174,13 +178,13 @@ describe('widget appearance', () => {
     expect(first(withLook(appearance))).not.toHaveProperty('appearance')
   })
 
-  it.each([
-    ['the bare id', 'builtin:bare'],
-    ['an unknown built-in id', 'builtin:deleted-1'],
-    ['a user theme id', `user:${A}`],
-    ['null with a shadow', null],
-  ])('accepts %s as themeId', (_name, themeId) => {
-    expect(first(withLook({ themeId, shadow: DEFAULT_SHADOW, variant: null })).appearance).toStrictEqual({ themeId, shadow: DEFAULT_SHADOW, variant: null })
+  it.each([['builtin:bare', 'bare'], ['builtin:deleted-1', null], [`user:${A}`, null], [null, null]])('maps legacy widget theme %j', (themeId, theme) => {
+    expect(first(withLook({ themeId, shadow: DEFAULT_SHADOW })).appearance).toStrictEqual({ theme, shadow: DEFAULT_SHADOW, variant: null })
+  })
+
+  it('maps bare and omits an empty legacy appearance', () => {
+    expect(first(withLook({ themeId: 'builtin:bare', shadow: null })).appearance?.theme).toBe('bare')
+    expect(first(withLook({ themeId: null, shadow: null }))).not.toHaveProperty('appearance')
   })
 
   it('accepts the shadow bounds', () => {
@@ -188,7 +192,7 @@ describe('widget appearance', () => {
       { x: -32, y: -32, blur: 0, color: '#000000', opacity: 0 },
       { x: 32, y: 32, blur: 48, color: '#FFFFFF', opacity: 1 },
     ]) {
-      expect(first(withLook({ themeId: null, shadow, variant: null })).appearance).toStrictEqual({ themeId: null, shadow, variant: null })
+      expect(first(withLook({ themeId: null, shadow, variant: null })).appearance).toStrictEqual({ theme: null, shadow, variant: null })
     }
   })
 
@@ -197,13 +201,7 @@ describe('widget appearance', () => {
   it.each([
     ['a string', 'paper'],
     ['an array', []],
-    ['a missing themeId', { shadow: null }],
     ['a missing shadow', { themeId: 'builtin:paper' }],
-    ['a bare theme name', { themeId: 'glass', shadow: null, variant: null }],
-    ['an upper-case built-in id', { themeId: 'builtin:Glass', shadow: null, variant: null }],
-    ['an empty built-in name', { themeId: 'builtin:', shadow: null, variant: null }],
-    ['a user id that is not a UUID', { themeId: 'user:x', shadow: null, variant: null }],
-    ['a numeric themeId', { themeId: 7, shadow: null, variant: null }],
     ['a non-object shadow', { themeId: null, shadow: 'soft' }],
     ['x above 32', shadowWith({ x: 33 })],
     ['y below -32', shadowWith({ y: -33 })],
@@ -221,7 +219,7 @@ describe('widget appearance', () => {
     ['a missing colour', { themeId: null, shadow: { x: 0, y: 8, blur: 16, opacity: 0.5 } }],
   ])('rejects %s', (_name, appearance) => {
     const result = parseScreenBoard(withLook(appearance))
-    expect(result).toEqual({ ok: false, error: 'instances[0]: invalid appearance' })
+    expect(result).toEqual({ ok: false, error: 'instances[0]: invalid widget appearance' })
   })
 })
 
@@ -229,13 +227,13 @@ describe('normalizeAppearance', () => {
   it.each([
     ['undefined', undefined],
     ['null', null],
-    ['all three fields null', { themeId: null, shadow: null, variant: null }],
+    ['all three fields null', { theme: null, shadow: null, variant: null }],
   ])('returns undefined for %s', (_name, appearance) => {
     expect(normalizeAppearance(appearance)).toBeUndefined()
   })
 
   it('rebuilds the canonical key order', () => {
-    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 16, y: 8, x: 0 }, themeId: null, variant: null }
-    expect(JSON.stringify(normalizeAppearance(scrambled))).toBe(JSON.stringify({ themeId: null, shadow: DEFAULT_SHADOW, variant: null }))
+    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 16, y: 8, x: 0 }, theme: null, variant: null }
+    expect(JSON.stringify(normalizeAppearance(scrambled))).toBe(JSON.stringify({ theme: null, shadow: DEFAULT_SHADOW, variant: null }))
   })
 })
