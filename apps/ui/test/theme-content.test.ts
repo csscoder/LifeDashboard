@@ -59,3 +59,24 @@ it('opts the mounted widget body into semantic content styling', () => {
   expect(body).toBeDefined()
   expect(String(body!.props.class).split(' ')).toContain('ld-content')
 })
+it('applies the last-child bottom margin reset after every element margin, including hr', () => {
+  const css = content()
+  let lastChildReset = -1
+  let lastElementMargin = -1
+  let position = 0
+  css.walkDecls(declaration => {
+    const rule = declaration.parent as Rule
+    if (rule.selector === ':where(.ld-content) :where(:last-child)' && declaration.prop === 'margin-bottom') {
+      expect(declaration.value).toBe('0')
+      lastChildReset = position
+    } else if (declaration.prop === 'margin' || declaration.prop === 'margin-bottom') {
+      lastElementMargin = position
+    }
+    position++
+  })
+  expect(declarations(':where(.ld-content) :where(hr)')).toMatchObject({ margin: '1em 0' })
+  // All selectors here have zero specificity in the same layer. A later margin shorthand
+  // would overwrite margin-bottom even on a final hr, so the reset must come last.
+  expect(lastElementMargin).toBeGreaterThanOrEqual(0)
+  expect(lastChildReset).toBeGreaterThan(lastElementMargin)
+})

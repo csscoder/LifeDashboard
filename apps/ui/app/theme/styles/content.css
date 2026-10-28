@@ -40,10 +40,6 @@
     padding-left: 1.25em;
   }
 
-  :where(.ld-content) :where(:last-child) {
-    margin-bottom: 0;
-  }
-
   :where(.ld-content) :where(small) {
     font-size: var(--ld-size-small);
     color: var(--ld-text-secondary);
@@ -91,5 +87,9 @@
 
   :where(.ld-content) :where(strong, b) {
     font-weight: var(--ld-weight-strong);
+  }
+
+  :where(.ld-content) :where(:last-child) {
+    margin-bottom: 0;
   }
 }
