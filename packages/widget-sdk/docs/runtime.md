@@ -45,7 +45,7 @@ Target the intersection of WebKit 18.6 (macOS, WKWebView) and WebKitGTK 2.50 (Li
 ## Dependencies
 
 - The host provides Vue ^3.5.0. A widget must not bundle its own Vue.
-- Third-party npm libraries are allowed. They must be browser ES modules without Node APIs. The build bundles them.
+- Third-party npm libraries are allowed. They must be browser ES modules without Node APIs. The build bundles them. For controls prefer a headless UI library such as `reka-ui`; see [design.md](design.md#widget-ui).
 - The bundled code must stay within 10485760 bytes.
 - Reference audio and video by URL from `assets/`. The build rejects imports of such files into code.
 

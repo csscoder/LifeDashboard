@@ -45,6 +45,15 @@ Text must keep readable contrast in every theme. Put `text-*` on `surface-*` tok
 - Declare `"frame": "frameless"` for object-like widgets: clocks, gauges and stickers. Such a widget draws no card background.
 - Read `context.frame` when the widget must change its styling by frame.
 
+## Widget UI
+
+The widget builds its own UI (buttons, inputs, lists, modal workspaces) in isolation, inside its sandbox. Dashboard components are not available there; the dashboard draws only the widget settings panel (see [settings.md](settings.md#who-draws-the-panel)) and the modal frame.
+
+- Prefer a UI component library to hand-written controls: less code, with keyboard, focus and ARIA behavior included. Pick a library of unstyled (headless) Vue components that lists `vue` as a peer dependency, for example [reka-ui](https://reka-ui.com). Add it to the widget's `dependencies`; the build bundles it within the code limit of {{CODE_BYTES}} bytes. See [runtime.md](runtime.md#dependencies).
+- Style library parts with `--ld-*` tokens, like every other element of the widget.
+- Without a library, use native elements (`<button>`, `<input>`, `<select>`) and style them with `--ld-*` tokens. Never leave the browser's default look.
+- User options are not widget UI: declare them in `settings` and the dashboard draws them. See [settings.md](settings.md).
+
 ## Looks (variants)
 
 Several visual designs of one function (clock faces, hands, gauge styles) are one widget with `variants`, not several widgets. A variant changes the look only, never data or behavior. Draw every variant with `--ld-*` tokens. Read `context.variant`, which updates reactively when the user changes the Look selector in the dashboard's settings panel.

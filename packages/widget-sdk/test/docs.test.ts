@@ -91,6 +91,9 @@ describe('page content', () => {
   it('documents looks in the manifest, design guidance and context API', async () => {
     const docs = await freshDocs()
     expect(docs.get('design.md')).toContain('## Looks (variants)')
+    expect(docs.get('design.md')).toContain('## Widget UI')
+    expect(docs.get('settings.md')).toContain('A widget cannot style, extend or replace the panel')
+    expect(docs.get('design.md')).toContain('reka-ui')
     expect(docs.get('design.md')).toContain('16')
     expect(docs.get('design.md')).toContain('context.variant')
     expect(docs.get('api.md')).toMatch(/\| `variant` \| .*Since sdk 5/)

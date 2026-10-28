@@ -20,9 +20,16 @@ Read it when a rule below is unclear or a task is not covered here.
 - Keep `title` and `id` in `widget.json` as created, unless the user asks to change them.
 - Read only this project's files, the SDK docs and the `.d.ts` types. Do not read the compiled files of the SDK: the docs cover the dev shell URL, themes and limits.
 
+## Widget UI
+
+- The widget builds its own UI (buttons, inputs, lists, modal workspaces) in isolation, inside its sandbox. Dashboard components are not available there.
+- Prefer a UI component library to hand-written controls: less code, with keyboard, focus and ARIA behavior included. For example, add `reka-ui` (headless Vue components) to `dependencies`; the build bundles it.
+- Style library parts with `--ld-*` tokens. Without a library, style native elements (`<button>`, `<input>`, `<select>`) with `--ld-*` tokens; never leave the browser's default look.
+
 ## Settings and looks
 
 - Declare user options (time zone, units, city) in `settings` in `widget.json`. The dashboard draws one settings panel for every widget. Do not build a settings form in the widget or in a modal.
+- The settings panel behind the widget's gear belongs to the dashboard: version, Style (frame), Look, Shadow, the widget's `settings` and «Reset to defaults», drawn in one dashboard style that follows the screen theme. The widget cannot style or extend it; it only declares `settings`, `variants` and `frame`.
 - The dashboard stores the values in its database per widget instance. Every plain setting needs `default`: the factory value that «Reset to defaults» restores.
 - A colour option is a `color` setting with a `#rrggbb` `default`; the dashboard draws a colour picker for it.
 - API keys and tokens are `secret` settings with `bind`. The widget sees only `true` or `false`.

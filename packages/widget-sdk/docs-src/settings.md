@@ -6,6 +6,10 @@ Settings let the user configure a widget without changing its code. Declare them
 
 Declare user options (time zone, units, city) in `settings` in `widget.json`. The dashboard draws one settings panel for every widget. Do not build a settings form in the widget or in a modal.
 
+The settings panel opens from the widget's gear button and belongs to the dashboard. It holds, in this order: the package version, the widget's appearance (Style for the frame, Look when the manifest declares `variants`, Shadow with its colour and opacity), the widget's own `settings`, and «Reset to defaults». The dashboard draws all of it with its own controls in one dashboard style that follows the screen theme. The widget's own style, including «No frame», never changes the panel.
+
+A widget cannot style, extend or replace the panel. It only declares what the panel shows: `settings`, `variants` and `frame` in `widget.json`.
+
 ## Storage and reset
 
 The dashboard stores the values in its database per widget instance. Every plain setting needs `default`: the factory value that «Reset to defaults» restores. Reset also restores the default look and appearance; it keeps secrets.
