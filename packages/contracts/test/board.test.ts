@@ -134,13 +134,28 @@ describe('parseScreenBoard', () => {
 })
 
 describe('widget appearance', () => {
-  const look = { themeId: 'builtin:paper', shadow: { x: 0, y: 8, blur: 16, color: '#1a2B3c', opacity: 0.5 } }
+  const look = { themeId: 'builtin:paper', shadow: { x: 0, y: 8, blur: 16, color: '#1a2B3c', opacity: 0.5 }, variant: null }
   const withLook = (appearance: unknown) => mutated((d) => { d.instances[0].appearance = appearance })
   const first = (raw: unknown) => {
     const result = parseScreenBoard(raw)
     if (!result.ok) throw new Error(result.error)
     return result.value.instances[0]!
   }
+
+  it('parses a stored appearance without variant', () => {
+    expect(first(withLook({ themeId: 'builtin:paper', shadow: null })).appearance)
+      .toEqual({ themeId: 'builtin:paper', shadow: null, variant: null })
+  })
+
+  it('keeps a variant-only appearance and omits an all-null appearance', () => {
+    expect(first(withLook({ themeId: null, shadow: null, variant: 'roman' })).appearance)
+      .toEqual({ themeId: null, shadow: null, variant: 'roman' })
+    expect(first(withLook({ themeId: null, shadow: null, variant: null }))).not.toHaveProperty('appearance')
+  })
+
+  it.each(['Roman', 3])('rejects invalid variant %j', (variant) => {
+    expect(parseScreenBoard(withLook({ themeId: null, shadow: null, variant })).ok).toBe(false)
+  })
 
   it('keeps a valid appearance last, in canonical key order, without unknown fields', () => {
     const scrambled = { extra: 1, shadow: { opacity: 0.5, color: '#1a2B3c', extra: 1, blur: 16, y: 8, x: 0 }, themeId: 'builtin:paper' }
@@ -154,7 +169,7 @@ describe('widget appearance', () => {
 
   it.each([
     ['null', null],
-    ['both fields null', { themeId: null, shadow: null }],
+    ['all three fields null', { themeId: null, shadow: null, variant: null }],
   ])('omits the appearance key for %s', (_name, appearance) => {
     expect(first(withLook(appearance))).not.toHaveProperty('appearance')
   })
@@ -165,7 +180,7 @@ describe('widget appearance', () => {
     ['a user theme id', `user:${A}`],
     ['null with a shadow', null],
   ])('accepts %s as themeId', (_name, themeId) => {
-    expect(first(withLook({ themeId, shadow: DEFAULT_SHADOW })).appearance).toStrictEqual({ themeId, shadow: DEFAULT_SHADOW })
+    expect(first(withLook({ themeId, shadow: DEFAULT_SHADOW, variant: null })).appearance).toStrictEqual({ themeId, shadow: DEFAULT_SHADOW, variant: null })
   })
 
   it('accepts the shadow bounds', () => {
@@ -173,7 +188,7 @@ describe('widget appearance', () => {
       { x: -32, y: -32, blur: 0, color: '#000000', opacity: 0 },
       { x: 32, y: 32, blur: 48, color: '#FFFFFF', opacity: 1 },
     ]) {
-      expect(first(withLook({ themeId: null, shadow })).appearance).toStrictEqual({ themeId: null, shadow })
+      expect(first(withLook({ themeId: null, shadow, variant: null })).appearance).toStrictEqual({ themeId: null, shadow, variant: null })
     }
   })
 
@@ -184,11 +199,11 @@ describe('widget appearance', () => {
     ['an array', []],
     ['a missing themeId', { shadow: null }],
     ['a missing shadow', { themeId: 'builtin:paper' }],
-    ['a bare theme name', { themeId: 'glass', shadow: null }],
-    ['an upper-case built-in id', { themeId: 'builtin:Glass', shadow: null }],
-    ['an empty built-in name', { themeId: 'builtin:', shadow: null }],
-    ['a user id that is not a UUID', { themeId: 'user:x', shadow: null }],
-    ['a numeric themeId', { themeId: 7, shadow: null }],
+    ['a bare theme name', { themeId: 'glass', shadow: null, variant: null }],
+    ['an upper-case built-in id', { themeId: 'builtin:Glass', shadow: null, variant: null }],
+    ['an empty built-in name', { themeId: 'builtin:', shadow: null, variant: null }],
+    ['a user id that is not a UUID', { themeId: 'user:x', shadow: null, variant: null }],
+    ['a numeric themeId', { themeId: 7, shadow: null, variant: null }],
     ['a non-object shadow', { themeId: null, shadow: 'soft' }],
     ['x above 32', shadowWith({ x: 33 })],
     ['y below -32', shadowWith({ y: -33 })],
@@ -214,13 +229,13 @@ describe('normalizeAppearance', () => {
   it.each([
     ['undefined', undefined],
     ['null', null],
-    ['both fields null', { themeId: null, shadow: null }],
+    ['all three fields null', { themeId: null, shadow: null, variant: null }],
   ])('returns undefined for %s', (_name, appearance) => {
     expect(normalizeAppearance(appearance)).toBeUndefined()
   })
 
   it('rebuilds the canonical key order', () => {
-    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 16, y: 8, x: 0 }, themeId: null }
-    expect(JSON.stringify(normalizeAppearance(scrambled))).toBe(JSON.stringify({ themeId: null, shadow: DEFAULT_SHADOW }))
+    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 16, y: 8, x: 0 }, themeId: null, variant: null }
+    expect(JSON.stringify(normalizeAppearance(scrambled))).toBe(JSON.stringify({ themeId: null, shadow: DEFAULT_SHADOW, variant: null }))
   })
 })

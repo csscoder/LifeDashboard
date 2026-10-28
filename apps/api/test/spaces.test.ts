@@ -578,7 +578,7 @@ describe('package widget version transitions', () => {
     }
     original = oneWidget(A, SEED_SCREEN_ID)
     original.instances[0]!.source = { kind: 'package', packageId: 'dev.test.hello', version: '1.0.0' }
-    original.instances[0]!.appearance = { themeId: 'builtin:glass', shadow: null }
+    original.instances[0]!.appearance = { themeId: 'builtin:glass', shadow: null, variant: null }
     original.layout[0] = { instanceId: A, x: 0, y: 0, w: 3, h: 3 }
     const saved = await put({ expectedRevision: 1, screens: [original] })
     expect(saved.statusCode, saved.body).toBe(200)
@@ -653,10 +653,25 @@ describe('package widget version transitions', () => {
 })
 
 describe('widget appearance', () => {
-  const look = { themeId: 'builtin:bare', shadow: { x: 2, y: 4, blur: 12, color: '#102030', opacity: 0.25 } }
+  const look = { themeId: 'builtin:bare', shadow: { x: 2, y: 4, blur: 12, color: '#102030', opacity: 0.25 }, variant: null }
   const styled = (appearance: unknown) => ({
     ...screen,
     instances: [{ ...screen.instances[0]!, appearance }, screen.instances[1]!],
+  })
+
+  it('reads a legacy appearance row with variant null', async () => {
+    expect((await put({ expectedRevision: 1, screens: [screen] })).statusCode).toBe(200)
+    t.db.prepare('UPDATE widgets SET appearance = ? WHERE id = ?')
+      .run('{"themeId":"builtin:paper","shadow":null}', screen.instances[0]!.id)
+    const board = await getBoard()
+    expect(board.screens[0]!.instances[0]!.appearance).toEqual({ themeId: 'builtin:paper', shadow: null, variant: null })
+    const response = await put({ expectedRevision: board.revision, screens: board.screens })
+    expect(response.statusCode).toBe(200)
+    expect(response.json().data.screens).toEqual(board.screens)
+    expect((await getBoard()).screens).toEqual(board.screens)
+    const { appearance, ...instance } = board.screens[0]!.instances[0]!
+    expect(instance).toEqual(screen.instances[0])
+    expect(board.screens[0]!.layout).toEqual(screen.layout)
   })
 
   it('round-trips appearance after config and leaves the key out for widgets without one', async () => {
@@ -668,7 +683,7 @@ describe('widget appearance', () => {
   })
 
   it('stores NULL for an empty appearance and reads the old board JSON back', async () => {
-    const response = await put({ expectedRevision: 1, screens: [styled({ themeId: null, shadow: null })] })
+    const response = await put({ expectedRevision: 1, screens: [styled({ themeId: null, shadow: null, variant: null })] })
     expect(response.statusCode).toBe(200)
     expect(t.db.prepare('SELECT appearance FROM widgets ORDER BY rowid').all()).toEqual([{ appearance: null }, { appearance: null }])
     expect(JSON.stringify((await getBoard()).screens[0])).toBe(JSON.stringify(screen))
@@ -708,7 +723,7 @@ describe('space and screen theme persistence', () => {
   it('round-trips screen themes canonically and retains them through widget and row edits', async () => {
     const themed = { id: screen.id, rows: screen.rows, themeId: 'builtin:paper', instances: screen.instances, layout: screen.layout }
     themed.instances = structuredClone(themed.instances)
-    themed.instances[0]!.appearance = { themeId: 'builtin:bare', shadow: null }
+    themed.instances[0]!.appearance = { themeId: 'builtin:bare', shadow: null, variant: null }
     const response = await put({ expectedRevision: 1, screens: [themed] })
     expect(response.statusCode).toBe(200)
     expect(JSON.stringify(response.json().data.screens[0])).toBe(JSON.stringify(themed))
@@ -718,7 +733,7 @@ describe('space and screen theme persistence', () => {
     expect((await put({ expectedRevision: loaded.revision, screens: loaded.screens })).statusCode).toBe(200)
     const edited = await getBoard()
     expect(edited.screens[0]).toMatchObject({ themeId: 'builtin:paper', rows: 20 })
-    expect(edited.screens[0]!.instances[0]!.appearance).toEqual({ themeId: 'builtin:bare', shadow: null })
+    expect(edited.screens[0]!.instances[0]!.appearance).toEqual({ themeId: 'builtin:bare', shadow: null, variant: null })
     expect(edited.screens[0]!.instances[1]!.config).toEqual({ title: 'Changed' })
     expect((await listSpaces())[0]!.themeId).toBeNull()
   })

@@ -18,7 +18,7 @@ export type BoardMode = 'view' | 'build' | 'edit'
 
 /** The board with a new widget last in both lists. A `frameless` package widget starts with the bare theme (spec 2026-10-20). */
 export function addInstance(doc: ScreenBoard, id: string, source: WidgetSource, rect: Rect, frame: 'framed' | 'frameless' | undefined): ScreenBoard {
-  const appearance = frame === 'frameless' ? normalizeAppearance({ themeId: BARE_THEME_ID, shadow: null }) : undefined
+  const appearance = frame === 'frameless' ? normalizeAppearance({ themeId: BARE_THEME_ID, shadow: null, variant: null }) : undefined
   const instance: WidgetInstance = { id, source: { ...source }, configVersion: 1, config: {}, ...(appearance ? { appearance } : {}) }
   return {
     ...doc,

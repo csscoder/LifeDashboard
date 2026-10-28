@@ -1,5 +1,6 @@
 import { GRID_COLS, ROWS, inBounds, overlaps, type Rect } from './grid.ts'
 import { fail, isRecord, type ParseResult } from './parse.ts'
+import { isVariantId } from './widget-variants.ts'
 import { isPackageId, isPackageVersion } from './widget-package.ts'
 
 export type { ParseResult } from './parse.ts'
@@ -20,6 +21,7 @@ export interface DropShadow {
 export interface WidgetAppearance {
   themeId: string | null // null: inherit the board theme; BARE_THEME_ID: no frame
   shadow: DropShadow | null // null: the theme's own shadow
+  variant: string | null // null: the widget's default look
 }
 
 export interface WidgetInstance {
@@ -106,11 +108,12 @@ export function isUuid(value: unknown): value is string {
  * both build it here, so boards compare equal as JSON (isSameBoard).
  */
 export function normalizeAppearance(appearance: WidgetAppearance | null | undefined): WidgetAppearance | undefined {
-  if (!appearance || (appearance.themeId === null && appearance.shadow === null)) return undefined
+  if (!appearance || (appearance.themeId === null && appearance.shadow === null && appearance.variant === null)) return undefined
   const { shadow } = appearance
   return {
     themeId: appearance.themeId,
     shadow: shadow && { x: shadow.x, y: shadow.y, blur: shadow.blur, color: shadow.color, opacity: shadow.opacity },
+    variant: appearance.variant,
   }
 }
 
@@ -185,14 +188,16 @@ function isNonEmptyString(value: unknown): value is string {
 const BUILTIN_THEME = /^builtin:[a-z0-9-]+$/
 const HEX_COLOR = /^#[0-9a-f]{6}$/i
 
-// undefined: nothing set (absent, null or both fields null); null: invalid.
+// undefined: nothing set (absent, null or all three fields null); null: invalid.
 function parseAppearance(raw: unknown): WidgetAppearance | undefined | null {
   if (raw === undefined || raw === null) return undefined
   if (!isRecord(raw)) return null
   const { themeId, shadow } = raw
   if (themeId !== null && !isThemeId(themeId)) return null
   if (shadow !== null && !isDropShadow(shadow)) return null
-  return normalizeAppearance({ themeId, shadow })
+  const variant = raw.variant ?? null
+  if (variant !== null && !isVariantId(variant)) return null
+  return normalizeAppearance({ themeId, shadow, variant })
 }
 
 // A well-formed unknown id is valid: rendering treats it as unset, the stored reference stays.

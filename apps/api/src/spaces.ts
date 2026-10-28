@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
 import type { FastifyInstance } from 'fastify'
 import {
+  normalizeAppearance,
   parseScreenBoard,
   parseScreenBackground,
   type SpaceBoard,
@@ -264,14 +265,18 @@ function readBoard(db: DatabaseSync, spaceId: string): SpaceBoard {
         rows,
         ...(theme_id !== null && { themeId: theme_id }),
         ...(background !== null && { background: parseScreenBackground(JSON.parse(background)) as ScreenBackground }),
-        instances: placed.map((row) => ({
-          id: row.id,
-          source: sourceOf(row),
-          configVersion: row.config_version,
-          config: JSON.parse(row.config) as Record<string, unknown>,
-          // Last, as parseScreenBoard builds it: the UI compares boards as JSON.
-          ...(row.appearance !== null && { appearance: JSON.parse(row.appearance) as WidgetAppearance }),
-        })),
+        instances: placed.map((row) => {
+          const parsed = row.appearance === null ? null : JSON.parse(row.appearance) as WidgetAppearance
+          const appearance = parsed && normalizeAppearance({ ...parsed, variant: parsed.variant ?? null })
+          return {
+            id: row.id,
+            source: sourceOf(row),
+            configVersion: row.config_version,
+            config: JSON.parse(row.config) as Record<string, unknown>,
+            // Last, as parseScreenBoard builds it: the UI compares boards as JSON.
+            ...(appearance && { appearance }),
+          }
+        }),
         layout: placed.map((row) => ({ instanceId: row.id, x: row.x, y: row.y, w: row.w, h: row.h })),
       }
     }),

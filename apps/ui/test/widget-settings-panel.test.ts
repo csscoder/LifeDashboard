@@ -54,7 +54,7 @@ describe('widget settings panel', () => {
   })
 
   it('speaks English and picks the style through the themed select', () => {
-    const ui = mount(undefined, { appearance: { themeId: null, shadow: board.DEFAULT_SHADOW } })
+    const ui = mount(undefined, { appearance: { themeId: null, shadow: board.DEFAULT_SHADOW, variant: null } })
     expect(ui.panel().props['aria-label']).toBe('Widget settings')
     for (const label of ['Style', 'Shadow', 'Blur', 'Color', 'Opacity', 'Reset widget settings']) expect(ui.text()).toContain(label)
     const style = ui.nodes().find((el) => el.tag === 'ui-select')!
@@ -67,7 +67,7 @@ describe('widget settings panel', () => {
       { value: board.BARE_THEME_ID, label: 'No frame' },
     ])
     style.props.pick('builtin:paper')
-    expect(ui.events).toEqual([['change', { themeId: 'builtin:paper', shadow: board.DEFAULT_SHADOW }]])
+    expect(ui.events).toEqual([['change', { themeId: 'builtin:paper', shadow: board.DEFAULT_SHADOW, variant: null }]])
   })
 
   it('applies a version picked in the themed select', async () => {
@@ -82,14 +82,14 @@ describe('widget settings panel', () => {
   })
 
   it('shows the shadow controls only while the shadow is on', async () => {
-    const ui = mount(undefined, { appearance: { themeId: null, shadow: null } })
+    const ui = mount(undefined, { appearance: { themeId: null, shadow: null, variant: null } })
     const sliders = () => ui.nodes().filter((el) => el.tag === 'input' && el.props.type === 'range')
     const colour = () => ui.nodes().find((el) => el.tag === 'input' && el.props.type === 'color')
     expect(sliders()).toHaveLength(0)
     expect(colour()).toBeUndefined()
     expect(ui.text()).not.toContain('Blur')
     expect(ui.button('Reset widget settings')).toBeDefined()
-    ui.props.appearance = { themeId: null, shadow: board.DEFAULT_SHADOW }
+    ui.props.appearance = { themeId: null, shadow: board.DEFAULT_SHADOW, variant: null }
     await Vue.nextTick()
     expect(sliders().map((el) => el.props.value)).toEqual([board.DEFAULT_SHADOW.x, board.DEFAULT_SHADOW.y, board.DEFAULT_SHADOW.blur, Math.round(board.DEFAULT_SHADOW.opacity * 100)])
     expect(sliders().every((el) => !el.props.disabled)).toBe(true)
@@ -97,7 +97,7 @@ describe('widget settings panel', () => {
   })
 
   it('resets the whole widget from one button below every setting', () => {
-    const ui = mount(Editor, { appearance: { themeId: null, shadow: board.DEFAULT_SHADOW } })
+    const ui = mount(Editor, { appearance: { themeId: null, shadow: board.DEFAULT_SHADOW, variant: null } })
     expect(ui.button('Reset')).toBeUndefined()
     const reset = ui.button('Reset widget settings')
     const all = ui.nodes()
