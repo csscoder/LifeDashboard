@@ -27,7 +27,7 @@ function update(key: string, setting: PlainSetting, event: Event) {
         <option v-for="value in setting.enum" :key="value" :value="value">{{ value }}</option>
       </select>
       <input v-else-if="controlFor(setting) === 'checkbox'" :id="`setting-${key}`" type="checkbox" :checked="Boolean(config[key])" @change="update(key, setting, $event)">
-      <input v-else :id="`setting-${key}`" :type="controlFor(setting) === 'text' ? 'text' : 'number'"
+      <input v-else :id="`setting-${key}`" :type="controlFor(setting) === 'number' ? 'number' : controlFor(setting) === 'color' ? 'color' : 'text'"
         :value="config[key]" :min="setting.minimum" :max="setting.maximum" :maxlength="setting.maxLength"
         :step="setting.type === 'integer' ? 1 : 'any'" :aria-invalid="invalid[key] || false" @input="update(key, setting, $event)">
       <small v-if="setting.description">{{ setting.description }}</small>

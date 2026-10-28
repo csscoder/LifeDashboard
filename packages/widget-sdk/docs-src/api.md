@@ -91,7 +91,7 @@ Errors are `WidgetError` objects with a `code`. See [errors.md](errors.md).
 - Level 2: the settings schema (`settings`), typed HTTP (`http.get`, `http.send`) and `context.frame`.
 - Level 3: the manifest `frame` field.
 - Level 4: named modal workspaces through `widget.modal`.
-- Level 5: manifest `variants` and `context.variant`.
+- Level 5: manifest `variants`, `context.variant` and `color` settings.
 
 ## modal
 

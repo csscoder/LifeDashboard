@@ -1,6 +1,6 @@
 import { fail, isPlainText, isRecord, unknownKey, type ParseResult } from './parse.ts'
 
-export type PlainSettingType = 'string' | 'number' | 'integer' | 'boolean'
+export type PlainSettingType = 'string' | 'number' | 'integer' | 'boolean' | 'color'
 
 export interface PlainSetting {
   type: PlainSettingType
@@ -86,8 +86,8 @@ function parseSetting(raw: unknown, path: string, network: readonly string[]): P
     if (!bind.ok) return bind
     return { ok: true, value: { type: 'secret', ...metadata, bind: bind.value } }
   }
-  if (raw.type !== 'string' && raw.type !== 'number' && raw.type !== 'integer' && raw.type !== 'boolean') {
-    return fail(`${path}.type must be string, number, integer, boolean or secret`)
+  if (raw.type !== 'string' && raw.type !== 'number' && raw.type !== 'integer' && raw.type !== 'boolean' && raw.type !== 'color') {
+    return fail(`${path}.type must be string, number, integer, boolean, color or secret`)
   }
   const setting: PlainSetting = { type: raw.type, ...metadata, default: raw.default as PlainSetting['default'] }
   if (Object.hasOwn(raw, 'enum')) {
@@ -155,6 +155,8 @@ export function isValidSettingValue(setting: PlainSetting, value: unknown): bool
         (setting.enum === undefined || setting.enum.includes(value))
     case 'boolean':
       return typeof value === 'boolean'
+    case 'color':
+      return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
     case 'number':
     case 'integer':
       return typeof value === 'number' && Number.isFinite(value) &&
@@ -191,12 +193,13 @@ export function isSecretOriginAllowed(origin: string): boolean {
   )
 }
 
-export type FieldControl = 'text' | 'select' | 'number' | 'checkbox' | 'secret'
+export type FieldControl = 'text' | 'select' | 'number' | 'checkbox' | 'color' | 'secret'
 
 export function controlFor(setting: Setting): FieldControl {
   switch (setting.type) {
     case 'secret': return 'secret'
     case 'boolean': return 'checkbox'
+    case 'color': return 'color'
     case 'number':
     case 'integer': return 'number'
     case 'string': return setting.enum === undefined ? 'text' : 'select'

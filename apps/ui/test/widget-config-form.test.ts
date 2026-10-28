@@ -7,7 +7,7 @@ import * as logic from '../app/board/config-form'
 import { compileSfc, mountComponent } from './helpers/sfc-renderer'
 
 const part = (name: string) => Vue.defineComponent({ name, setup: (_, { attrs, slots }) => () => Vue.h(name, attrs, slots.default?.()) })
-const modules = Object.fromEntries(['UiTextField', 'UiSelect', 'UiSwitch', 'UiNumberField', 'UiButton'].map(name => [`../ui/${name}.vue`, part(name)]))
+const modules = Object.fromEntries(['UiTextField', 'UiSelect', 'UiSwitch', 'UiNumberField', 'UiColorField', 'UiButton'].map(name => [`../ui/${name}.vue`, part(name)]))
 const mount = () => mountComponent(compileSfc(new URL('../app/board/WidgetConfigForm.vue', import.meta.url), {
   ...modules, './SettingsRow.vue': part('SettingsRow'),
   '@lifedashboard/contracts/widget-settings': settings, '@lifedashboard/contracts/widget-secrets': secrets,
@@ -15,16 +15,24 @@ const mount = () => mountComponent(compileSfc(new URL('../app/board/WidgetConfig
 }), { schema: { type: 'object', properties: {
   city: { type: 'string', title: 'City', default: 'Paris' }, mode: { type: 'string', title: 'Mode', default: 'a', enum: ['a', 'b'] },
   enabled: { type: 'boolean', title: 'Enabled', default: false }, count: { type: 'integer', title: 'Count', default: 1 },
-  scale: { type: 'number', title: 'Scale', default: 1 }, token: { type: 'secret', title: 'Token', bind: { origin: 'https://example.com', header: 'Authorization' } },
+  scale: { type: 'number', title: 'Scale', default: 1 }, accent: { type: 'color', title: 'Accent', default: '#2d6687' }, token: { type: 'secret', title: 'Token', bind: { origin: 'https://example.com', header: 'Authorization' } },
 } }, config: {}, widgetId: 'widget', secrets: new Set() }, ['change'])
 
 describe('WidgetConfigForm controls', () => {
   it('uses typed UI controls without native inputs', () => {
     const ui = mount()
-    expect(ui.nodes().filter(n => /^Ui/.test(n.tag)).map(n => n.tag)).toEqual(['UiTextField', 'UiSelect', 'UiSwitch', 'UiNumberField', 'UiNumberField', 'UiTextField', 'UiButton', 'UiButton'])
+    expect(ui.nodes().filter(n => /^Ui/.test(n.tag)).map(n => n.tag)).toEqual(['UiTextField', 'UiSelect', 'UiSwitch', 'UiNumberField', 'UiNumberField', 'UiColorField', 'UiTextField', 'UiButton', 'UiButton'])
     expect(ui.nodes().filter(n => n.tag === 'input')).toHaveLength(0)
     expect(ui.nodes().filter(n => n.tag === 'UiNumberField').map(n => n.props.integer)).toEqual([true, false])
     expect(ui.nodes().filter(n => n.tag === 'UiTextField')[1]!.props.type).toBe('password')
+  })
+  it('edits a color setting with the colour picker and applies only #rrggbb', () => {
+    const ui = mount()
+    const accent = ui.nodes().find(n => n.tag === 'UiColorField')!
+    expect(accent.props['model-value'] ?? accent.props.modelValue).toBe('#2d6687')
+    expect(accent.props.alpha).toBeUndefined()
+    accent.props['onUpdate:modelValue']('#ff0000')
+    expect(ui.events.at(-1)).toEqual(['change', expect.objectContaining({ accent: '#ff0000' })])
   })
   it('initializes and resets the password model to an empty string', async () => {
     const ui = mount()
@@ -53,8 +61,8 @@ describe('WidgetConfigForm controls', () => {
     ui.nodes().find(n => n.tag === 'UiSwitch')!.props['onUpdate:modelValue'](true)
     ui.nodes().find(n => n.tag === 'UiTextField')!.props.onCommit('Berlin')
     expect(ui.events).toEqual([
-      ['change', { city: 'Paris', mode: 'a', enabled: true, count: 1, scale: 1 }],
-      ['change', { city: 'Berlin', mode: 'a', enabled: true, count: 1, scale: 1 }],
+      ['change', { city: 'Paris', mode: 'a', enabled: true, count: 1, scale: 1, accent: '#2d6687' }],
+      ['change', { city: 'Berlin', mode: 'a', enabled: true, count: 1, scale: 1, accent: '#2d6687' }],
     ])
   })
   it('resets the draft on config replacement and emits plain cloneable objects', async () => {
@@ -63,7 +71,7 @@ describe('WidgetConfigForm controls', () => {
     ui.props.config = { city: 'London', enabled: false, count: 2 }
     await Vue.nextTick()
     ui.nodes().find(n => n.tag === 'UiSwitch')!.props['onUpdate:modelValue'](true)
-    expect(ui.events.at(-1)).toEqual(['change', { city: 'London', mode: 'a', enabled: true, count: 2, scale: 1 }])
+    expect(ui.events.at(-1)).toEqual(['change', { city: 'London', mode: 'a', enabled: true, count: 2, scale: 1, accent: '#2d6687' }])
     for (const [, config] of ui.events) {
       expect(Vue.isProxy(config)).toBe(false)
       expect(structuredClone(config)).toEqual(config)

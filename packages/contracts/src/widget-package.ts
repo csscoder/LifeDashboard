@@ -257,6 +257,8 @@ function parseManifest(raw: unknown): ParseResult<WidgetPackageManifest> {
   if (Object.hasOwn(raw, 'settings')) {
     const parsed = parseSettingsSchema(raw.settings, network ?? [])
     if (!parsed.ok) return parsed
+    const color = Object.entries(parsed.value.properties).find(([, setting]) => setting.type === 'color')
+    if (color && sdk < 5) return fail(`manifest.settings.${color[0]} color needs sdk 5`)
     settings = parsed.value
   }
   if (raw.frame !== undefined && sdk < 3) return fail('manifest.frame needs sdk 3')

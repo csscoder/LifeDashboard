@@ -24,6 +24,7 @@ Read it when a rule below is unclear or a task is not covered here.
 
 - Declare user options (time zone, units, city) in `settings` in `widget.json`. The dashboard draws one settings panel for every widget. Do not build a settings form in the widget or in a modal.
 - The dashboard stores the values in its database per widget instance. Every plain setting needs `default`: the factory value that «Reset to defaults» restores.
+- A colour option is a `color` setting with a `#rrggbb` `default`; the dashboard draws a colour picker for it.
 - API keys and tokens are `secret` settings with `bind`. The widget sees only `true` or `false`.
 - `settings` hold what the user chooses; `widget.state` holds data the widget produces.
 - Several visual designs of one function (clock faces, hands, gauge styles) are one widget with `variants`, not several widgets. A variant changes the look only, never data or behavior. Draw every variant with `--ld-*` tokens. Read `context.variant`.

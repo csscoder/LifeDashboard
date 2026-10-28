@@ -418,6 +418,12 @@ describe('manifest variants', () => {
     expect(parseWidgetManifest({ ...manifestV2, sdk: 4, variants })).toEqual({ ok: false, error: 'manifest.variants needs sdk 5' })
   })
 
+  it('requires sdk 5 for a color setting', () => {
+    const settings = { type: 'object', properties: { accent: { type: 'color', title: 'Accent', default: '#2d6687' } } }
+    expect(parseWidgetManifest({ ...manifestV2, sdk: 4, settings })).toEqual({ ok: false, error: 'manifest.settings.accent color needs sdk 5' })
+    expect(parseWidgetManifest({ ...manifestV2, sdk: 5, settings }).ok).toBe(true)
+  })
+
   it('omits absent variants', () => {
     const result = parseWidgetManifest({ ...manifestV2, sdk: 5 })
     expect(result.ok).toBe(true)

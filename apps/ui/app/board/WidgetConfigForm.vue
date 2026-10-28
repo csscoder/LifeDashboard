@@ -7,6 +7,7 @@ import UiSelect from '../ui/UiSelect.vue'
 import UiTextField from '../ui/UiTextField.vue'
 import UiNumberField from '../ui/UiNumberField.vue'
 import UiSwitch from '../ui/UiSwitch.vue'
+import UiColorField from '../ui/UiColorField.vue'
 import UiButton from '../ui/UiButton.vue'
 import SettingsRow from './SettingsRow.vue'
 import { refreshSecretFlags } from '../widgets/secret-flags'
@@ -107,6 +108,11 @@ function messageFor(key: string): string | null {
       <UiNumberField
         v-else-if="setting.type === 'integer' || setting.type === 'number'"
         :model-value="Number(values[key])" :integer="setting.type === 'integer'" :min="setting.minimum" :max="setting.maximum"
+        :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
+        @update:model-value="changeField(key, setting, $event)"
+      />
+      <UiColorField
+        v-else-if="setting.type === 'color'" :model-value="String(values[key])"
         :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
         @update:model-value="changeField(key, setting, $event)"
       />

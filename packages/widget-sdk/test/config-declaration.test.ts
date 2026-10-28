@@ -60,6 +60,11 @@ declare module '@lifedashboard/widget-sdk' {
 `)
 })
 
+it('types a color setting as a string', () => {
+  expect(renderConfigDeclaration({ type: 'object', properties: { accent: { type: 'color', title: 'Accent', default: '#2d6687' } } }))
+    .toContain('    /** Accent */\n    accent: string\n')
+})
+
 it('renders an empty interface without settings', () => {
   expect(renderConfigDeclaration(undefined)).toBe(emptyDeclaration)
 })

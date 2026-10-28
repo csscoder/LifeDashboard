@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isSecretOriginAllowed, isValidSettingValue, normalizeConfig, parseSettingsSchema, type PlainSetting, type SettingsSchema } from '../src/widget-settings.ts'
+import { controlFor, isSecretOriginAllowed, isValidSettingValue, parseFieldInput, normalizeConfig, parseSettingsSchema, type PlainSetting, type SettingsSchema } from '../src/widget-settings.ts'
 
 const city = { type: 'string', title: 'City', default: 'Moscow' }
 const origin = 'https://a.example'
@@ -59,7 +59,7 @@ describe('parseSettingsSchema', () => {
   })
 
   it('requires each property to be a supported scalar or secret setting', () => {
-    for (const setting of [null, [], 'string', {}, { ...city, type: 'object' }, { ...city, type: 'array' }, { ...city, type: 'null' }]) {
+    for (const setting of [null, [], 'string', {}, { ...city, type: 'object' }, { ...city, type: 'array' }, { ...city, type: 'null' }, { ...city, type: 'colour' }]) {
       expectInvalid(schema(setting), 'key')
     }
   })
@@ -263,6 +263,31 @@ describe('isValidSettingValue', () => {
     [{ type: 'boolean', title: 'B', default: false }, null, false],
   ])('validates %j against %j as %s', (setting, value, valid) => {
     expect(isValidSettingValue(setting, value)).toBe(valid)
+  })
+})
+
+describe('color settings', () => {
+  const accent = { type: 'color', title: 'Accent', default: '#2d6687' }
+
+  it('accepts a #rrggbb default in either case', () => {
+    expect(parseSettingsSchema(schema(accent), [])).toEqual({ ok: true, value: { type: 'object', properties: { key: accent } } })
+    expect(parseSettingsSchema(schema({ ...accent, default: '#2D6687' }), []).ok).toBe(true)
+  })
+
+  it('rejects other colour formats and string constraints with the specified errors', () => {
+    for (const value of ['#2d668780', '#2d6', '2d6687', 'red', 'rgb(0, 0, 0)', '', 3]) {
+      expect(parseSettingsSchema(schema({ ...accent, default: value }), [])).toEqual({ ok: false, error: 'settings.key.default must satisfy its own type and constraints' })
+    }
+    expect(parseSettingsSchema(schema({ ...accent, enum: ['#000000'] }), [])).toEqual({ ok: false, error: 'settings.key.enum must contain 1–50 distinct strings on a string setting' })
+    expect(parseSettingsSchema(schema({ ...accent, maxLength: 7 }), [])).toEqual({ ok: false, error: 'settings.key.maxLength must be an integer from 1 to 1000 on a string setting' })
+  })
+
+  it('uses the colour control and keeps only valid values', () => {
+    const setting = accent as PlainSetting
+    expect(controlFor(setting)).toBe('color')
+    expect(parseFieldInput(setting, '#ff0000')).toEqual({ ok: true, value: '#ff0000' })
+    expect(parseFieldInput(setting, '#ff000080')).toEqual({ ok: false })
+    expect(normalizeConfig({ type: 'object', properties: { accent: setting } }, { accent: 'blue' }, new Set())).toEqual({ accent: '#2d6687' })
   })
 })
 

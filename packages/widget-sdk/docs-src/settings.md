@@ -26,6 +26,7 @@ The dashboard stores the values in its database per widget instance. Every plain
     "units": { "type": "string", "title": "Units", "enum": ["metric", "imperial"], "default": "metric" },
     "refreshMinutes": { "type": "integer", "title": "Refresh (minutes)", "minimum": 1, "maximum": 60, "default": 15 },
     "showSeconds": { "type": "boolean", "title": "Show seconds", "default": false },
+    "accent": { "type": "color", "title": "Accent", "default": "#2d6687" },
     "apiKey": { "type": "secret", "title": "API key", "bind": { "origin": "https://api.example.com", "header": "X-Api-Key" } }
   },
   "required": ["city"]
@@ -42,7 +43,9 @@ Limits:
 - `minimum` and `maximum`: finite numbers, on `number` and `integer` settings only. `minimum` must not exceed `maximum`.
 - `default`: a plain setting must declare `default`, and it must satisfy the setting's own type and constraints. A `secret` setting has no `default`.
 
-Types: `string`, `number`, `integer`, `boolean` and `secret`.
+Types: `string`, `number`, `integer`, `boolean`, `color` and `secret`.
+
+A `color` setting (sdk 5) holds a `#rrggbb` hex colour, and its `default` must be one. The dashboard draws a colour picker for it. The value has no alpha channel; draw transparency in the widget's own styles.
 
 ## Reading settings
 
