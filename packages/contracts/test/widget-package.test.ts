@@ -69,13 +69,13 @@ describe('manifest field rules', () => {
   })
 
   it('rejects a newer sdk level with an update hint', () => {
-    const result = parseWidgetManifest(mutatedManifest((m) => { m.sdk = 5 }))
-    expect(result).toEqual({ ok: false, error: 'manifest.sdk 5 needs a newer LifeDashboard (this one supports 1–4)' })
+    const result = parseWidgetManifest(mutatedManifest((m) => { m.sdk = 6 }))
+    expect(result).toEqual({ ok: false, error: 'manifest.sdk 6 needs a newer LifeDashboard (this one supports 1–5)' })
   })
 
   it('checks sdk before unknown fields', () => {
-    const result = parseWidgetManifest(mutatedManifest((m) => { m.sdk = 5; m.future = 1 }))
-    expect(result).toEqual({ ok: false, error: 'manifest.sdk 5 needs a newer LifeDashboard (this one supports 1–4)' })
+    const result = parseWidgetManifest(mutatedManifest((m) => { m.sdk = 6; m.future = 1 }))
+    expect(result).toEqual({ ok: false, error: 'manifest.sdk 6 needs a newer LifeDashboard (this one supports 1–5)' })
   })
 
   it('accepts frame at sdk 3 and keeps it', () => {
@@ -403,5 +403,24 @@ describe('plain-text limit', () => {
     expect(PACKAGE_LIMITS.maxTextLength).toBe(PLAIN_TEXT_MAX)
     expect(isPlainText('x'.repeat(PLAIN_TEXT_MAX))).toBe(true)
     expect(isPlainText('x'.repeat(PLAIN_TEXT_MAX + 1))).toBe(false)
+  })
+})
+
+describe('manifest variants', () => {
+  const variants = { default: 'classic', items: [{ id: 'classic', title: 'Classic' }, { id: 'roman', title: 'Roman numerals' }] }
+
+  it('keeps variants at sdk 5', () => {
+    expect(parseWidgetManifest({ ...manifestV2, sdk: 5, variants })).toEqual({ ok: true, value: { ...valid.manifest, sdk: 5, variants } })
+  })
+
+  it('requires sdk 5 before parsing variants', () => {
+    expect(parseWidgetManifest({ ...manifestV2, sdk: 4, variants: null })).toEqual({ ok: false, error: 'manifest.variants needs sdk 5' })
+    expect(parseWidgetManifest({ ...manifestV2, sdk: 4, variants })).toEqual({ ok: false, error: 'manifest.variants needs sdk 5' })
+  })
+
+  it('omits absent variants', () => {
+    const result = parseWidgetManifest({ ...manifestV2, sdk: 5 })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(Object.hasOwn(result.value, 'variants')).toBe(false)
   })
 })

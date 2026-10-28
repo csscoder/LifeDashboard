@@ -1,6 +1,6 @@
 # LifeDashboard widget SDK
 
-Docs for `@lifedashboard/widget-sdk`, matched to this version. Target `sdk` level: 4.
+Docs for `@lifedashboard/widget-sdk`, matched to this version. Target `sdk` level: 5.
 Open the page that matches your task:
 
 - [api.md](api.md): `useWidget()`, context fields, `state`, `notify`, `http`, `call`, permissions, limits, `sdk` levels.
@@ -29,7 +29,7 @@ AGENTS.md            rules for coding agents
 
 ## Manifest
 
-`widget.json` example. `ld-widget check` and `build` set `format` and `sdk` (target level 4), so do not write them:
+`widget.json` example. `ld-widget check` and `build` set `format` and `sdk` (target level 5), so do not write them:
 
 ```json
 {

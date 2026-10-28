@@ -338,9 +338,9 @@ export const WIDGET_ERROR_CODES = [
 export type WidgetErrorCode = (typeof WIDGET_ERROR_CODES)[number]
 
 export const SDK_VERSION = 1
-export const SDK_LEVELS = [1, 2, 3, 4] as const
+export const SDK_LEVELS = [1, 2, 3, 4, 5] as const
 export type SdkLevel = (typeof SDK_LEVELS)[number]
-export const SDK_TARGET_LEVEL: SdkLevel = 4
+export const SDK_TARGET_LEVEL: SdkLevel = 5
 
 export interface InitMessage {
   t: 'ld:init'

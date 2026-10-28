@@ -2,6 +2,7 @@ import { GRID_COLS, ROWS, type Size, type WidgetSizing } from './grid.ts'
 import { fail, isPlainText, isRecord, PLAIN_TEXT_MAX, unknownKey, type ParseResult } from './parse.ts'
 import { SDK_LEVELS, type SdkLevel } from './widget-gateway.ts'
 import { parseSettingsSchema, type SettingsSchema } from './widget-settings.ts'
+import { parseVariants, type WidgetVariants } from './widget-variants.ts'
 import type { BoundSecret } from './widget-secrets.ts'
 
 export const WIDGET_PERMISSIONS = ['state', 'notifications', 'network'] as const
@@ -93,7 +94,7 @@ const ID_PATTERN = /^[a-z0-9]+(\.[a-z0-9-]+)+$/
 const STRICT_VERSION_PATTERN = /^(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})$/
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/
 
-const MANIFEST_KEYS = ['id', 'version', 'title', 'author', 'sdk', 'entry', 'styles', 'sizing', 'permissions', 'network', 'settings', 'frame']
+const MANIFEST_KEYS = ['id', 'version', 'title', 'author', 'sdk', 'entry', 'styles', 'sizing', 'permissions', 'network', 'settings', 'frame', 'variants']
 const SIZING_KEYS = ['default', 'min', 'max']
 const SIZE_KEYS = ['w', 'h']
 
@@ -116,6 +117,7 @@ export interface WidgetPackageManifest {
   settings?: SettingsSchema
   // Absent means `framed`; the key is left out so manifests without it keep their canonical JSON.
   frame?: WidgetFrame
+  variants?: WidgetVariants
 }
 
 /** `POST /widget-uploads` (hash null) and `POST /widget-uploads/:id/install` answer with this. */
@@ -262,6 +264,13 @@ function parseManifest(raw: unknown): ParseResult<WidgetPackageManifest> {
     return fail('manifest.frame must be "framed" or "frameless"')
   }
   const frame = raw.frame as WidgetFrame | undefined
+  let variants: WidgetVariants | undefined
+  if (Object.hasOwn(raw, 'variants')) {
+    if (sdk < 5) return fail('manifest.variants needs sdk 5')
+    const parsed = parseVariants(raw.variants)
+    if (!parsed.ok) return parsed
+    variants = parsed.value
+  }
   return {
     ok: true,
     value: {
@@ -278,6 +287,7 @@ function parseManifest(raw: unknown): ParseResult<WidgetPackageManifest> {
       ...(network === undefined ? {} : { network }),
       ...(settings === undefined ? {} : { settings }),
       ...(frame === undefined ? {} : { frame }),
+      ...(variants === undefined ? {} : { variants }),
     },
   }
 }
