@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, useId, watch } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { normalizeConfig, SETTINGS_LIMITS, type PlainSetting, type SettingsSchema } from '@lifedashboard/contracts/widget-settings'
 import { SECRET_MIN_LENGTH } from '@lifedashboard/contracts/widget-secrets'
 import { api } from '../api'
 import UiSelect from '../ui/UiSelect.vue'
+import UiTextField from '../ui/UiTextField.vue'
+import UiNumberField from '../ui/UiNumberField.vue'
+import UiSwitch from '../ui/UiSwitch.vue'
+import UiButton from '../ui/UiButton.vue'
+import SettingsRow from './SettingsRow.vue'
 import { refreshSecretFlags } from '../widgets/secret-flags'
 import { controlFor, isRequiredSetting, mergeConfigField, parseFieldInput, secretStatusMessage } from './config-form'
 
@@ -14,7 +19,6 @@ const props = defineProps<{
   secrets: ReadonlySet<string>
 }>()
 const emit = defineEmits<{ change: [config: Record<string, unknown>] }>()
-const uid = useId()
 const draft = shallowRef(props.config)
 watch([() => props.config, () => props.schema, () => props.widgetId], () => {
   draft.value = props.config
@@ -25,6 +29,7 @@ const passwords = ref<Record<string, string>>(Object.create(null))
 const pending = ref<Record<string, boolean>>(Object.create(null))
 const messages = ref<Record<string, string | null>>(Object.create(null))
 const missing = ref(false)
+const controlRevisions = ref<Record<string, number>>(Object.create(null))
 let revision = 0
 
 watch(() => props.widgetId, () => {
@@ -35,23 +40,14 @@ watch(() => props.widgetId, () => {
   missing.value = false
 })
 
-function changeChoice(key: string, value: string) {
-  draft.value = mergeConfigField(props.schema, values.value, key, value)
-  emit('change', draft.value)
-}
-
-function changeField(key: string, setting: PlainSetting, event: Event) {
-  const input = event.target as HTMLInputElement | HTMLSelectElement
-  const raw = setting.type === 'boolean' ? (input as HTMLInputElement).checked : input.value
-  const parsed = parseFieldInput(setting, raw)
-  if (parsed.ok) {
-    draft.value = mergeConfigField(props.schema, values.value, key, parsed.value)
-    emit('change', draft.value)
-  } else if (setting.type === 'boolean') {
-    (input as HTMLInputElement).checked = values.value[key] === true
-  } else {
-    input.value = String(values.value[key])
+function changeField(key: string, setting: PlainSetting, raw: string | number | boolean) {
+  const parsed = parseFieldInput(setting, typeof raw === 'number' ? String(raw) : raw)
+  if (!parsed.ok) {
+    controlRevisions.value[key] = (controlRevisions.value[key] ?? 0) + 1
+    return
   }
+  draft.value = mergeConfigField(props.schema, values.value, key, parsed.value)
+  emit('change', draft.value)
 }
 
 async function changeSecret(key: string, clear: boolean) {
@@ -77,153 +73,53 @@ function messageFor(key: string): string | null {
 
 <template>
   <div class="settings__config">
-    <div v-for="(setting, key) in schema.properties" :key="key" class="settings__field">
-      <div class="settings__row">
-        <label class="settings__label" :for="`${uid}-${key}`">
-          {{ setting.title }}<template v-if="isRequiredSetting(schema, key)"> *<span class="settings__visually-hidden"> required</span></template>
-        </label>
-        <template v-if="setting.type === 'secret'">
-          <input
-            :id="`${uid}-${key}`"
-            v-model="passwords[key]"
-            class="settings__control"
-            type="password"
-            autocomplete="new-password"
-            :minlength="SECRET_MIN_LENGTH"
-            :disabled="!widgetId || missing || pending[key]"
-            :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
-            :aria-describedby="`${uid}-${key}-status${setting.description ? ` ${uid}-${key}-description` : ''}`"
-          />
-          <span :id="`${uid}-${key}-status`" class="settings__description" :class="{ settings__warning: isRequiredSetting(schema, key) && !secrets.has(key) }">{{ secrets.has(key) ? 'set' : 'not set' }}</span>
-          <div class="settings__actions">
-            <button
-              type="button"
-              class="settings__reset"
-              :disabled="!widgetId || missing || pending[key] || (passwords[key]?.length ?? 0) < SECRET_MIN_LENGTH"
-              @click="changeSecret(key, false)"
-            >Set</button>
-            <button
-              type="button"
-              class="settings__reset"
-              :disabled="!widgetId || missing || pending[key] || !secrets.has(key)"
-              @click="changeSecret(key, true)"
-            >Clear</button>
-          </div>
-          <p v-if="(passwords[key]?.length ?? 0) > 0 && (passwords[key]?.length ?? 0) < SECRET_MIN_LENGTH" class="settings__message" role="status">At least {{ SECRET_MIN_LENGTH }} characters</p>
-          <p v-if="messageFor(key)" class="settings__message" role="status">{{ messageFor(key) }}</p>
-        </template>
-        <template v-else>
-          <UiSelect
-            v-if="controlFor(setting) === 'select'"
-            :id="`${uid}-${key}`"
-            :model-value="String(values[key])"
-            :options="(setting.enum ?? []).map((option) => ({ value: option, label: option }))"
-            :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
-            :aria-describedby="setting.description ? `${uid}-${key}-description` : undefined"
-            @update:model-value="changeChoice(key, $event)"
-          />
-          <input
-            v-else
-            :id="`${uid}-${key}`"
-            class="settings__control"
-            :type="controlFor(setting)"
-            :value="values[key]"
-            :checked="values[key] === true"
-            :maxlength="setting.maxLength ?? SETTINGS_LIMITS.maxLength"
-            :min="setting.minimum"
-            :max="setting.maximum"
-            :step="setting.type === 'integer' ? 1 : 'any'"
-            :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
-            :aria-describedby="setting.description ? `${uid}-${key}-description` : undefined"
-            @change="changeField(key, setting, $event)"
-          />
-        </template>
-      </div>
-      <p v-if="setting.description" :id="`${uid}-${key}-description`" class="settings__description">{{ setting.description }}</p>
-    </div>
+    <SettingsRow
+      v-for="(setting, key) in schema.properties" :key="key"
+      :label="setting.title" :required="isRequiredSetting(schema, key)"
+      :description="setting.description"
+      :value="setting.type === 'secret' ? (secrets.has(key) ? 'set' : 'not set') : undefined"
+      :error="setting.type === 'secret' ? messageFor(key) : null"
+    >
+      <template v-if="setting.type === 'secret'">
+        <UiTextField
+          v-model="passwords[key]!" type="password" autocomplete="new-password"
+          :minlength="SECRET_MIN_LENGTH" :disabled="!widgetId || missing || pending[key]"
+          :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
+        />
+        <div class="settings__actions">
+          <UiButton :disabled="!widgetId || missing || pending[key] || (passwords[key]?.length ?? 0) < SECRET_MIN_LENGTH" @click="changeSecret(key, false)">Set</UiButton>
+          <UiButton :disabled="!widgetId || missing || pending[key] || !secrets.has(key)" @click="changeSecret(key, true)">Clear</UiButton>
+        </div>
+        <p v-if="(passwords[key]?.length ?? 0) > 0 && (passwords[key]?.length ?? 0) < SECRET_MIN_LENGTH" class="settings__message" role="status">At least {{ SECRET_MIN_LENGTH }} characters</p>
+      </template>
+      <UiSelect
+        v-else-if="controlFor(setting) === 'select'" :model-value="String(values[key])"
+        :options="(setting.enum ?? []).map((option) => ({ value: option, label: option }))"
+        :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
+        @update:model-value="changeField(key, setting, $event)"
+      />
+      <UiSwitch
+        v-else-if="setting.type === 'boolean'" :model-value="values[key] === true"
+        :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
+        @update:model-value="changeField(key, setting, $event)"
+      />
+      <UiNumberField
+        v-else-if="setting.type === 'integer' || setting.type === 'number'"
+        :model-value="Number(values[key])" :integer="setting.type === 'integer'" :min="setting.minimum" :max="setting.maximum"
+        :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
+        @update:model-value="changeField(key, setting, $event)"
+      />
+      <UiTextField
+        v-else :key="controlRevisions[key] ?? 0" :model-value="String(values[key])" :maxlength="setting.maxLength ?? SETTINGS_LIMITS.maxLength"
+        :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
+        @commit="changeField(key, setting, $event)"
+      />
+    </SettingsRow>
   </div>
 </template>
 
 <style scoped>
-.settings__config {
-  display: grid;
-  gap: 0.375rem;
-  padding-top: 0.5rem;
-  border-top: var(--ld-border-width) solid var(--ld-border-default);
-}
-
-.settings__row {
-  display: grid;
-  grid-template-columns: 6.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 1.75rem;
-}
-
-.settings__row > input[type='checkbox'] {
-  justify-self: start;
-  margin: 0;
-}
-
-.settings__label,
-.settings__description {
-  color: var(--ld-text-secondary);
-}
-
-.settings__warning {
-  color: var(--ld-warning-text);
-}
-
-.settings__visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.settings__control {
-  min-width: 0;
-}
-
-.settings__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.settings__message,
-.settings__actions {
-  grid-column: 1 / -1;
-}
-
-.settings__message,
-.settings__description {
-  margin: 0.125rem 0 0;
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-
-.settings__reset {
-  padding: 0.125rem 0.625rem;
-  border: var(--ld-border-width) solid var(--ld-border-default);
-  border-radius: var(--ld-radius-control);
-  background: var(--ld-surface-3);
-  color: var(--ld-text-primary);
-  font: inherit;
-  cursor: pointer;
-}
-
-.settings__reset:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.settings__control:focus-visible,
-.settings__reset:focus-visible {
-  outline: 0.125rem solid var(--ld-focus-ring);
-  outline-offset: 0.125rem;
-}
+.settings__config { display: grid; gap: 0.375rem; padding-top: 0.5rem; border-top: var(--ld-border-width) solid var(--ld-border-default); }
+.settings__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; grid-column: 1 / -1; }
+.settings__message { grid-column: 1 / -1; margin: 0.125rem 0 0; font-size: 0.75rem; line-height: 1rem; color: var(--ld-text-secondary); }
 </style>
