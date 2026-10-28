@@ -10,14 +10,16 @@
 - At the `default` size the essential content is visible without scrolling. Check `min` and `default` first, then `max`.
 - Round or square content, such as a clock face or a gauge, sizes from the smaller side of the widget, so it fits when the widget is wider than tall or taller than wide. Give the root `container-type: size` and the content `width: min(100cqw, 100cqh); aspect-ratio: 1`. `width: 100%; height: 100%` on square content clips it in a non-square widget. See the clock in [recipes.md](recipes.md).
 
-## rem and rootFontSize
+## em, rem and rootFontSize
 
-- Use `rem` for sizes and spacing inside the widget, so the widget follows the board's font size.
+- Size content text and spacing in `em`, or use the `size-*` tokens, so content follows its inherited typography. Use `rem` only for frame-independent values.
 - `context.rootFontSize` is the dashboard's root font size in px. Use it only when a value must be a px number, such as a canvas size.
 
 ## Theme tokens
 
 Every colour, radius, font, spacing and motion value comes from a theme token. Use `var(--ld-…)` with the full token name. Do not write literal colours, font names or durations.
+
+A theme combines a palette, a mode (`light`, `dark` or `auto`, which follows the system colour scheme) and a style (`solid` or `glass`). The 11 palettes produce 44 combinations.
 
 Read the current values from `context.theme.tokens`, or use the CSS variables directly. To see the widget in a theme, open the dev shell with its `theme` id ([workflow.md](workflow.md)). Tokens of the built-in themes:
 
@@ -32,11 +34,43 @@ Token groups:
 - Accent and status: `accent*`, `on-accent`, and for each status `success`, `warning`, `danger`, `info`: `<status>`, `<status>-subtle`, `<status>-text`, `on-<status>`.
 - Focus: `focus-ring`.
 - Shape and effects: `radius-*`, `shadow-*`, `blur`, `glow`, `edge-highlight`.
-- Type: `font-ui`, `font-mono`, `font-display`, `font-scale`, `weight-*`, `leading`, `tracking`.
+- Type: `font-heading`, `font-body`, `font-ui`, `font-mono`, `font-display`, `font-scale`, `size-h1`, `size-h2`, `size-h3`, `size-body`, `size-small`, `weight-*`, `leading`, `leading-heading`, `tracking`.
+- Links: `link`.
 - Motion: `duration-*`, `ease-*`.
 - Spacing: `widget-padding`, `gap`, `control-height`.
 
 Text must keep readable contrast in every theme. Put `text-*` on `surface-*` tokens, and `on-accent` on `accent`.
+
+## Typography and content
+
+Use semantic elements: headings, paragraphs, lists, `small` and links are already styled with theme typography. Size content text and spacing in `em` or with `size-*` tokens. Use only `--ld-*` colours, choosing the role that matches the content:
+
+| Content | Token |
+| --- | --- |
+| Heading or body | `text-primary` |
+| Secondary text | `text-secondary` |
+| Hint | `text-muted` |
+| Link | `link` |
+| Emphasis | `accent-text` |
+| Status | `<s>-text` on `<s>-subtle` (`success`, `warning`, `danger`, `info`) |
+
+For example, the last three Telegram threads can use semantic cards:
+
+```html
+<ul class="threads">
+  <li><small>Design team</small><h3>New dashboard ideas</h3><a href="https://t.me/design/101">Read thread</a></li>
+  <li><small>Book club</small><h3>Next month's reading</h3><a href="https://t.me/books/102">Read thread</a></li>
+  <li><small>Weekend group</small><h3>Saturday plans</h3><a href="https://t.me/weekend/103">Read thread</a></li>
+</ul>
+```
+
+```css
+.threads { display: grid; gap: 0.75em; list-style: none; padding: 0; }
+.threads li { background: var(--ld-surface-2); border-radius: var(--ld-radius-card); padding: 0.75em; }
+.threads h3 { color: var(--ld-text-primary); }
+.threads small { color: var(--ld-text-secondary); }
+.threads a { color: var(--ld-link); }
+```
 
 ## Framed and frameless
 

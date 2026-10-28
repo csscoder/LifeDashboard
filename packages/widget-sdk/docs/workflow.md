@@ -45,7 +45,7 @@ Theme keys use `builtin:<palette>-<dark|light>-<glass|solid>`.
   ```
 
   - It starts its own dev server and an installed Chromium-based browser in headless mode, waits until the widget has rendered, and writes one image of the widget area per combination to `.ld-widget/shots/`, named `<w>x<h>-<theme>-<frame>.png`. It prints each path.
-  - By default it takes min, default and max size, every built-in theme, framed and frameless. Narrow it with `--size 4x3`, `--theme builtin:lifedashboard-light-solid` and `--frame frameless`; each option can repeat.
+  - By default it takes min, default and max size, the four LifeDashboard combinations (`builtin:lifedashboard-{light,dark}-{solid,glass}`), framed and frameless. `--theme all` captures all 44 combinations. Narrow it with `--size 4x3`, `--theme builtin:lifedashboard-light-solid` and `--frame frameless`; each option can repeat.
   - `--wait <ms>` sets how long it waits after the first render, 1000 by default. Raise it for a widget that loads data or animates in, for example `--wait 5000`.
   - It finds Chrome, Chromium, Edge or Brave in the usual places. Set `LD_BROWSER` to the browser's path if it is elsewhere.
   - Runtime errors and overflow are written to `.ld-widget/dev.log` as with an open browser.

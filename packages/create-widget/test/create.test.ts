@@ -75,7 +75,7 @@ describe('createWidgetProject', () => {
     expect(component).toContain('var(--ld-')
     const instructions = await readFile(join(project, 'AGENTS.md'), 'utf8')
     for (const rule of [
-      '## Widget UI', 'The widget cannot style or extend it', 'reka-ui', 'never leave the browser', '## Settings and looks', 'Do not build a settings form', 'Reset to defaults', 'secret', 'variants', 'context.variant',
+      'size-*', '--ld-link', '## Widget UI', 'The widget cannot style or extend it', 'reka-ui', 'never leave the browser', '## Settings and looks', 'Do not build a settings form', 'Reset to defaults', 'secret', 'variants', 'context.variant',
       'node_modules/@lifedashboard/widget-sdk/docs/index.md', 'widget.state', 'widget.http.get', 'widget.http.send',
       'network', 'WebM', 'Opus', 'assets/', 'var(--ld-', 'context.size', 'sizeClass', 'context.frame',
       'context.visible', '"frame": "frameless"', 'npx ld-widget dev', 'npx ld-widget check', 'npx ld-widget build',

@@ -48,7 +48,7 @@ The following describes the implementation in the repository as of **October 202
 | --- | --- |
 | Widget board | 24-column fluid grid; configurable number of rows; add, move, resize, and remove widgets; pointer and keyboard controls. |
 | Persistence | Boards and widget instances saved through the local Fastify API to SQLite, with revision-based conflict detection. |
-| Appearance | Glass, Obsidian, and Paper themes; dashboard, space and screen defaults with inheritance; per-widget overrides, a frameless style, and custom shadows. |
+| Appearance | 11 palettes × light/dark modes × Solid/Glass styles (44 combinations); dashboard, space and screen defaults with inheritance; per-widget overrides, a frameless style, and custom shadows. |
 | Built-in widgets | Animated analog clock and a placeholder. The built-in library is still small. |
 | Installable widgets | Widget folders built by ld-widget build: code up to 10 MB, unlimited media, bundled sources; installed through the UI into the userwidgets library with permission review. |
 | Widget SDK | Initial `useWidget()` API, `ld-widget build` CLI, reactive widget context, persisted state, and host notifications. |
@@ -178,7 +178,7 @@ The goal is to make custom widgets possible **without changing or rebuilding Lif
 LifeDashboard treats visual design as a first-class feature:
 
 - A responsive-to-window-width board with square grid cells and explicit drag/resize editing.
-- Built-in **Glass**, **Obsidian**, and **Paper** themes.
+- 11 built-in palettes: **LifeDashboard**, **Catppuccin**, **Gruvbox**, **GitHub**, **Solarized**, **Tokyo Night**, **Rosé Pine**, **Everforest**, **One**, **Kanagawa**, and **Ayu**. Each offers **Light** and **Dark** modes with **Solid** and **Glass** styles: 44 combinations.
 - Theme priority: widget override → screen → space → dashboard default. An unset or unavailable theme inherits from the next scope.
 - Set a space theme in its icon/theme editor; set the dashboard default in the settings panel. In board edit mode, the gear beside the active screen bullet opens a panel above it with screen-theme selection and confirmed deletion. Screen theme choices preview with the board draft and follow Done/Cancel. Every screen deletion asks for confirmation, including empty screens.
 - Space and screen assignments persist in SQLite. The dashboard default remains local to the browser.
@@ -191,7 +191,7 @@ LifeDashboard treats visual design as a first-class feature:
 - A shared design-token vocabulary for consistent UI across widgets.
 - Animations where they improve the experience, with consideration for reduced-motion preferences.
 
-**Planned:** theme imports, richer background effects, additional skins and themes, richer visual widgets, themed widget packs, and more flexible personalization. A frameless clock is one example of the intended direction: widgets should be able to feel like objects on a desktop, not just rectangles in a grid.
+**Planned:** user palette imports, richer background effects, additional skins and themes, richer visual widgets, themed widget packs, and more flexible personalization. A frameless clock is one example of the intended direction: widgets should be able to feel like objects on a desktop, not just rectangles in a grid.
 
 Theme contracts and token rules are documented in [`docs/theme-contract.md`](docs/theme-contract.md).
 

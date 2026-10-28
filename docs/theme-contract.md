@@ -1,16 +1,18 @@
-# Theme contract (version 1)
+# Theme contract (version 2)
 
 The rules a LifeDashboard theme must satisfy. `apps/ui/app/theme/contract.ts` is the canonical
 token list; `validateThemeCss()` in `apps/ui/app/theme/validate-theme.ts` enforces this document for the built-in themes in the test suite; a runtime check for user themes comes with user themes.
-The AI theme skill writes themes against it. Design: [archived theme-engine design](../.project-history/features/2026-10-09-theme-engine/spec.md).
+Design: [archived theme-engine design](../.project-history/features/2026-10-09-theme-engine/spec.md).
 
 ## Assignment and inheritance
 
-The resolved dashboard scope uses the first available theme in this order: screen, space, dashboard default, built-in Glass. A widget can override that resolved theme; `builtin:bare` only removes the widget frame and keeps the resolved screen tokens. It cannot be assigned to a space or screen.
+A choice is `{ palette, mode, style }`: one of 11 built-in palette IDs (for example `builtin:lifedashboard`), `light`, `dark` or `auto`, and `solid` or `glass`. Auto follows the system colour scheme; the two resolved modes produce 44 combinations. Resolution is widget → screen → space → dashboard default → LifeDashboard Dark Glass. Null inherits. A widget may use `'bare'` to remove its frame while keeping inherited screen tokens; spaces and screens cannot use bare.
 
-Space assignments use nullable `SpaceSummary.themeId` and `SpacePatch.themeId`. Screen assignments use optional `ScreenBoard.themeId`; absent or null inherits, and inherited IDs are omitted in canonical board responses. Space and screen assignments persist in SQLite; the dashboard default uses browser appearance storage. Unknown, syntactically valid IDs inherit without rewriting the stored reference. The current selector lists built-in themes; theme imports remain planned.
+Space and screen assignments persist in SQLite; the dashboard default uses browser appearance storage schema version 2. Legacy theme IDs migrate to LifeDashboard combinations. Screen choices preview in the board draft and follow Done/Cancel. Importing user palettes is planned.
 
-In board edit mode, the gear beside the active screen bullet opens screen-theme selection above that bullet, together with confirmed deletion. The choice is part of the draft: Done saves it through the revision-checked board API, Cancel restores the loaded theme. The general settings panel only selects the dashboard default. A stale background refresh cannot replace a newer saved board snapshot.
+## Generator
+
+Palette seeds live in `apps/ui/app/theme/palettes.ts`; `apps/ui/app/theme/generate.ts` converts them to token sets. Run `pnpm -C apps/ui gen:themes` to regenerate `apps/ui/app/theme/styles/themes/generated.css`. This generated file must not be edited by hand. It contains 44 combination rules, each validated for syntax, token ranges, opacity and contrast. The generator reports failures rather than silently changing palette seeds.
 
 ## Screen media backgrounds
 
@@ -22,12 +24,12 @@ A selected binary-alpha PNG repeats at its native cell size: diagonal 2×2 px, s
 
 ## Format
 
-A theme is a record `{ id, name, mode, skin, css }`.
+The generator returns a combination `{ key, id, name, mode, style, tokens }`. `themeRule()` serializes its token set to CSS; SDK development entries expose `skin` equal to `style`.
 
 - `mode`: `light` or `dark`.
-- `skin`: one of the built-in skins `glass`, `solid`, `paper`. Skins hold all structure and effects;
+- `style`: one of the built-in skins `glass`, `solid`. Skins hold all structure and effects;
   a theme only tunes them through tokens.
-- `css`: exactly **one rule** and nothing else:
+- Each combination serializes to exactly **one rule**:
 
 ```css
 .space--theme-<slug>, .widget--theme-<slug> {
@@ -37,19 +39,19 @@ A theme is a record `{ id, name, mode, skin, css }`.
 }
 ```
 
-The slug is `<name>` for `builtin:<name>` and `u-<uuid>` for `user:<uuid>`. No other selector,
+The built-in slug is `<palette>-<mode>-<style>`, with id `builtin:<palette>-<mode>-<style>`. No other selector,
 rule or at-rule (`@import`, `@media`, `@font-face`, `@keyframes`, …) and no property other than
 `color-scheme` and contract tokens. `url(`, `image-set(`, `attr(`, `expression` and `!important`
 are rejected anywhere.
 
-Reference themes: `apps/ui/app/theme/styles/themes/*.css`.
+Generated combinations: `apps/ui/app/theme/styles/themes/generated.css`.
 
 ## Values
 
 - **Colour tokens:** `oklch(L C H [/ A])`, `var(--ld-<colour token>)` from the same block, or
   `transparent`. No hex, `rgb()`, `hsl()` or named colours. Cycles are rejected.
 - **Opaque (alpha 1):** `bg`, `surface-1-solid`, `surface-2`, `surface-3`, all `text-*`,
-  `accent`, `accent-hover`, `accent-active`, `accent-text`, `on-accent`, `focus-ring`, and for each
+  `accent`, `accent-hover`, `accent-active`, `accent-text`, `on-accent`, `link`, `focus-ring`, and for each
   status `<s>`, `<s>-text`, `on-<s>`. Only `surface-1` may be translucent.
 - `surface-1-solid` must be an `oklch()` literal (not `var()`).
 - **Font stacks:** family names in double or single quotes containing only `[A-Za-z0-9 _-]+`
@@ -78,6 +80,10 @@ Reference themes: `apps/ui/app/theme/styles/themes/*.css`.
 | `radius-widget`, `radius-card`, `radius-control` | length | 0–2rem |
 | `radius-pill` | length | 0–999px |
 | `font-ui`, `font-mono`, `font-display` | font stack | See Values |
+| `font-heading`, `font-body` | font stack | `system-ui, sans-serif` generated; same validation as other font stacks |
+| `size-h1`, `size-h2`, `size-h3`, `size-body`, `size-small` | length, `em` | 0.75–3em, strictly descending; generated 2em, 1.5em, 1.25em, 1em, 0.875em |
+| `leading-heading` | number | 1.0–1.6; generated 1.2 |
+| `link` | colour | Opaque; generated equal to `accent-text` |
 | `font-scale` | number | 0.875–1.25 |
 | `weight-regular`, `weight-medium`, `weight-strong` | number | 300–800, strictly ascending |
 | `leading` | number | 1.2–1.8 |
@@ -86,6 +92,8 @@ Reference themes: `apps/ui/app/theme/styles/themes/*.css`.
 | `ease-standard`, `ease-emphasized` | easing | `cubic-bezier()` or `linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out` |
 | `widget-padding`, `gap` | length | 0.25rem–1.5rem |
 | `control-height` | length | 1.75rem–2.75rem |
+
+The generator sets `font-ui` equal to `font-body` and `font-display` equal to `font-heading`; both legacy font tokens remain required. Content uses semantic typography and `em` sizes.
 
 ## Optional tokens
 
@@ -114,6 +122,7 @@ every row in two modes:
 | `on-accent` | `accent`, `accent-hover`, `accent-active` | 4.5:1 |
 | `on-<s>` | `<s>` | 4.5:1 |
 | `focus-ring` | each surface | 3:1 |
+| `link` | `surface-1`, `surface-2`, `surface-3` | 4.5:1 |
 
 `text-disabled` is exempt. A photo backdrop cannot be checked.
 
@@ -126,5 +135,5 @@ message naming the offending token and the allowed alternative, for example
 
 ## Evolution
 
-New tokens are added as optional with a fallback, so existing themes keep working.
+Version 2 adds the required content typography and link tokens above.
 `CONTRACT_VERSION` increases only for a breaking change, together with a migration.

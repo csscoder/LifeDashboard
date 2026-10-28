@@ -88,6 +88,20 @@ describe('freshDocs and the committed docs', () => {
 })
 
 describe('page content', () => {
+  it('documents palette typography and removes legacy theme ids', async () => {
+    const docs = await freshDocs()
+    const design = docs.get('design.md')!
+    expect(design).toContain('## Typography and content')
+    for (const token of ['font-heading', 'font-body', 'size-h1', 'size-h2', 'size-h3', 'size-body', 'size-small', 'leading-heading', 'link']) expect(design).toContain(token)
+    expect(design).toContain('in `em`')
+    for (const content of docs.values()) {
+      for (const id of ['builtin:glass', 'builtin:paper', 'builtin:obsidian']) expect(content).not.toContain(id)
+    }
+    const workflow = docs.get('workflow.md')!
+    expect(workflow).toContain('four LifeDashboard combinations')
+    expect(workflow).toContain('`--theme all` captures all 44')
+  })
+
   it('documents looks in the manifest, design guidance and context API', async () => {
     const docs = await freshDocs()
     expect(docs.get('design.md')).toContain('## Looks (variants)')

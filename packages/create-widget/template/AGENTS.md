@@ -13,6 +13,9 @@ Read it when a rule below is unclear or a task is not covered here.
 - Files only from the widget folder. fetch, XHR and WebSocket reach only the widget's own files.
 - Media by URL from `assets/`: WebM (VP9 + Opus) for video, Opus for audio. Create `assets/` when you add media.
 - Style with `var(--ld-…)` theme tokens only.
+- Use semantic headings, paragraphs, lists, `small` and links; theme typography already styles them.
+- Size content text and spacing in `em` or with `size-*` tokens; reserve `rem` for frame-independent values.
+- Use text-primary for headings/body, text-secondary for secondary text, text-muted for hints, `--ld-link` for links, accent-text for emphasis and status-text on status-subtle for status.
 - Adapt to `context.size` and `context.sizeClass`. Read `context.frame`.
 - Pause animation while `context.visible` is false.
 - Object-like widgets (clocks, gauges, stickers) set `"frame": "frameless"` in `widget.json` and draw no card background.
