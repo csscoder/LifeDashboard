@@ -5,11 +5,13 @@ import { DEFAULT_SHADOW, parseScreenBoard } from '@lifedashboard/contracts/board
 import { describe, expect, it } from 'vitest'
 import { compileSfc, mountComponent } from './helpers/sfc-renderer'
 
-const part = (name: string) => Vue.defineComponent({ name, setup: (_, { slots }) => () => Vue.h(name, null, slots.default?.()) })
+const part = (name: string) => Vue.defineComponent({ name, setup: (_, { slots }) => () => Vue.h(name, null, slots.default?.({})) })
 const reka = Object.fromEntries([
   'SwitchRoot', 'SwitchThumb', 'SliderRoot', 'SliderTrack', 'SliderRange', 'SliderThumb',
   'RadioGroupRoot', 'RadioGroupItem', 'RadioGroupIndicator',
   'NumberFieldRoot', 'NumberFieldInput', 'ColorFieldRoot', 'ColorFieldInput', 'FieldControl',
+  'PopoverRoot', 'PopoverTrigger', 'PopoverContent', 'ColorSwatch',
+  'ColorAreaRoot', 'ColorAreaArea', 'ColorAreaThumb', 'ColorSliderRoot', 'ColorSliderTrack', 'ColorSliderThumb',
 ].map(name => [name, part(name)]))
 Object.assign(reka, { Primitive: Vue.defineComponent({ props: ['as'], setup: (props, { slots }) => () => Vue.h(props.as, null, slots.default?.()) }) })
 const compile = (name: string) => compileSfc(new URL(`../app/ui/${name}.vue`, import.meta.url), { 'reka-ui': reka, './field-bridge': { useFieldBridge }, './number-format': { numberFormatOptions } })
@@ -107,6 +109,55 @@ describe('UiColorField', () => {
     root.props['onUpdate:modelValue'](normalized)
     expect(ui.events).toEqual(expected ? [['update:modelValue', expected]] : [])
     if (expected) expect(parseScreenBoard({ id: '11111111-1111-4111-8111-111111111111', rows: 8, instances: [{ id: '22222222-2222-4222-8222-222222222222', source: { kind: 'builtin', type: 'clock' }, configVersion: 1, config: {}, appearance: { themeId: null, variant: null, shadow: { ...DEFAULT_SHADOW, color: ui.events[0]![1] } } }], layout: [{ instanceId: '22222222-2222-4222-8222-222222222222', x: 0, y: 0, w: 1, h: 1 }] }).ok).toBe(true)
+  })
+})
+
+describe('UiColorField picker', () => {
+  it('opens a saturation and brightness area with a hue slider from the swatch', () => {
+    const ui = mountComponent(compile('UiColorField'), { modelValue: '#2d6687', disabled: true }, [])
+    const trigger = ui.nodes().find(n => n.tag === 'PopoverTrigger')!
+    expect(trigger.props).toMatchObject({ 'aria-label': 'Pick color', disabled: true })
+    expect(ui.nodes().find(n => n.tag === 'ColorSwatch')!.props.color).toBe('#2d6687')
+    expect(ui.nodes().find(n => n.tag === 'ColorAreaRoot')!.props).toMatchObject({ 'model-value': '#2d6687', 'color-space': 'hsb', 'x-channel': 'saturation', 'y-channel': 'brightness' })
+    expect(ui.nodes().find(n => n.tag === 'ColorSliderRoot')!.props).toMatchObject({ 'model-value': '#2d6687', 'color-space': 'hsb', channel: 'hue' })
+    expect(ui.nodes().some(n => n.tag === 'ColorFieldInput')).toBe(true)
+  })
+  it('emits #rrggbb from the picker and keeps the picked hue on black', async () => {
+    const ui = mountComponent(compile('UiColorField'), { modelValue: '#2d6687' }, ['update:modelValue'])
+    const area = () => ui.nodes().find(n => n.tag === 'ColorAreaRoot')!
+    const slider = () => ui.nodes().find(n => n.tag === 'ColorSliderRoot')!
+    const black = { space: 'hsb', h: 200, s: 40, b: 0, alpha: 1 }
+    area().props['onUpdate:modelValue']('#000000')
+    area().props['onUpdate:color'](black)
+    ui.props.modelValue = '#000000'
+    await Vue.nextTick()
+    expect(ui.events).toEqual([['update:modelValue', '#000000']])
+    expect(area().props['model-value']).toEqual(black)
+    expect(slider().props['model-value']).toEqual(black)
+    slider().props['onUpdate:modelValue']('#11AA33')
+    expect(ui.events.at(-1)).toEqual(['update:modelValue', '#11aa33'])
+    ui.props.modelValue = '#ff0000'
+    await Vue.nextTick()
+    expect(area().props['model-value']).toBe('#ff0000')
+  })
+})
+
+describe('UiColorField opacity', () => {
+  const sliders = (ui: ReturnType<typeof mountComponent>) => ui.nodes().filter(n => n.tag === 'ColorSliderRoot')
+  it('adds an opacity slider and a transparent swatch only with an alpha model', () => {
+    expect(sliders(mountComponent(compile('UiColorField'), { modelValue: '#2d6687' }, [])).map(n => n.props.channel)).toEqual(['hue'])
+    const ui = mountComponent(compile('UiColorField'), { modelValue: '#2d6687', alpha: 0.5 }, [])
+    expect(sliders(ui).map(n => n.props.channel)).toEqual(['hue', 'alpha'])
+    expect(ui.nodes().find(n => n.tag === 'ColorSwatch')!.props.color).toBe('#2d668780')
+    expect(sliders(ui)[1]!.props['model-value']).toBe('#2d668780')
+    expect(ui.nodes().filter(n => n.tag === 'ColorSliderThumb').map(n => n.props['aria-label'])).toEqual(['Hue', 'Opacity'])
+  })
+  it('emits opacity apart from the #rrggbb colour', () => {
+    const ui = mountComponent(compile('UiColorField'), { modelValue: '#2d6687', alpha: 0.5 }, ['update:modelValue', 'update:alpha'])
+    sliders(ui)[1]!.props['onUpdate:color']({ space: 'hsb', h: 200, s: 67, b: 53, alpha: 0.257 })
+    expect(ui.events).toEqual([['update:alpha', 0.26]])
+    ui.nodes().find(n => n.tag === 'ColorAreaRoot')!.props['onUpdate:modelValue']('#FF000080')
+    expect(ui.events.at(-1)).toEqual(['update:modelValue', '#ff0000'])
   })
 })
 

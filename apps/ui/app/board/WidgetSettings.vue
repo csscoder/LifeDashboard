@@ -48,7 +48,6 @@ const selectedVersion = ref(props.version)
 watch(() => [props.widgetId, props.version], () => { selectedVersion.value = props.version })
 const shadow = computed(() => props.appearance?.shadow ?? null)
 // The shadow controls are shown only while the shadow is on.
-const percent = computed(() => Math.round((shadow.value?.opacity ?? 0) * 100))
 const offsets = [
   { key: 'x', label: 'X', limits: SHADOW_LIMITS.x },
   { key: 'y', label: 'Y', limits: SHADOW_LIMITS.y },
@@ -141,10 +140,9 @@ defineExpose({ open, close, isOpen })
       <SettingsRow v-for="item in offsets" :native-label="false" :key="item.key" :label="item.label" :value="`${shadow[item.key]} px`">
         <UiSlider :aria-label="item.label" :model-value="shadow[item.key]" :min="item.limits[0]" :max="item.limits[1]" @update:model-value="setShadow(item.key, $event)" />
       </SettingsRow>
-      <SettingsRow :native-label="false" label="Opacity" :value="`${percent} %`">
-        <UiSlider aria-label="Opacity" :model-value="percent" :min="0" :max="100" @update:model-value="setShadow('opacity', $event / 100)" />
+      <SettingsRow label="Color">
+        <UiColorField :model-value="shadow.color" :alpha="shadow.opacity" @update:model-value="setShadow('color', $event)" @update:alpha="setShadow('opacity', $event)" />
       </SettingsRow>
-      <SettingsRow label="Color"><UiColorField aria-label="Color" :model-value="shadow.color" @update:model-value="setShadow('color', $event)" /></SettingsRow>
     </template>
     <template v-if="hasWidgetBlock">
       <Separator class="settings__separator" />

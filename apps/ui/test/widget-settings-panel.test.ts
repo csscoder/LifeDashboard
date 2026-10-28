@@ -65,7 +65,7 @@ describe('widget settings panel', () => {
     expect(mount().nodes().filter(el => el.tag === 'separator')).toHaveLength(2)
     expect(ui.nodes().filter(el => el.tag === 'input')).toHaveLength(0)
     expect(ui.nodes().filter(el => el.tag === 'ui-switch')).toHaveLength(1)
-    expect(ui.nodes().filter(el => el.tag === 'ui-slider')).toHaveLength(4)
+    expect(ui.nodes().filter(el => el.tag === 'ui-slider')).toHaveLength(3)
     expect(ui.nodes().filter(el => el.tag === 'ui-colorfield')).toHaveLength(1)
   })
   it('leaves out the Widget block when the widget has no settings', () => {
@@ -99,7 +99,7 @@ describe('widget settings panel', () => {
   it('speaks English and picks the style through the themed select', () => {
     const ui = mount(undefined, { appearance: { themeId: null, shadow: board.DEFAULT_SHADOW, variant: null } })
     expect(ui.panel().props['aria-label']).toBe('Widget settings')
-    for (const label of ['Style', 'Shadow', 'Blur', 'Color', 'Opacity', 'Reset to defaults']) expect(ui.text()).toContain(label)
+    for (const label of ['Style', 'Shadow', 'Blur', 'Color', 'Reset to defaults']) expect(ui.text()).toContain(label)
     const style = ui.nodes().find((el) => el.tag === 'ui-select')!
     expect(style.props.modelValue).toBe('')
     expect(style.props.options).toEqual([
@@ -134,9 +134,13 @@ describe('widget settings panel', () => {
     expect(ui.button('Reset to defaults')).toBeDefined()
     ui.props.appearance = { themeId: null, shadow: board.DEFAULT_SHADOW, variant: null }
     await Vue.nextTick()
-    expect(sliders().map((el) => el.props.modelValue)).toEqual([board.DEFAULT_SHADOW.x, board.DEFAULT_SHADOW.y, board.DEFAULT_SHADOW.blur, Math.round(board.DEFAULT_SHADOW.opacity * 100)])
+    expect(sliders().map((el) => el.props.modelValue)).toEqual([board.DEFAULT_SHADOW.x, board.DEFAULT_SHADOW.y, board.DEFAULT_SHADOW.blur])
     expect(sliders().every((el) => !el.props.disabled)).toBe(true)
     expect(colour()?.props.modelValue).toBe(board.DEFAULT_SHADOW.color)
+    expect(colour()?.props.alpha).toBe(board.DEFAULT_SHADOW.opacity)
+    expect(ui.text()).not.toContain('Opacity')
+    colour()!.props['onUpdate:alpha'](0.25)
+    expect(ui.events.at(-1)).toEqual(['change', { themeId: null, shadow: { ...board.DEFAULT_SHADOW, opacity: 0.25 }, variant: null }])
   })
 
   it('resets the whole widget from one button below every setting', () => {
