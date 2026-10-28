@@ -68,6 +68,14 @@ describe('widget settings panel', () => {
     expect(ui.nodes().filter(el => el.tag === 'ui-slider')).toHaveLength(4)
     expect(ui.nodes().filter(el => el.tag === 'ui-colorfield')).toHaveLength(1)
   })
+  it('leaves out the Widget block when the widget has no settings', () => {
+    for (const empty of [undefined, { type: 'object', properties: {} }]) {
+      const ui = mount(undefined, { schema: empty })
+      expect(ui.text()).not.toContain('Widget')
+      expect(ui.nodes().filter(el => el.tag === 'separator')).toHaveLength(1)
+      expect(ui.button('Reset to defaults')).toBeDefined()
+    }
+  })
   it('takes the focus of a click on its text, so the board main never gets it and closes the panel', () => {
     const panel = mount().nodes().find((el) => el.props.role === 'dialog')!
     expect(panel.props.tabindex).toBe('-1')

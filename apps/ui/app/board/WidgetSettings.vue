@@ -59,6 +59,8 @@ const styleOptions = [
   ...BUILTIN_THEMES.map((theme) => ({ value: theme.id, label: theme.name })),
   { value: BARE_THEME_ID, label: 'No frame' },
 ]
+// A built-in editor needs its schema; the generic form needs at least one setting.
+const hasWidgetBlock = computed(() => Boolean(props.schema && (props.editor || Object.keys(props.schema.properties).length > 0)))
 const versionOptions = computed(() => props.versions.map((item) => ({ value: item, label: item })))
 
 function isOpen(): boolean {
@@ -144,25 +146,27 @@ defineExpose({ open, close, isOpen })
       </SettingsRow>
       <SettingsRow label="Color"><UiColorField aria-label="Color" :model-value="shadow.color" @update:model-value="setShadow('color', $event)" /></SettingsRow>
     </template>
-    <Separator class="settings__separator" />
-    <h2 class="settings__heading">Widget</h2>
-    <component
-      :is="editor"
-      v-if="editor && schema"
-      :key="`editor:${widgetId ?? 'unsaved'}`"
-      :schema="schema"
-      :config="config"
-      @change="emit('config', $event)"
-    />
-    <WidgetConfigForm
-      v-else-if="schema && Object.keys(schema.properties).length > 0"
-      :key="widgetId ?? 'unsaved'"
-      :schema="schema"
-      :config="config"
-      :widget-id="widgetId"
-      :secrets="secrets"
-      @change="emit('config', $event)"
-    />
+    <template v-if="hasWidgetBlock">
+      <Separator class="settings__separator" />
+      <h2 class="settings__heading">Widget</h2>
+      <component
+        :is="editor"
+        v-if="editor"
+        :key="`editor:${widgetId ?? 'unsaved'}`"
+        :schema="schema"
+        :config="config"
+        @change="emit('config', $event)"
+      />
+      <WidgetConfigForm
+        v-else
+        :key="widgetId ?? 'unsaved'"
+        :schema="schema!"
+        :config="config"
+        :widget-id="widgetId"
+        :secrets="secrets"
+        @change="emit('config', $event)"
+      />
+    </template>
     <Separator class="settings__separator" />
     <div class="settings__footer"><UiButton @click="emit('reset')">Reset to defaults</UiButton></div>
   </div>

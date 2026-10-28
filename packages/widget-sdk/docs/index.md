@@ -6,8 +6,8 @@ Open the page that matches your task:
 - [api.md](api.md): `useWidget()`, context fields, `state`, `notify`, `http`, `call`, permissions, limits, `sdk` levels.
 - [runtime.md](runtime.md): sandbox, CSP, storage and media rules, runtime baseline, dependencies.
 - [errors.md](errors.md): every `WidgetError` code, when it happens and what the widget should do.
-- [design.md](design.md): theme tokens, grid sizing, size classes, `rem` and `rootFontSize`, framed vs frameless.
-- [settings.md](settings.md): settings schema, secret settings, `REDACTED`.
+- [design.md](design.md): theme tokens, grid sizing, size classes, `rem` and `rootFontSize`, framed vs frameless, looks (`variants`).
+- [settings.md](settings.md): who draws the settings panel, storage and reset, settings schema, secrets for API keys, `REDACTED`.
 - [recipes.md](recipes.md): visibility-aware animation, size classes, HTTP retry, revision conflicts.
 - [workflow.md](workflow.md): `dev`, `check`, `build`, handover, engine checks.
 

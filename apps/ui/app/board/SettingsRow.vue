@@ -18,6 +18,7 @@ withDefaults(defineProps<{ label: string; required?: boolean; description?: stri
 .settings-row__label, .settings-row__value, .settings-row__description { color: var(--ld-text-secondary); }
 .settings-row__description, .settings-row__warning, .settings-row__error { grid-column: 1 / -1; margin: 0.125rem 0 0; font-size: 0.75rem; line-height: 1rem; }
 .settings-row__warning, .settings-row__error { color: var(--ld-warning-text); }
-.settings-row__value { grid-column: 3; grid-row: 1; font-size: 0.75rem; }
+/* A fixed width keeps the slider tracks of «0 px» and «16 px» rows aligned. */
+.settings-row__value { grid-column: 3; grid-row: 1; min-width: 2.75rem; text-align: end; font-size: 0.75rem; }
 .settings-row__visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 </style>

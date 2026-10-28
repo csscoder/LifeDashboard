@@ -120,7 +120,7 @@ function messageFor(key: string): string | null {
 </template>
 
 <style scoped>
-.settings__config { display: grid; gap: 0.375rem; padding-top: 0.5rem; border-top: var(--ld-border-width) solid var(--ld-border-default); }
+.settings__config { display: grid; gap: 0.375rem; }
 .settings__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; grid-column: 1 / -1; }
 .settings__message { grid-column: 1 / -1; margin: 0.125rem 0 0; font-size: 0.75rem; line-height: 1rem; color: var(--ld-text-secondary); }
 </style>
