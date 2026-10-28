@@ -63,7 +63,7 @@ export interface ThemeChoice {
 
 ### Legacy input
 
-Parsers accept the legacy fields and normalize them; writers emit only the new fields.
+Parsers accept the legacy fields and normalize them; writers emit only the new fields. When both are present, `theme` wins, including `theme: null` (inherit); `themeId` is read only when `theme` is absent. An invalid `theme` is rejected (400 in requests, invalid board as today) even when `themeId` is valid.
 
 | Legacy `themeId` | `theme` |
 | --- | --- |
@@ -77,7 +77,7 @@ Parsers accept the legacy fields and normalize them; writers emit only the new f
 - SQLite: an additive migration adds `spaces.theme` and `screens.theme` (`TEXT`, JSON) and fills them from `theme_id` with the table above. `theme_id` stays and is no longer read or written.
 - `localStorage` `lifedashboard.appearance`: `Appearance` becomes `{ schemaVersion: 2, theme: ThemeChoice | null }`. `loadAppearance()` maps a valid version 1 record with the table above; unreadable data yields the default as today.
 
-Obsidian's neutral near-black becomes the dark Solid LifeDashboard palette (violet-tinted). This is the only visible change for existing users.
+Migrated assignments become generated combinations: colours come from the LifeDashboard palette, while borders, radii and shadows follow the shared style rules below. Glass stays close to today's look (same translucent recipe, radii, blur and shadows). Paper changes slightly (Solid radii and shadows, borders derived from one seed). Obsidian changes most: its neutral near-black becomes the violet-tinted dark Solid palette. Pixel-identical legacy themes are a non-goal.
 
 ### Resolution
 
@@ -162,7 +162,7 @@ Style rules:
 
 | Token | Solid | Glass |
 | --- | --- | --- |
-| `surface-1` | `surface[0]` | `surface[0]` at alpha 0.55 (dark) or 0.65 (light) |
+| `surface-1` | `surface[0]` | white overlay `oklch(1 0 0 / 0.08)` (dark) or `oklch(1 0 0 / 0.55)` (light), today's Glass recipe |
 | `surface-1-solid` | `surface[0]` | `surface[0]` |
 | `backdrop` | `bg` | `radial-gradient(circle at 20% 10%, <accent at L 0.38 dark / 0.92 light, C ×0.5>, <bg> 60%)` |
 | `radius-widget`, `radius-card`, `radius-control` | 0.75rem, 0.5rem, 0.375rem | 1rem, 0.75rem, 0.5rem |
@@ -185,14 +185,15 @@ Alpha values and backdrop lightness are starting values; the contrast tests are 
 
 - The layer order in `layers.css` becomes `ld.reset, ld.base, ld.frame, ld.skin, ld.theme, ld.utilities, ld.widget, ld.comfort`.
 - Every rule is in `@layer ld.base` and selects `:where(.ld-content) :where(<element>)`, so specificity is zero and any widget style wins.
+- Root: `:where(.ld-content)` sets `color: var(--ld-text-primary)`, `font-family: var(--ld-font-body)`, `font-size: var(--ld-size-body)`, `line-height: var(--ld-leading)` and `letter-spacing: var(--ld-tracking)`, so plain text inherits theme colour and font in the host and in the sandbox (where `frame.css` does not apply).
 - Elements:
   - `h1`, `h2`, `h3` (and `h4`–`h6` as `h3`): `font-family: var(--ld-font-heading)`, `font-size: var(--ld-size-h1|h2|h3)`, `line-height: var(--ld-leading-heading)`, `font-weight: var(--ld-weight-strong)` for `h1`/`h2` and `var(--ld-weight-medium)` for `h3`+, `color: var(--ld-text-primary)`, `margin: 0 0 0.5em`.
   - `p`, `ul`, `ol`: `font-size: var(--ld-size-body)`, `margin: 0 0 0.75em`; lists `padding-left: 1.25em`.
   - The last child of any container has `margin-bottom: 0`.
   - `small`: `font-size: var(--ld-size-small)`, `color: var(--ld-text-secondary)`.
-  - `a`: `color: var(--ld-link)`, `font-weight: var(--ld-weight-medium)`, no underline, underline on hover; `:focus-visible` outline `var(--ld-focus-ring)`.
+  - `a`: `color: var(--ld-link)`, `font-weight: var(--ld-weight-medium)`, no underline, underline on hover; `:focus-visible` has `outline: 0.125rem solid var(--ld-focus-ring)` and `outline-offset: 0.125rem`.
   - `code`: `font-family: var(--ld-font-mono)`, `font-size: var(--ld-size-small)`, `background: var(--ld-surface-2)`, `border-radius: var(--ld-radius-control)`, `padding: 0.1em 0.3em`.
-  - `pre`: like `code`, block, `padding: 0.75em`, `overflow: auto`; `pre code` has no own background or padding.
+  - `pre`: like `code`, block, `padding: 0.75em`, `overflow: auto`; `pre code` has no own background or padding and `font-size: inherit`.
   - `hr`: `border-top: var(--ld-border-width) solid var(--ld-border-subtle)`, `margin: 1em 0`.
   - `strong`, `b`: `font-weight: var(--ld-weight-strong)`.
 - Host: `.widget__body` gets the class `ld-content`. The dashboard's own UI has no `ld-content` and is unaffected.
@@ -243,14 +244,14 @@ Style    ( Solid | Glass )           ← UiRadioGroup
 TDD with Vitest; each behaviour starts with a failing test.
 
 - `packages/contracts`: `parseThemeChoice`; legacy normalization for space, screen and widget appearance; `'bare'` rejected for space and screen.
-- `apps/api`: the migration fills `theme` from every legacy `theme_id`; `SpacePatch.theme` and board `theme` round-trip; legacy `themeId` in a stored board is returned as `theme`.
+- `apps/api`: the migration fills `theme` from every legacy `theme_id`; `SpacePatch.theme` and board `theme` round-trip; legacy `themeId` in a stored board is returned as `theme`; `theme` (including `null`) wins over `themeId`; an invalid `theme` with a valid `themeId` is rejected.
 - `apps/ui`:
   - `buildTokens` produces every required token for all 44 combinations, and each generated rule passes `validateThemeCss()`.
   - `generated.css` equals the generator output (drift check).
   - `loadAppearance` maps version 1 records.
   - Resolution covers inheritance, unknown palettes, `auto` with a mocked `matchMedia` change, `'bare'` and `foreign`.
   - `ThemePicker` covers Inherit, No frame, keyboard selection and taking mode/style from `inherited`.
-  - `content.css` rules are all inside `@layer ld.base` and use `:where(.ld-content)`.
+  - `content.css` rules are all inside `@layer ld.base` and use `:where(.ld-content)`; plain text in `.ld-content` computes `text-primary` and `font-body`.
 - `packages/widget-sdk`:
   - `themes.json` has 44 entries.
   - `shotCombos` defaults to the four reference ids and expands `all` to 44.
@@ -262,7 +263,7 @@ TDD with Vitest; each behaviour starts with a failing test.
   - `auto` following a system appearance change;
   - a sandbox widget updating live;
   - the picker in all four places;
-  - an existing database with Glass, Obsidian and Paper assignments showing the mapped choices.
+  - an existing database with Glass, Obsidian and Paper assignments showing the mapped choices, compared side by side with screenshots taken on `main` before the change.
 
 ## Out of scope
 
