@@ -12,6 +12,7 @@
 @import './themes/glass.css' layer(ld.theme);
 @import './themes/obsidian.css' layer(ld.theme);
 @import './themes/paper.css' layer(ld.theme);
+@import './themes/generated.css' layer(ld.theme);
 @import './comfort.css';
 
 @layer ld.reset {

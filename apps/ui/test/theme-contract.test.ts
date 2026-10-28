@@ -2,43 +2,29 @@ import { readFileSync } from 'node:fs'
 import postcss, { type AtRule } from 'postcss'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'vue/compiler-sfc'
-import { BUILTIN_THEMES } from '../app/theme/builtin'
+import { allThemeCombos, themeRule } from '../app/theme/generate'
 import { OPTIONAL_TOKENS, SKINS } from '../app/theme/contract'
 import { validateThemeCss } from '../app/theme/validate-theme'
 
-const themeCss = (name: string) => readFileSync(new URL(`../app/theme/styles/themes/${name}.css`, import.meta.url), 'utf8')
-const nameOf = (id: string) => id.slice('builtin:'.length)
 // Replaces the value of one token in a theme stylesheet.
 const withToken = (css: string, token: string, value: string) =>
   css.replace(new RegExp(`(--ld-${token}:)[^;]*;`), `$1 ${value};`)
 
-const withNewTokens = (css: string) => css.replace(/}\s*$/, `
-  --ld-font-heading: system-ui, sans-serif;
-  --ld-font-body: system-ui, sans-serif;
-  --ld-size-h1: 2em;
-  --ld-size-h2: 1.5em;
-  --ld-size-h3: 1.25em;
-  --ld-size-body: 1em;
-  --ld-size-small: 0.875em;
-  --ld-leading-heading: 1.2;
-  --ld-link: var(--ld-accent-text);
-}`)
-
 describe('built-in themes', () => {
-  it.each(BUILTIN_THEMES.map((theme) => [theme.id, theme] as const))('%s passes the contract', (_, theme) => {
-    expect(validateThemeCss(themeCss(nameOf(theme.id)), { slug: nameOf(theme.id), mode: theme.mode })).toEqual({ ok: true })
+  it.each(allThemeCombos().map((combo) => [combo.key, combo] as const))('%s passes the contract', (_, combo) => {
+    expect(validateThemeCss(themeRule(combo), { slug: combo.key, mode: combo.mode })).toEqual({ ok: true })
   })
 })
 
 describe('validateThemeCss', () => {
-  const base = withNewTokens(themeCss('obsidian'))
-  const glass = withNewTokens(themeCss('glass'))
+  const base = themeRule(allThemeCombos()[1]!)
+  const glass = themeRule(allThemeCombos()[0]!)
 
   it.each([
     ['an extra rule', `${base}\n.widget__box { opacity: 0 }`, 'single-block', /exactly one rule/],
     ['an @import', `@import "other.css";\n${base}`, 'single-block', /exactly one rule/],
     ['a @media wrapper', `@media (min-width: 1px) { ${base} }`, 'single-block', /exactly one rule/],
-    ['another selector', base.replace('.widget--theme-obsidian', '.widget'), 'selector', /must be "\.space--theme-obsidian, \.widget--theme-obsidian"/],
+    ['another selector', base.replace('.widget--theme-lifedashboard-dark-solid', '.widget'), 'selector', /must be "\.space--theme-lifedashboard-dark-solid, \.widget--theme-lifedashboard-dark-solid"/],
     ['an unknown token', base.replace(/}\s*$/, '--ld-foo: 1;\n}'), 'unknown-property', /--ld-foo is not a contract token/],
     ['a prototype property token', base.replace(/}\s*$/, '--ld-constructor: 1;\n}'), 'unknown-property', /--ld-constructor is not a contract token/],
     ['a non-token property', base.replace(/}\s*$/, 'opacity: 0;\n}'), 'unknown-property', /opacity is not a contract token/],
@@ -85,14 +71,14 @@ describe('validateThemeCss', () => {
     ],
     ['low text contrast', withToken(base, 'text-muted', 'oklch(0.5 0.008 260)'), 'contrast', /text-muted on surface-1 \(translucent mode\) is [\d.]+:1, needs 4\.5:1/],
   ])('rejects %s', (_, css, rule, message) => {
-    const result = validateThemeCss(css, { slug: 'obsidian', mode: 'dark' })
+    const result = validateThemeCss(css, { slug: 'lifedashboard-dark-solid', mode: 'dark' })
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.errors).toEqual(expect.arrayContaining([expect.objectContaining({ rule, message: expect.stringMatching(message) })]))
   })
 
   it('rejects a theme that passes translucent mode but fails solid mode', () => {
-    const result = validateThemeCss(withToken(glass, 'surface-1-solid', 'oklch(0.6 0.03 280)'), { slug: 'glass', mode: 'dark' })
+    const result = validateThemeCss(withToken(glass, 'surface-1-solid', 'oklch(0.6 0.03 280)'), { slug: 'lifedashboard-dark-glass', mode: 'dark' })
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.errors.length).toBeGreaterThan(0)
@@ -101,7 +87,7 @@ describe('validateThemeCss', () => {
 
   it('accepts a theme without optional tokens', () => {
     const css = base.replace(/\s*--ld-shadow-(widget|raised):[^;]*;/g, '')
-    expect(validateThemeCss(css, { slug: 'obsidian', mode: 'dark' })).toEqual({ ok: true })
+    expect(validateThemeCss(css, { slug: 'lifedashboard-dark-solid', mode: 'dark' })).toEqual({ ok: true })
   })
 })
 
@@ -117,7 +103,7 @@ describe('stylesheets', () => {
 
   it('layers.css imports every built-in theme into ld.theme and every skin', () => {
     const css = styleFile('layers.css')
-    for (const theme of BUILTIN_THEMES) expect(css).toContain(`@import './themes/${nameOf(theme.id)}.css' layer(ld.theme);`)
+    expect(css).toContain(`@import './themes/generated.css' layer(ld.theme);`)
     for (const skin of SKINS) expect(css).toContain(`@import './skins/${skin}.css';`)
   })
 
