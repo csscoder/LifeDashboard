@@ -1,69 +1,66 @@
-import { BARE_THEME_ID, DEFAULT_SHADOW } from '@lifedashboard/contracts/board'
+import type { ThemeMode, ThemeStyle } from '@lifedashboard/contracts/theme'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { APPEARANCE_STORAGE_KEY, loadAppearance, saveAppearance } from '../app/theme/appearance'
-import { BUILTIN_THEME_IDS, BUILTIN_THEMES, DEFAULT_THEME_ID, themeMeta } from '../app/theme/builtin'
-import { resolveThemeId, resolveWidgetLook, themeClass } from '../app/theme/resolve'
+import { DEFAULT_THEME, themeKey, themeMeta } from '../app/theme/builtin'
+import { resolveTheme, resolveWidgetLook, themeClass } from '../app/theme/resolve'
 
-describe('resolveThemeId', () => {
-  const known = new Set(['builtin:glass', 'builtin:paper', 'builtin:obsidian'])
+const g = (mode: ThemeMode, style: ThemeStyle = 'glass') => ({ palette: 'builtin:gruvbox', mode, style })
 
-  it('returns the first set and known id (widget, space, workspace)', () => {
-    expect(resolveThemeId(['builtin:obsidian', 'builtin:paper'], known)).toBe('builtin:obsidian')
-    expect(resolveThemeId([null, 'builtin:paper'], known)).toBe('builtin:paper')
-  })
+afterEach(() => { vi.unstubAllGlobals(); vi.resetModules() })
 
-  it('treats an unknown id as unset', () => {
-    expect(resolveThemeId(['user:deleted', null, 'builtin:paper'], known)).toBe('builtin:paper')
-  })
-
-  it('falls back to the default theme', () => {
-    expect(resolveThemeId([null, null], known)).toBe(DEFAULT_THEME_ID)
-    expect(resolveThemeId([], known)).toBe(DEFAULT_THEME_ID)
-    expect(resolveThemeId(['user:deleted'], known)).toBe(DEFAULT_THEME_ID)
-  })
+it('takes the first known choice and resolves auto', () => {
+  expect(resolveTheme([null, { palette: 'builtin:nord', mode: 'dark', style: 'solid' }, g('auto')], 'light')).toBe('builtin:gruvbox-light-glass')
+  expect(resolveTheme([undefined, null], 'dark')).toBe('builtin:lifedashboard-dark-glass')
+  expect(themeKey(DEFAULT_THEME, 'light')).toBe('lifedashboard-dark-glass')
 })
-
-describe('resolveWidgetLook', () => {
-  const paper = { themeId: 'builtin:paper', skin: 'paper', foreign: false }
-
-  it.each([
-    ['absent', undefined, 'builtin:paper', paper],
-    ['inherited with a shadow', { themeId: null, shadow: DEFAULT_SHADOW, variant: null }, 'builtin:paper', paper],
-    ['the board theme chosen', { themeId: 'builtin:paper', shadow: null, variant: null }, 'builtin:paper', paper],
-    ['Glass chosen on Paper', { themeId: 'builtin:glass', shadow: null, variant: null }, 'builtin:paper', { themeId: 'builtin:glass', skin: 'glass', foreign: true }],
-    ['Obsidian chosen on Glass', { themeId: 'builtin:obsidian', shadow: null, variant: null }, 'builtin:glass', { themeId: 'builtin:obsidian', skin: 'solid', foreign: true }],
-    ['bare', { themeId: BARE_THEME_ID, shadow: null, variant: null }, 'builtin:obsidian', { themeId: 'builtin:obsidian', skin: 'bare', foreign: false }],
-    ['an unknown user id', { themeId: 'user:00000000-0000-4000-8000-00000000000a', shadow: null, variant: null }, 'builtin:paper', paper],
-    ['an unknown built-in id', { themeId: 'builtin:deleted', shadow: null, variant: null }, 'builtin:paper', paper],
-  ] as const)('%s', (_name, appearance, board, expected) => {
-    expect(resolveWidgetLook(appearance, board)).toEqual(expected)
-  })
+it('keeps an auto widget equal to an auto board non-foreign in both schemes', () => {
+  for (const scheme of ['light', 'dark'] as const) {
+    const board = resolveTheme([g('auto')], scheme)
+    expect(resolveWidgetLook({ theme: g('auto'), shadow: null, variant: null }, board, scheme).foreign).toBe(false)
+  }
 })
-
-describe('themeClass', () => {
-  it('maps builtin and user ids to class suffixes', () => {
-    expect(themeClass('builtin:glass')).toBe('glass')
-    expect(themeClass('user:3f2a-11')).toBe('u-3f2a-11')
-  })
-
-  it('throws for any other id', () => {
-    expect(() => themeClass('glass')).toThrow(/Unknown theme id/)
-  })
-
-  it('never gives a built-in theme a user-namespace class', () => {
-    for (const theme of BUILTIN_THEMES) expect(themeClass(theme.id).startsWith('u-')).toBe(false)
-  })
+it('marks a different choice foreign and keeps the board key for bare', () => {
+  const board = 'builtin:gruvbox-dark-glass'
+  expect(resolveWidgetLook({ theme: g('dark', 'solid'), shadow: null, variant: null }, board, 'dark')).toEqual({ themeId: 'builtin:gruvbox-dark-solid', skin: 'solid', foreign: true })
+  expect(resolveWidgetLook({ theme: 'bare', shadow: null, variant: null }, board, 'dark')).toEqual({ themeId: board, skin: 'bare', foreign: false })
 })
-
-describe('built-in theme metadata', () => {
-  it('knows the default theme', () => {
-    expect(BUILTIN_THEME_IDS.has(DEFAULT_THEME_ID)).toBe(true)
+it.each([['undefined', undefined], ['null theme', { theme: null, shadow: null, variant: null }], ['unknown palette', { theme: { palette: 'builtin:nord', mode: 'dark', style: 'solid' }, shadow: null, variant: null }]] as const)(
+  'a widget with %s inherits a non-default board', (_, appearance) => {
+    expect(resolveWidgetLook(appearance, 'builtin:gruvbox-light-solid', 'dark')).toEqual({ themeId: 'builtin:gruvbox-light-solid', skin: 'solid', foreign: false })
   })
-
-  it('returns metadata by id and the default theme for an unknown id', () => {
-    expect(themeMeta('builtin:paper')).toMatchObject({ mode: 'light', skin: 'paper' })
-    expect(themeMeta('user:deleted').id).toBe(DEFAULT_THEME_ID)
-  })
+it('reads combination meta and defaults invalid ids', () => {
+  expect(themeMeta('builtin:rose-pine-light-solid')).toEqual({ id: 'builtin:rose-pine-light-solid', mode: 'light', skin: 'solid' })
+  for (const id of ['user:deleted', 'builtin:nord-dark-glass', 'builtin:gruvbox-auto-glass', 'builtin:gruvbox-dark-paper']) {
+    expect(themeMeta(id)).toEqual({ id: 'builtin:lifedashboard-dark-glass', mode: 'dark', skin: 'glass' })
+  }
+})
+it('maps a version 1 appearance', () => {
+  vi.stubGlobal('localStorage', memoryStorage(JSON.stringify({ schemaVersion: 1, themeId: 'builtin:paper' })))
+  expect(loadAppearance()).toEqual({ schemaVersion: 2, theme: { palette: 'builtin:lifedashboard', mode: 'light', style: 'solid' } })
+  localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({ schemaVersion: 1, themeId: 'builtin:bare' }))
+  expect(loadAppearance().theme).toBeNull()
+})
+it('follows matchMedia changes with one shared readonly ref', async () => {
+  const listeners: ((event: { matches: boolean }) => void)[] = []
+  vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: (_: string, listener: typeof listeners[number]) => listeners.push(listener) }))
+  const { useColorScheme } = await import('../app/theme/color-scheme')
+  const scheme = useColorScheme()
+  expect(scheme).toBe(useColorScheme())
+  expect(scheme.value).toBe('light')
+  listeners.forEach(listener => listener({ matches: true }))
+  expect(scheme.value).toBe('dark')
+  listeners.forEach(listener => listener({ matches: false }))
+  expect(scheme.value).toBe('light')
+})
+it('defaults to dark without matchMedia', async () => {
+  vi.stubGlobal('matchMedia', undefined)
+  const { useColorScheme } = await import('../app/theme/color-scheme')
+  expect(useColorScheme().value).toBe('dark')
+})
+it('maps CSS suffixes and rejects invalid namespaces', () => {
+  expect(themeClass('builtin:gruvbox-dark-glass')).toBe('gruvbox-dark-glass')
+  expect(themeClass('user:3f2a-11')).toBe('u-3f2a-11')
+  expect(() => themeClass('glass')).toThrow(/Unknown theme id/)
 })
 
 function memoryStorage(initial?: string) {
@@ -85,40 +82,40 @@ describe('appearance storage', () => {
 
   it('returns defaults when nothing is stored', () => {
     vi.stubGlobal('localStorage', memoryStorage())
-    expect(loadAppearance()).toEqual({ schemaVersion: 1, themeId: null })
+    expect(loadAppearance()).toEqual({ schemaVersion: 2, theme: null })
   })
 
   it('round-trips a saved appearance', () => {
     vi.stubGlobal('localStorage', memoryStorage())
-    expect(saveAppearance({ schemaVersion: 1, themeId: 'builtin:paper' })).toBe(true)
-    expect(loadAppearance()).toEqual({ schemaVersion: 1, themeId: 'builtin:paper' })
+    expect(saveAppearance({ schemaVersion: 2, theme: g('light', 'solid') })).toBe(true)
+    expect(loadAppearance()).toEqual({ schemaVersion: 2, theme: g('light', 'solid') })
   })
 
   it.each([
     ['malformed JSON', '{'],
-    ['a wrong schemaVersion', '{"schemaVersion":2,"themeId":"builtin:paper"}'],
-    ['a non-string themeId', '{"schemaVersion":1,"themeId":7}'],
-    ['a missing themeId', '{"schemaVersion":1}'],
+    ['a wrong schemaVersion', '{"schemaVersion":3,"theme":null}'],
+    ['a non-string themeId', '{"schemaVersion":2,"theme":7}'],
+    ['a missing themeId', '{"schemaVersion":2}'],
     ['an array', '[]'],
   ])('returns defaults for %s', (_, stored) => {
     vi.stubGlobal('localStorage', memoryStorage(stored))
-    expect(loadAppearance()).toEqual({ schemaVersion: 1, themeId: null })
+    expect(loadAppearance()).toEqual({ schemaVersion: 2, theme: null })
   })
 
   it('drops unknown fields', () => {
-    vi.stubGlobal('localStorage', memoryStorage('{"schemaVersion":1,"themeId":null,"extra":1}'))
-    expect(loadAppearance()).toEqual({ schemaVersion: 1, themeId: null })
+    vi.stubGlobal('localStorage', memoryStorage('{"schemaVersion":2,"theme":null,"extra":1}'))
+    expect(loadAppearance()).toEqual({ schemaVersion: 2, theme: null })
   })
 
   it('returns defaults when getItem throws or storage is missing', () => {
     vi.stubGlobal('localStorage', { getItem: () => { throw new Error('denied') } })
-    expect(loadAppearance()).toEqual({ schemaVersion: 1, themeId: null })
+    expect(loadAppearance()).toEqual({ schemaVersion: 2, theme: null })
     vi.stubGlobal('localStorage', undefined)
-    expect(loadAppearance()).toEqual({ schemaVersion: 1, themeId: null })
+    expect(loadAppearance()).toEqual({ schemaVersion: 2, theme: null })
   })
 
   it('returns false when setItem throws', () => {
     vi.stubGlobal('localStorage', { setItem: () => { throw new Error('quota') } })
-    expect(saveAppearance({ schemaVersion: 1, themeId: 'builtin:paper' })).toBe(false)
+    expect(saveAppearance({ schemaVersion: 2, theme: g('light', 'solid') })).toBe(false)
   })
 })

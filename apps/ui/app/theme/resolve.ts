@@ -1,28 +1,28 @@
-import { BARE_THEME_ID, type WidgetAppearance } from '@lifedashboard/contracts/board'
-import { BUILTIN_THEME_IDS, DEFAULT_THEME_ID, themeMeta } from './builtin'
-import type { SkinId } from './contract'
+import type { WidgetAppearance } from '@lifedashboard/contracts/board'
+import type { ThemeChoice, ThemeStyle } from '@lifedashboard/contracts/theme'
+import { DEFAULT_THEME, themeKey, themeMeta } from './builtin'
+import type { ColorScheme } from './contract'
+import { BUILTIN_PALETTE_IDS } from './palettes'
 
-/** A frame skin: a theme's skin, or «No frame», which only a widget appearance picks. */
-export type FrameSkin = SkinId | 'bare'
+export type FrameSkin = ThemeStyle | 'bare'
 
-/**
- * The theme of a scope: the first id in the chain (widget, space, workspace) that is set and known.
- * An unknown id (deleted theme) counts as unset; the stored reference is not rewritten.
- */
-export function resolveThemeId(chain: readonly (string | null)[], known: ReadonlySet<string>): string {
-  return chain.find((id): id is string => id !== null && known.has(id)) ?? DEFAULT_THEME_ID
+/** Unknown palettes count as unset without rewriting the stored choice. */
+export function resolveTheme(chain: readonly (ThemeChoice | null | undefined)[], scheme: ColorScheme): string {
+  const choice = chain.find((choice): choice is ThemeChoice => choice != null && BUILTIN_PALETTE_IDS.has(choice.palette)) ?? DEFAULT_THEME
+  return `builtin:${themeKey(choice, scheme)}`
 }
 
-/**
- * How one widget is drawn on a board with the resolved `boardThemeId`. Bare keeps the board's tokens and
- * only drops the frame; a widget on another theme than the board's is `foreign` (opaque surface-1).
- */
+/** Bare and inherited widgets retain the board's resolved tokens. */
 export function resolveWidgetLook(
   appearance: WidgetAppearance | undefined,
   boardThemeId: string,
+  scheme: ColorScheme,
 ): { themeId: string; skin: FrameSkin; foreign: boolean } {
-  if (appearance?.themeId === BARE_THEME_ID) return { themeId: boardThemeId, skin: 'bare', foreign: false }
-  const themeId = resolveThemeId([appearance?.themeId ?? null, boardThemeId], BUILTIN_THEME_IDS)
+  if (appearance?.theme === 'bare') return { themeId: boardThemeId, skin: 'bare', foreign: false }
+  const choice = appearance?.theme
+  const themeId = choice && BUILTIN_PALETTE_IDS.has(choice.palette)
+    ? resolveTheme([choice], scheme)
+    : boardThemeId
   return { themeId, skin: themeMeta(themeId).skin, foreign: themeId !== boardThemeId }
 }
 
