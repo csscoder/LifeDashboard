@@ -9,7 +9,7 @@ const reka = Object.fromEntries([
   'SelectItem', 'SelectItemText', 'SelectItemIndicator',
 ].map((name) => [name, part(name)]))
 const component = compileSfc(new URL('../app/ui/UiSelect.vue', import.meta.url), { 'reka-ui': reka })
-const options = [{ value: '', label: 'Same as board' }, { value: 'builtin:paper', label: 'Paper' }]
+const options = [{ value: '', label: 'Same as board' }, { value: 'builtin:gruvbox-light-solid', label: 'Gruvbox' }]
 
 function mount(modelValue: string) {
   const ui = mountComponent(component, { modelValue, options, id: 'f-style', 'aria-required': 'true' }, ['update:modelValue'])
@@ -19,7 +19,7 @@ function mount(modelValue: string) {
 
 describe('UiSelect', () => {
   it('puts the label attributes on the trigger, not on the root', () => {
-    const ui = mount('builtin:paper')
+    const ui = mount('builtin:gruvbox-light-solid')
     expect(ui.find('SelectTrigger')[0]?.props).toMatchObject({ id: 'f-style', 'aria-required': 'true' })
     expect(ui.find('SelectRoot')[0]?.props.id).toBeUndefined()
   })
@@ -50,12 +50,12 @@ describe('UiSelect', () => {
     const items = ui.find('SelectItem')
     expect(items).toHaveLength(2)
     expect(items.every((item) => item.props.value !== '')).toBe(true)
-    expect(ui.find('SelectItemText').map((el) => el.children.map((child) => child.text).join('') || el.text)).toEqual(['Same as board', 'Paper'])
+    expect(ui.find('SelectItemText').map((el) => el.children.map((child) => child.text).join('') || el.text)).toEqual(['Same as board', 'Gruvbox'])
     expect(ui.find('SelectRoot')[0]?.props['model-value']).toBe(items[0]!.props.value)
   })
 
   it('closes only the list on Escape, so the panel around it stays open', async () => {
-    const ui = mount('builtin:paper')
+    const ui = mount('builtin:gruvbox-light-solid')
     ui.find('SelectRoot')[0]!.props['onUpdate:open'](true)
     await Vue.nextTick()
     expect(ui.find('SelectRoot')[0]!.props.open).toBe(true)
@@ -67,7 +67,7 @@ describe('UiSelect', () => {
   })
 
   it('closes the list when the popover around it closes, so the page does not stay locked', async () => {
-    const ui = mount('builtin:paper')
+    const ui = mount('builtin:gruvbox-light-solid')
     const listeners: Record<string, (event: { newState: string }) => void> = {}
     const popover = {
       addEventListener: (type: string, listener: (event: { newState: string }) => void) => { listeners[type] = listener },
@@ -83,11 +83,11 @@ describe('UiSelect', () => {
   })
 
   it('emits the option value, mapping the empty one back', () => {
-    const ui = mount('builtin:paper')
+    const ui = mount('builtin:gruvbox-light-solid')
     const root = ui.find('SelectRoot')[0]!
     const empty = ui.find('SelectItem')[0]!.props.value
     root.props['onUpdate:modelValue'](empty)
-    root.props['onUpdate:modelValue']('builtin:paper')
-    expect(ui.events).toEqual([['update:modelValue', ''], ['update:modelValue', 'builtin:paper']])
+    root.props['onUpdate:modelValue']('builtin:gruvbox-light-solid')
+    expect(ui.events).toEqual([['update:modelValue', ''], ['update:modelValue', 'builtin:gruvbox-light-solid']])
   })
 })

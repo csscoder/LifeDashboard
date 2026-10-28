@@ -1,42 +1,32 @@
-import { BARE_THEME_ID, DEFAULT_SHADOW } from '@lifedashboard/contracts/board'
+import { DEFAULT_SHADOW } from '@lifedashboard/contracts/board'
 import { describe, expect, it } from 'vitest'
-import { panelPosition, styleValue, withShadow, withStyle, withVariant } from '../app/board/widget-settings'
+import { panelPosition, withShadow, withStyle, withVariant } from '../app/board/widget-settings'
 
-const UNKNOWN = 'user:00000000-0000-4000-8000-00000000000a'
-
-describe('styleValue', () => {
-  it.each([
-    ['no appearance', undefined, ''],
-    ['an inherited theme', { themeId: null, shadow: DEFAULT_SHADOW, variant: null }, ''],
-    ['a built-in theme', { themeId: 'builtin:paper', shadow: null, variant: null }, 'builtin:paper'],
-    ['bare', { themeId: BARE_THEME_ID, shadow: null, variant: null }, BARE_THEME_ID],
-    ['an unknown user theme', { themeId: UNKNOWN, shadow: null, variant: null }, ''],
-    ['an unknown built-in theme', { themeId: 'builtin:deleted', shadow: null, variant: null }, ''],
-  ] as const)('%s → %j', (_name, appearance, expected) => {
-    expect(styleValue(appearance)).toBe(expected)
-  })
-})
+const UNKNOWN = { palette: 'builtin:nord', mode: 'dark', style: 'solid' } as const
 
 describe('withStyle', () => {
+  it('sets bare without an existing appearance', () => {
+    expect(withStyle(undefined, 'bare')).toEqual({ theme: 'bare', shadow: null, variant: null })
+  })
   it('sets the theme and keeps the shadow', () => {
-    expect(withStyle({ themeId: null, shadow: DEFAULT_SHADOW, variant: null }, BARE_THEME_ID)).toEqual({ themeId: BARE_THEME_ID, shadow: DEFAULT_SHADOW, variant: null })
+    expect(withStyle({ theme: null, shadow: DEFAULT_SHADOW, variant: null }, 'bare')).toEqual({ theme: 'bare', shadow: DEFAULT_SHADOW, variant: null })
   })
 
   it('maps «Same as board» to null', () => {
-    expect(withStyle({ themeId: 'builtin:paper', shadow: null, variant: null }, '')).toEqual({ themeId: null, shadow: null, variant: null })
-    expect(withStyle(undefined, '')).toEqual({ themeId: null, shadow: null, variant: null })
+    expect(withStyle({ theme: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' }, shadow: null, variant: null }, null)).toEqual({ theme: null, shadow: null, variant: null })
+    expect(withStyle(undefined, null)).toEqual({ theme: null, shadow: null, variant: null })
   })
 })
 
 describe('withShadow', () => {
   it('keeps a stored unknown theme id while the shadow changes', () => {
-    const on = withShadow({ themeId: UNKNOWN, shadow: null, variant: null }, DEFAULT_SHADOW)
-    expect(on).toEqual({ themeId: UNKNOWN, shadow: DEFAULT_SHADOW, variant: null })
-    expect(withShadow(on, null)).toEqual({ themeId: UNKNOWN, shadow: null, variant: null })
+    const on = withShadow({ theme: UNKNOWN, shadow: null, variant: null }, DEFAULT_SHADOW)
+    expect(on).toEqual({ theme: UNKNOWN, shadow: DEFAULT_SHADOW, variant: null })
+    expect(withShadow(on, null)).toEqual({ theme: UNKNOWN, shadow: null, variant: null })
   })
 
   it('starts from an inherited theme without an appearance', () => {
-    expect(withShadow(undefined, DEFAULT_SHADOW)).toEqual({ themeId: null, shadow: DEFAULT_SHADOW, variant: null })
+    expect(withShadow(undefined, DEFAULT_SHADOW)).toEqual({ theme: null, shadow: DEFAULT_SHADOW, variant: null })
   })
 })
 
@@ -63,13 +53,13 @@ describe('panelPosition', () => {
 
 describe('withVariant', () => {
   it('starts with inherited appearance when absent', () => {
-    expect(withVariant(undefined, 'roman')).toEqual({ themeId: null, shadow: null, variant: 'roman' })
+    expect(withVariant(undefined, 'roman')).toEqual({ theme: null, shadow: null, variant: 'roman' })
   })
 
   it('keeps theme and shadow when setting and clearing the variant', () => {
-    const appearance = { themeId: UNKNOWN, shadow: DEFAULT_SHADOW, variant: 'roman' }
+    const appearance = { theme: UNKNOWN, shadow: DEFAULT_SHADOW, variant: 'roman' }
     expect(withVariant(appearance, null)).toEqual({ ...appearance, variant: null })
-    expect(withStyle(appearance, 'builtin:paper')).toEqual({ ...appearance, themeId: 'builtin:paper' })
+    expect(withStyle(appearance, { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' })).toEqual({ ...appearance, theme: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' } })
     expect(withShadow(appearance, null)).toEqual({ ...appearance, shadow: null })
   })
 })

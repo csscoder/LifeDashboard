@@ -2,7 +2,9 @@
 import { computed, onMounted, onUnmounted, ref, useId, useTemplateRef, watch } from 'vue'
 import type { ScreenBackground } from '@lifedashboard/contracts/board'
 import BackgroundEditor from '../background/BackgroundEditor.vue'
-import { BUILTIN_THEMES } from '../theme/builtin'
+import type { ThemeChoice } from '@lifedashboard/contracts/theme'
+import { BUILTIN_PALETTE_IDS } from '../theme/palettes'
+import ThemePicker from '../theme/ThemePicker.vue'
 
 // Screen navigation of the active space, centred in the footer; hidden for one screen outside edit mode.
 const props = defineProps<{
@@ -13,7 +15,8 @@ const props = defineProps<{
   canAdd: boolean
   canRemove: boolean
   removeTitle: string
-  themeId: string | null
+  theme: ThemeChoice | null
+  inherited: ThemeChoice
   background: ScreenBackground | null
   screenKey: string
 }>()
@@ -32,7 +35,7 @@ const emit = defineEmits<{
   go: [index: number]
   add: []
   remove: []
-  theme: [id: string | null]
+  theme: [choice: ThemeChoice | null]
   background: [value: ScreenBackground | null]
 }>()
 
@@ -62,7 +65,7 @@ function onToggle(event: ToggleEvent) {
   open.value = event.newState === 'open'
   if (!open.value) return
   positionPanel()
-  panel.value?.querySelector('select')?.focus()
+  panel.value?.querySelector('.theme-picker')?.querySelector<HTMLElement>('button')?.focus()
 }
 
 function remove() {
@@ -152,15 +155,12 @@ onUnmounted(() => {
         <h3>Screen {{ index + 1 }}</h3>
         <button type="button" class="dots__close" aria-label="Close screen settings" @click="close">×</button>
       </header>
-      <label class="dots__theme">
+      <div class="dots__theme">
         Screen theme
-        <select aria-label="Screen theme" :value="themeId ?? ''" :disabled="disabled"
-          @change="emit('theme', ($event.target as HTMLSelectElement).value || null)">
-          <option value="">Inherit the space theme</option>
-          <option v-if="themeId && !BUILTIN_THEMES.some(theme => theme.id === themeId)" :value="themeId" disabled>Theme unavailable — inherited</option>
-          <option v-for="theme in BUILTIN_THEMES" :key="theme.id" :value="theme.id">{{ theme.name }}</option>
-        </select>
-      </label>
+        <ThemePicker :model-value="theme" inherit :inherited="inherited" :disabled="disabled"
+          :unavailable="!!theme && !BUILTIN_PALETTE_IDS.has(theme.palette)"
+          @update:model-value="$event !== 'bare' && emit('theme', $event)" />
+      </div>
       <p class="dots__hint">Saved with the board changes</p>
       <BackgroundEditor :key="screenKey" :background="background" :disabled="disabled" @change="emit('background', $event)" />
       <button type="button" class="dots__delete" :disabled="disabled || !canRemove"
@@ -292,7 +292,7 @@ onUnmounted(() => {
   position: fixed;
   inset: auto;
   margin: 0;
-  width: 19rem;
+  width: 21rem;
   max-width: calc(100vw - 1.5rem);
   overflow-y: auto;
   padding: 0.875rem;
@@ -307,7 +307,6 @@ onUnmounted(() => {
 .dots__panel-header h3 { margin: 0; font-size: 0.9375rem; }
 .dots__close { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--ld-state-hover); color: var(--ld-text-secondary); font: inherit; cursor: pointer; }
 .dots__theme { display: grid; gap: 0.5rem; color: var(--ld-text-muted); }
-.dots__theme select { width: 100%; padding: 0.5rem; border: var(--ld-border-width) solid var(--ld-border-default); border-radius: var(--ld-radius-control); background: var(--ld-surface-3); color: var(--ld-text-primary); font: inherit; }
 .dots__hint { margin: 0.5rem 0 0; color: var(--ld-text-muted); font-size: 0.75rem; }
 .dots__delete { width: 100%; margin-top: 0.875rem; padding: 0.5rem; border: var(--ld-border-width) solid var(--ld-danger); border-radius: var(--ld-radius-control); background: var(--ld-danger-subtle); color: var(--ld-danger-text); font: inherit; cursor: pointer; }
 .dots__delete:disabled { opacity: 0.4; cursor: default; }

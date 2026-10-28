@@ -2,7 +2,7 @@ import * as Vue from 'vue'
 import { describe, expect, it } from 'vitest'
 import * as variantsModule from '@lifedashboard/contracts/widget-variants'
 import * as board from '@lifedashboard/contracts/board'
-import { BUILTIN_THEMES } from '../app/theme/builtin'
+import { themeModules } from './helpers/theme-picker'
 import * as widgetSettings from '../app/board/widget-settings'
 import { compileSfc, mountComponent } from './helpers/sfc-renderer'
 
@@ -24,7 +24,7 @@ const control = (tag: string) => Vue.defineComponent({
 const Row = Vue.defineComponent({ props: ['label', 'value'], setup: (props, { slots }) => () => Vue.h('settings-row', [String(props.label), slots.default?.(), props.value]) })
 const component = compileSfc(new URL('../app/board/WidgetSettings.vue', import.meta.url), {
   '@lifedashboard/contracts/board': board,
-  '../theme/builtin': { BUILTIN_THEMES },
+  ...themeModules,
   './widget-settings': widgetSettings,
   './WidgetConfigForm.vue': GenericForm,
   '../ui/UiSelect.vue': UiSelect,
@@ -37,19 +37,25 @@ const schema = { type: 'object', properties: { zone: { type: 'string', title: 'Z
 
 function mount(editor?: Vue.Component, overrides: Record<string, unknown> = {}) {
   return mountComponent(component, {
-    appearance: undefined, schema, config: { zone: 'Asia/Tokyo' }, widgetId: 'w1', secrets: new Set(), version: '', versions: [],
+    inherited: { palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' }, appearance: undefined, schema, config: { zone: 'Asia/Tokyo' }, widgetId: 'w1', secrets: new Set(), version: '', versions: [],
     ...(editor ? { editor } : {}), ...overrides,
   }, ['config', 'change', 'version', 'reset'])
 }
 
 describe('widget settings panel', () => {
+  it('focuses the theme picker when opened without a package version selector', async () => {
+    const ui = mount()
+    await Vue.nextTick()
+    ui.panel().props.onToggle({ newState: 'open' })
+    expect(ui.button('Inherit').focused).toBe(true)
+  })
   it('hides Look without variants', () => { expect(mount().text()).not.toContain('Look') })
   it('resolves missing looks and preserves style and shadow when picking a look', () => {
     const variants = { default: 'plain', items: [{ id: 'plain', title: 'Plain' }, { id: 'roman', title: 'Roman numerals' }] }
-    const appearance = { themeId: 'foreign', shadow: board.DEFAULT_SHADOW, variant: 'gone' }
+    const appearance = { theme: { palette: 'builtin:nord', mode: 'dark', style: 'solid' }, shadow: board.DEFAULT_SHADOW, variant: 'gone' }
     const ui = mount(undefined, { variants, appearance })
     expect(ui.text()).toContain('Look')
-    const look = ui.nodes().filter(el => el.tag === 'ui-select')[1]!
+    const look = ui.nodes().filter(el => el.tag === 'ui-select')[0]!
     expect(look.props.modelValue).toBe('plain')
     expect(look.props.options).toEqual([{ value: 'plain', label: 'Plain' }, { value: 'roman', label: 'Roman numerals' }])
     look.props.pick('roman')
@@ -96,21 +102,16 @@ describe('widget settings panel', () => {
     expect(ui.events).toEqual([['config', { zone: 'UTC' }]])
   })
 
-  it('speaks English and picks the style through the themed select', () => {
-    const ui = mount(undefined, { appearance: { themeId: null, shadow: board.DEFAULT_SHADOW, variant: null } })
+  it('picks a palette or no frame while keeping the shadow', async () => {
+    const ui = mount(undefined, { appearance: { theme: null, shadow: board.DEFAULT_SHADOW, variant: null }, inherited: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' } })
+    await Vue.nextTick()
     expect(ui.panel().props['aria-label']).toBe('Widget settings')
     for (const label of ['Style', 'Shadow', 'Blur', 'Color', 'Reset to defaults']) expect(ui.text()).toContain(label)
-    const style = ui.nodes().find((el) => el.tag === 'ui-select')!
-    expect(style.props.modelValue).toBe('')
-    expect(style.props.options).toEqual([
-      { value: '', label: 'Same as board' },
-      { value: 'builtin:glass', label: 'Glass' },
-      { value: 'builtin:obsidian', label: 'Obsidian' },
-      { value: 'builtin:paper', label: 'Paper' },
-      { value: board.BARE_THEME_ID, label: 'No frame' },
-    ])
-    style.props.pick('builtin:paper')
-    expect(ui.events).toEqual([['change', { themeId: 'builtin:paper', shadow: board.DEFAULT_SHADOW, variant: null }]])
+    expect(ui.button('Inherit').props['aria-checked']).toBe(true)
+    ui.button('Catppuccin').click()
+    expect(ui.events).toEqual([['change', { theme: { palette: 'builtin:catppuccin', mode: 'light', style: 'solid' }, shadow: board.DEFAULT_SHADOW, variant: null }]])
+    ui.button('No frame').click()
+    expect(ui.events.at(-1)).toEqual(['change', { theme: 'bare', shadow: board.DEFAULT_SHADOW, variant: null }])
   })
 
   it('applies a version picked in the themed select', async () => {
@@ -125,14 +126,14 @@ describe('widget settings panel', () => {
   })
 
   it('shows the shadow controls only while the shadow is on', async () => {
-    const ui = mount(undefined, { appearance: { themeId: null, shadow: null, variant: null } })
+    const ui = mount(undefined, { appearance: { theme: null, shadow: null, variant: null } })
     const sliders = () => ui.nodes().filter((el) => el.tag === 'ui-slider')
     const colour = () => ui.nodes().find((el) => el.tag === 'ui-colorfield')
     expect(sliders()).toHaveLength(0)
     expect(colour()).toBeUndefined()
     expect(ui.text()).not.toContain('Blur')
     expect(ui.button('Reset to defaults')).toBeDefined()
-    ui.props.appearance = { themeId: null, shadow: board.DEFAULT_SHADOW, variant: null }
+    ui.props.appearance = { theme: null, shadow: board.DEFAULT_SHADOW, variant: null }
     await Vue.nextTick()
     expect(sliders().map((el) => el.props.modelValue)).toEqual([board.DEFAULT_SHADOW.x, board.DEFAULT_SHADOW.y, board.DEFAULT_SHADOW.blur])
     expect(sliders().every((el) => !el.props.disabled)).toBe(true)
@@ -140,11 +141,11 @@ describe('widget settings panel', () => {
     expect(colour()?.props.alpha).toBe(board.DEFAULT_SHADOW.opacity)
     expect(ui.text()).not.toContain('Opacity')
     colour()!.props['onUpdate:alpha'](0.25)
-    expect(ui.events.at(-1)).toEqual(['change', { themeId: null, shadow: { ...board.DEFAULT_SHADOW, opacity: 0.25 }, variant: null }])
+    expect(ui.events.at(-1)).toEqual(['change', { theme: null, shadow: { ...board.DEFAULT_SHADOW, opacity: 0.25 }, variant: null }])
   })
 
   it('resets the whole widget from one button below every setting', () => {
-    const ui = mount(Editor, { appearance: { themeId: null, shadow: board.DEFAULT_SHADOW, variant: null } })
+    const ui = mount(Editor, { appearance: { theme: null, shadow: board.DEFAULT_SHADOW, variant: null } })
     expect(ui.button('Reset')).toBeUndefined()
     const reset = ui.button('Reset to defaults')
     const all = ui.nodes()

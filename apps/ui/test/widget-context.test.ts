@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { effectScope, nextTick, ref } from 'vue'
+import { computed, effectScope, nextTick, ref } from 'vue'
 import { normalizeConfig, type SettingsSchema } from '@lifedashboard/contracts/widget-settings'
 import type { InstalledPackage } from '@lifedashboard/contracts/widget-package'
 import { describeSource } from '../app/widgets/catalog'
@@ -35,7 +35,7 @@ function setup(foreign: boolean, config: () => Record<string, unknown> = () => (
   const context = scope.run(() =>
     useWidgetContext({
       size: () => ({ w: 2, h: 2 }),
-      themeId: () => 'builtin:glass',
+      themeId: () => 'builtin:lifedashboard-dark-glass',
       foreign: () => flag.value,
       config,
       variant: () => variant.value,
@@ -79,7 +79,7 @@ describe('useWidgetContext', () => {
     surface = 'translucent'
     flag.value = false
     await vi.waitFor(() => expect(context.theme.tokens['--ld-surface-1']).toBe('translucent'))
-    expect(context.theme.id).toBe('builtin:glass')
+    expect(context.theme.id).toBe('builtin:lifedashboard-dark-glass')
   })
 })
 
@@ -130,7 +130,7 @@ it('copies theme, config, locale, secret flags and root font size to the modal a
  const { createDashboardModals } = await import('../app/widgets/modals')
  const { reactive } = await import('vue')
  const c = reactive({ size: { w: 3, h: 4 }, sizeClass: 's', frame: 'framed', rootFontSize: 17,
- theme: { id: 'builtin:paper', scheme: 'light', tokens: { '--ld-text-primary': '#123456' } }, config: { apiKey: { configured: true } }, locale: 'ru', visible: false })
+ theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: { '--ld-text-primary': '#123456' } }, config: { apiKey: { configured: true } }, locale: 'ru', visible: false })
  const m = createDashboardModals()
  m.registerCaller({ owner: { widgetId: 'w1', runtimeId: 'w1', packageId: 'dev.test', version: '1', hash: 'hash', title: 'Test' }, context: () => c as any, restart: async () => {} })
  await m.open('w1', { view: 'workspace' })
@@ -159,4 +159,21 @@ it('updates modal document visibility independently of caller intersection', asy
  document.visibilityState = 'hidden'; visibility(); expect(effective.value?.visible).toBe(false)
  document.visibilityState = 'visible'; visibility(); expect(effective.value?.visible).toBe(true)
  } finally { m.dispose() }
+})
+
+it('updates widget theme and tokens when an automatic theme follows matchMedia', async () => {
+  vi.resetModules()
+  let change!: (event: { matches: boolean }) => void
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: (_: string, callback: typeof change) => { change = callback } }))
+  const { useColorScheme } = await import('../app/theme/color-scheme')
+  const { resolveTheme } = await import('../app/theme/resolve')
+  const scheme = useColorScheme()
+  const id = computed(() => resolveTheme([{ palette: 'builtin:gruvbox', mode: 'auto', style: 'glass' }], scheme.value))
+  const scope = effectScope(); scopes.push(scope)
+  const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => id.value, foreign: () => false, config: () => ({}), variant: () => '', frame: () => ({}) as Element, frameMode: () => 'framed' }))!
+  expect(context.theme.id).toBe('builtin:gruvbox-dark-glass')
+  surface = 'light surface'
+  change({ matches: false })
+  await nextTick()
+  expect(context.theme).toMatchObject({ id: 'builtin:gruvbox-light-glass', scheme: 'light', tokens: { '--ld-surface-1': 'light surface' } })
 })

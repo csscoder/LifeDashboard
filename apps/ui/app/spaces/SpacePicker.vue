@@ -2,10 +2,12 @@
 import { onMounted, onUnmounted } from 'vue'
 import { SPACE_ICONS, type SpacePatch, type SpaceSummary } from '@lifedashboard/contracts/space'
 
-import { BUILTIN_THEMES } from '../theme/builtin'
+import type { ThemeChoice } from '@lifedashboard/contracts/theme'
+import { BUILTIN_PALETTE_IDS } from '../theme/palettes'
+import ThemePicker from '../theme/ThemePicker.vue'
 
 // Icon and theme of one space. The selection is the server state: it changes only when the patch is saved.
-const props = defineProps<{ space: SpaceSummary; disabled: boolean }>()
+const props = defineProps<{ space: SpaceSummary; disabled: boolean; inherited: ThemeChoice }>()
 const emit = defineEmits<{ pick: [patch: SpacePatch]; close: [] }>()
 
 // A click outside the switcher closes the picker. Clicks on the corner button, the fan and the badges do not.
@@ -35,19 +37,12 @@ onUnmounted(() => document.removeEventListener('pointerdown', onPointerDown))
         {{ icon }}
       </button>
     </div>
-    <label class="space-picker__heading space-picker__theme">
+    <div class="space-picker__heading space-picker__theme">
       Space theme
-      <select
-        aria-label="Space theme"
-        :value="space.themeId ?? ''"
-        :disabled="disabled"
-        @change="emit('pick', { themeId: ($event.target as HTMLSelectElement).value || null })"
-      >
-        <option value="">Inherit the dashboard theme</option>
-        <option v-if="space.themeId && !BUILTIN_THEMES.some(theme => theme.id === space.themeId)" :value="space.themeId" disabled>Theme unavailable — inherited</option>
-        <option v-for="theme in BUILTIN_THEMES" :key="theme.id" :value="theme.id">{{ theme.name }}</option>
-      </select>
-    </label>
+      <ThemePicker :model-value="space.theme" inherit :inherited="inherited" :disabled="disabled"
+        :unavailable="!!space.theme && !BUILTIN_PALETTE_IDS.has(space.theme.palette)"
+        @update:model-value="$event !== 'bare' && emit('pick', { theme: $event })" />
+    </div>
   </div>
 </template>
 
@@ -97,19 +92,9 @@ onUnmounted(() => document.removeEventListener('pointerdown', onPointerDown))
 }
 
 .space-picker__theme { display: grid; gap: 0.5rem; }
-.space-picker__theme select {
-  width: 100%;
-  padding: 0.5rem;
-  border: var(--ld-border-width) solid var(--ld-border-default);
-  border-radius: var(--ld-radius-control);
-  background: var(--ld-surface-1-solid);
-  color: var(--ld-text-primary);
-  font: inherit;
-}
 .space-picker :disabled { opacity: 0.5; cursor: default; }
 
-.space-picker__icon:focus-visible,
-.space-picker__theme select:focus-visible {
+.space-picker__icon:focus-visible {
   outline: 0.125rem solid var(--ld-focus-ring);
   outline-offset: 0.125rem;
 }

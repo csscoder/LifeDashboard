@@ -108,7 +108,7 @@ describe('UiColorField', () => {
     input.props.onInputCapture({ target: { value: raw } })
     root.props['onUpdate:modelValue'](normalized)
     expect(ui.events).toEqual(expected ? [['update:modelValue', expected]] : [])
-    if (expected) expect(parseScreenBoard({ id: '11111111-1111-4111-8111-111111111111', rows: 8, instances: [{ id: '22222222-2222-4222-8222-222222222222', source: { kind: 'builtin', type: 'clock' }, configVersion: 1, config: {}, appearance: { themeId: null, variant: null, shadow: { ...DEFAULT_SHADOW, color: ui.events[0]![1] } } }], layout: [{ instanceId: '22222222-2222-4222-8222-222222222222', x: 0, y: 0, w: 1, h: 1 }] }).ok).toBe(true)
+    if (expected) expect(parseScreenBoard({ id: '11111111-1111-4111-8111-111111111111', rows: 8, instances: [{ id: '22222222-2222-4222-8222-222222222222', source: { kind: 'builtin', type: 'clock' }, configVersion: 1, config: {}, appearance: { theme: null, variant: null, shadow: { ...DEFAULT_SHADOW, color: ui.events[0]![1] } } }], layout: [{ instanceId: '22222222-2222-4222-8222-222222222222', x: 0, y: 0, w: 1, h: 1 }] }).ok).toBe(true)
   })
 })
 

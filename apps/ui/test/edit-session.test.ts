@@ -35,7 +35,7 @@ describe('setPackageVersion', () => {
     },
   }] }]
   const original: ScreenBoard = { ...board, instances: [{ ...board.instances[0]!, source: { kind: 'package', packageId: 'dev.test.upgrade', version: '1.0.0' },
-    configVersion: 7, config: { title: 'Saved', count: -1, removed: true, token: 'never retain' }, appearance: { themeId: 'builtin:paper', shadow: null, variant: null } }],
+    configVersion: 7, config: { title: 'Saved', count: -1, removed: true, token: 'never retain' }, appearance: { theme: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' }, shadow: null, variant: null } }],
     layout: [{ instanceId: A, x: 4, y: 0, w: 2, h: 2 }] }
 
   it('keeps instance identity and appearance, normalizes compatible config, and fits the new minimum without moving', () => {
@@ -150,7 +150,7 @@ describe('withRows', () => {
 
 describe('setConfig', () => {
   it('replaces only the target config and preserves configVersion, appearance and the input', () => {
-    const original = setAppearance(board, A, { themeId: 'builtin:paper', shadow: null, variant: null })
+    const original = setAppearance(board, A, { theme: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' }, shadow: null, variant: null })
     original.instances[0] = { ...original.instances[0]!, configVersion: 3, config: { old: true } }
     const before = structuredClone(original)
     const config = { title: 'Updated', count: 3 }
@@ -172,7 +172,7 @@ describe('setConfig', () => {
 
 describe('resetWidget', () => {
   it('drops the appearance and the config of one widget, keeping the rest of the board', () => {
-    const styled = setAppearance(board, A, { themeId: 'builtin:paper', shadow: DEFAULT_SHADOW, variant: null })
+    const styled = setAppearance(board, A, { theme: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' }, shadow: DEFAULT_SHADOW, variant: null })
     styled.instances[0] = { ...styled.instances[0]!, configVersion: 2, config: { zone: 'Asia/Tokyo' } }
     const next = resetWidget(styled, A)
     expect(next.instances[0]).toStrictEqual({ id: A, source: styled.instances[0]!.source, configVersion: 2, config: {} })
@@ -182,7 +182,7 @@ describe('resetWidget', () => {
 })
 
 describe('setAppearance', () => {
-  const look: WidgetAppearance = { themeId: 'builtin:paper', shadow: null, variant: null }
+  const look: WidgetAppearance = { theme: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' }, shadow: null, variant: null }
 
   it('sets the appearance last on the target only and does not mutate its input', () => {
     const before = structuredClone(board)
@@ -195,15 +195,15 @@ describe('setAppearance', () => {
   })
 
   it('replaces an appearance and stores it in canonical key order', () => {
-    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 16, y: 8, x: 0 }, themeId: null, variant: null } as WidgetAppearance
+    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 16, y: 8, x: 0 }, theme: null, variant: null } as WidgetAppearance
     const next = setAppearance(setAppearance(board, A, look), A, scrambled)
-    expect(JSON.stringify(next.instances[0]!.appearance)).toBe(JSON.stringify({ themeId: null, shadow: DEFAULT_SHADOW, variant: null }))
+    expect(JSON.stringify(next.instances[0]!.appearance)).toBe(JSON.stringify({ theme: null, shadow: DEFAULT_SHADOW, variant: null }))
   })
 
   it.each([
     ['null («Reset»)', null],
     ['undefined', undefined],
-    ['both fields null', { themeId: null, shadow: null, variant: null }],
+    ['both fields null', { theme: null, shadow: null, variant: null }],
   ])('removes the key for %s, so the board is unchanged again', (_name, value) => {
     const next = setAppearance(setAppearance(board, A, look), A, value)
     expect(next.instances[0]).not.toHaveProperty('appearance')
@@ -211,7 +211,7 @@ describe('setAppearance', () => {
   })
 
   it('matches what the parser reads back', () => {
-    const next = setAppearance(board, A, { themeId: null, shadow: DEFAULT_SHADOW, variant: null })
+    const next = setAppearance(board, A, { theme: null, shadow: DEFAULT_SHADOW, variant: null })
     const parsed = parseScreenBoard(JSON.parse(JSON.stringify(next)))
     expect(parsed.ok && isSameBoard(parsed.value, next)).toBe(true)
   })
@@ -225,7 +225,7 @@ describe('addInstance', () => {
   it('places a frameless widget last with the bare theme and no shadow, without mutating its input', () => {
     const before = structuredClone(board)
     const next = addInstance(board, NEW, source, rect, 'frameless')
-    expect(next.instances.at(-1)).toStrictEqual({ id: NEW, source, configVersion: 1, config: {}, appearance: { themeId: 'builtin:bare', shadow: null, variant: null } })
+    expect(next.instances.at(-1)).toStrictEqual({ id: NEW, source, configVersion: 1, config: {}, appearance: { theme: 'bare', shadow: null, variant: null } })
     expect(next.layout.at(-1)).toStrictEqual({ instanceId: NEW, ...rect })
     expect(next.instances.slice(0, 3)).toEqual(board.instances)
     expect(parseScreenBoard(JSON.parse(JSON.stringify(next)))).toEqual({ ok: true, value: next })
@@ -243,19 +243,19 @@ describe('addInstance', () => {
 
 describe('screen theme draft', () => {
   it('changes the screen theme without mutating the saved board or widget overrides', () => {
-    const source = { ...board, instances: board.instances.map((instance, index) => index === 0 ? { ...instance, appearance: { themeId: 'builtin:glass', shadow: null, variant: null } } : instance) }
-    const next = edits.withTheme(source, 'builtin:paper')
-    expect(next.themeId).toBe('builtin:paper')
-    expect(source).not.toHaveProperty('themeId')
-    expect(next.instances[0]!.appearance?.themeId).toBe('builtin:glass')
+    const source = { ...board, instances: board.instances.map((instance, index) => index === 0 ? { ...instance, appearance: { theme: { palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' }, shadow: null, variant: null } } : instance) }
+    const next = edits.withTheme(source, { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' })
+    expect(next.theme).toEqual({ palette: 'builtin:gruvbox', mode: 'light', style: 'solid' })
+    expect(source).not.toHaveProperty('theme')
+    expect(next.instances[0]!.appearance?.theme).toEqual({ palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' })
     expect(isSameBoard(source, next)).toBe(false)
     expect(parseScreenBoard(next)).toEqual({ ok: true, value: next })
   })
 
   it('clears an override canonically and preserves the theme through ordinary edits', () => {
-    const themed = edits.withTheme(board, 'builtin:paper')
-    expect(withRows(themed, 16).themeId).toBe('builtin:paper')
-    expect(setConfig(themed, A, { title: 'Keep theme' }).themeId).toBe('builtin:paper')
+    const themed = edits.withTheme(board, { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' })
+    expect(withRows(themed, 16).theme).toEqual({ palette: 'builtin:gruvbox', mode: 'light', style: 'solid' })
+    expect(setConfig(themed, A, { title: 'Keep theme' }).theme).toEqual({ palette: 'builtin:gruvbox', mode: 'light', style: 'solid' })
     expect(isSameBoard(edits.withTheme(themed, null), board)).toBe(true)
     const parsed = parseScreenBoard(themed)
     expect(parsed.ok).toBe(true)
@@ -268,7 +268,7 @@ describe('screen background draft', () => {
   const background = { mediaId: '00000000-0000-4000-8000-0000000000aa', kind: 'video' as const, opacity: 0.7, dim: 0.35,
     pattern: { shape: 'circles' as const, color: '#112233', opacity: 0.25, scale: 1 } }
   it('previews without mutating the saved screen and keeps canonical theme/background order', () => {
-    const saved = edits.withTheme(board, 'builtin:paper')
+    const saved = edits.withTheme(board, { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' })
     const next = edits.withBackground(saved, background)
     expect(next.background).toEqual(background)
     expect(saved).not.toHaveProperty('background')
@@ -276,12 +276,12 @@ describe('screen background draft', () => {
     const parsed = parseScreenBoard(next)
     expect(parsed.ok).toBe(true)
     if (parsed.ok) expect(JSON.stringify(parsed.value)).toBe(JSON.stringify(next))
-    expect(edits.withTheme(next, 'builtin:glass').background).toEqual(background)
+    expect(edits.withTheme(next, { palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' }).background).toEqual(background)
     expect(withRows(next, 16).background).toEqual(background)
     expect(setConfig(next, A, { title: 'Keep video' }).background).toEqual(background)
   })
   it('removes a draft background canonically without losing widgets or the theme', () => {
-    const saved = edits.withTheme(board, 'builtin:paper')
+    const saved = edits.withTheme(board, { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' })
     const next = edits.withBackground(saved, background)
     expect(isSameBoard(edits.withBackground(next, null), saved)).toBe(true)
     expect(next.instances).toEqual(saved.instances)

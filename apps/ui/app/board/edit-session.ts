@@ -1,5 +1,5 @@
+import type { ThemeChoice } from '@lifedashboard/contracts/theme'
 import {
-  BARE_THEME_ID,
   normalizeAppearance,
   type ScreenBoard,
   type ScreenBackground,
@@ -18,7 +18,7 @@ export type BoardMode = 'view' | 'build' | 'edit'
 
 /** The board with a new widget last in both lists. A `frameless` package widget starts with the bare theme (spec 2026-10-20). */
 export function addInstance(doc: ScreenBoard, id: string, source: WidgetSource, rect: Rect, frame: 'framed' | 'frameless' | undefined): ScreenBoard {
-  const appearance = frame === 'frameless' ? normalizeAppearance({ themeId: BARE_THEME_ID, shadow: null, variant: null }) : undefined
+  const appearance = frame === 'frameless' ? normalizeAppearance({ theme: 'bare', shadow: null, variant: null }) : undefined
   const instance: WidgetInstance = { id, source: { ...source }, configVersion: 1, config: {}, ...(appearance ? { appearance } : {}) }
   return {
     ...doc,
@@ -89,14 +89,14 @@ export function setPackageVersion(board: ScreenBoard, id: string, version: strin
 
 /** Rebuild scope keys in the same order as parseScreenBoard and the API. */
 export function withBackground(doc: ScreenBoard, background: ScreenBackground | null): ScreenBoard {
-  const { id, rows, themeId, instances, layout } = doc
-  return { id, rows, ...(themeId != null && { themeId }), ...(background && { background }), instances, layout }
+  const { id, rows, theme, instances, layout } = doc
+  return { id, rows, ...(theme != null && { theme }), ...(background && { background }), instances, layout }
 }
 
 /** Keep inherited themes absent and explicit themes in the API's canonical key order. */
-export function withTheme(doc: ScreenBoard, themeId: string | null): ScreenBoard {
-  const { id, rows, themeId: _old, ...rest } = doc
-  return { id, rows, ...(themeId !== null && { themeId }), ...rest }
+export function withTheme(doc: ScreenBoard, theme: ThemeChoice | null): ScreenBoard {
+  const { id, rows, theme: _old, ...rest } = doc
+  return { id, rows, ...(theme !== null && { theme }), ...rest }
 }
 
 /** The board with new configured rows; anything but an integer in ROWS.min..ROWS.max changes nothing. */

@@ -1,6 +1,8 @@
 import * as Vue from 'vue'
 import { describe, expect, it } from 'vitest'
-import { BUILTIN_THEMES } from '../app/theme/builtin'
+import { DEFAULT_THEME } from '../app/theme/builtin'
+import { loadAppearance } from '../app/theme/appearance'
+import { ThemePicker } from './helpers/theme-picker'
 import { GRID_COLS } from '@lifedashboard/contracts/grid'
 import { compileSfc, mountComponent, type HostNode } from './helpers/sfc-renderer'
 
@@ -10,14 +12,14 @@ const UiSelect = Vue.defineComponent({
   setup: (props, { attrs, emit }) => () => Vue.h('ui-select', { ...attrs, ...props, pick: (value: string) => emit('update:modelValue', value) }),
 })
 const component = compileSfc(new URL('../app/SettingsPanel.vue', import.meta.url), {
-  './theme/builtin': { BUILTIN_THEMES }, '@lifedashboard/contracts/grid': { GRID_COLS }, './ui/UiSelect.vue': UiSelect,
+  './theme/builtin': { DEFAULT_THEME }, './theme/ThemePicker.vue': ThemePicker, '@lifedashboard/contracts/grid': { GRID_COLS }, './ui/UiSelect.vue': UiSelect,
 })
 const picker = (ui: ReturnType<typeof mount>) => ui.nodes().find((el) => el.tag === 'ui-select')
 function mount(overrides: Record<string, unknown> = {}) {
   return mountComponent(component, {
     entries: [{ key: 'builtin:placeholder', title: 'Placeholder', source: { kind: 'builtin', type: 'placeholder' } }],
     loaded: true, viewing: true, spaceTitle: 'Garage', spaceIcon: '🧘', screenIndex: 1, screenCount: 3,
-    rows: 12, themeId: 'builtin:glass', apiLabel: 'API: running', apiDown: false, ...overrides,
+    rows: 12, theme: DEFAULT_THEME, apiLabel: 'API: running', apiDown: false, ...overrides,
   }, ['pick', 'edit', 'library', 'theme'])
 }
 
@@ -68,14 +70,24 @@ describe('settings panel', () => {
     expect(ui.button('Edit board')?.props.disabled).toBe(true)
   })
 
-  it('shows the selected theme and emits a theme choice without closing settings', () => {
+  it('shows the selected theme and emits a choice without closing settings', async () => {
     const ui = mount()
-    expect(ui.button('Glass')?.props['aria-pressed']).toBe(true)
-    expect(ui.button('Paper')?.props['aria-pressed']).toBe(false)
+    await Vue.nextTick()
+    expect(ui.button('LifeDashboard').props['aria-checked']).toBe(true)
     const panel = ui.panel(); panel.open = true
-    ui.button('Paper').props.onClick()
-    expect(ui.events).toEqual([['theme', 'builtin:paper']])
+    ui.button('Gruvbox').click()
+    expect(ui.events).toEqual([['theme', { palette: 'builtin:gruvbox', mode: 'dark', style: 'glass' }]])
     expect(panel.open).toBe(true)
+  })
+
+  it('opens a fresh profile with the default selected and Mode and Style enabled', async () => {
+    const ui = mount({ theme: loadAppearance().theme ?? DEFAULT_THEME })
+    await Vue.nextTick()
+    expect(ui.button('LifeDashboard').props['aria-checked']).toBe(true)
+    expect(ui.button('Inherit')).toBeUndefined()
+    const groups = ui.nodes().filter(n => n.props.role === 'radiogroup')
+    expect(groups).toHaveLength(3)
+    expect(groups.slice(1).every(n => n.props['data-disabled'] === undefined)).toBe(true)
   })
 
   it.each(['Escape', 'ArrowRight', 'Enter'])('keeps %s inside open settings without preventing native keyboard behavior', async (key) => {
@@ -84,8 +96,8 @@ describe('settings panel', () => {
     await Vue.nextTick()
     const event = { key, cancelBubble: false, defaultPrevented: false,
       stopPropagation() { this.cancelBubble = true }, preventDefault() { this.defaultPrevented = true } }
-    // Follow the rendered host ancestry as a keyboard event bubbles from a theme button.
-    for (let target: HostNode | null = ui.button('Glass'); target && !event.cancelBubble; target = target.parent)
+    // Follow the rendered host ancestry as a keyboard event bubbles from an action button.
+    for (let target: HostNode | null = ui.button('Close settings'); target && !event.cancelBubble; target = target.parent)
       target.props.onKeydown?.(event)
     expect(event.cancelBubble).toBe(true)
     expect(event.defaultPrevented).toBe(false)

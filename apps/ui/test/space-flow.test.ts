@@ -11,7 +11,7 @@ import {
   runEditSpace,
 } from '../app/spaces/space-flow'
 
-const SPACE: SpaceSummary = { id: 's-new', title: 'New space', icon: '⭐', color: 'violet', themeId: null, position: 1, revision: 1 }
+const SPACE: SpaceSummary = { id: 's-new', title: 'New space', icon: '⭐', color: 'violet', theme: null, position: 1, revision: 1 }
 const ok = <T>(data: T): ApiResult<T> => ({ ok: true, data })
 const conflict = { ok: false, kind: 'conflict' } as const
 

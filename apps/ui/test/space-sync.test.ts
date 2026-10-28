@@ -1,3 +1,4 @@
+import { themeModules } from './helpers/theme-picker'
 import type { SpaceBoard, ScreenBoard } from '@lifedashboard/contracts/board'
 import { describe, expect, it, vi } from 'vitest'
 import { afterLoad, afterManage, afterSave, afterStaySave, connect, failureOutcome, useSpaceSync } from '../app/board/space-sync'
@@ -94,13 +95,13 @@ describe('load', () => {
     const pending = deferred<ReturnType<typeof ok<SpaceBoard>>>()
     client.board.mockReturnValueOnce(pending.promise)
     const refreshing = sync.load()
-    const themed = { ...screen([]), themeId: 'builtin:paper' }
+    const themed = { ...screen([]), theme: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' } }
     client.saveBoard.mockResolvedValueOnce(ok({ ...board(2), screens: [themed, board(2).screens[1]!] }))
     expect(await sync.save(themed)).toBe('saved')
     pending.resolve(ok(board(1)))
     expect(await refreshing).toBe('ignored')
     expect(sync.space.value?.revision).toBe(2)
-    expect(sync.space.value?.screens[0]?.themeId).toBe('builtin:paper')
+    expect(sync.space.value?.screens[0]?.theme).toEqual({ palette: 'builtin:gruvbox', mode: 'light', style: 'solid' })
   })
 
   it('replaces the board on a later load in view mode', async () => {
@@ -382,5 +383,26 @@ describe('reactions', () => {
     expect(afterSave('conflict')).toEqual(afterStaySave('conflict'))
     expect(afterSave('conflict')).not.toHaveProperty('leaveMode')
     expect(afterSave('conflict')).not.toHaveProperty('reload')
+  })
+})
+
+describe('unknown space palette', () => {
+  it('inherits the dashboard and preserves the stored choice when changing an icon', async () => {
+    const { compileSfc, mountComponent } = await import('./helpers/sfc-renderer')
+    const contracts = await import('@lifedashboard/contracts/space')
+    const { resolveTheme } = await import('../app/theme/resolve')
+    const unknown = { palette: 'builtin:nord', mode: 'dark', style: 'glass' } as const
+    const dashboard = { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' } as const
+    const space = { id: SPACE, title: 'Desk', icon: '🏠', color: 'violet', theme: unknown, position: 0, revision: 1 }
+    expect(resolveTheme([space.theme, dashboard], 'dark')).toBe('builtin:gruvbox-light-solid')
+    vi.stubGlobal('document', { addEventListener() {}, removeEventListener() {}, getElementById: () => null, querySelector: () => null })
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+    const Picker = compileSfc(new URL('../app/spaces/SpacePicker.vue', import.meta.url), { ...themeModules, '@lifedashboard/contracts/space': contracts })
+    const ui = mountComponent(Picker, { space, disabled: false, inherited: dashboard }, ['pick'])
+    const icon = contracts.SPACE_ICONS.find(icon => icon !== space.icon)!
+    ui.button(icon).props.onClick()
+    expect(ui.events).toEqual([['pick', { icon }]])
+    expect(ui.events[0]![1]).not.toHaveProperty('theme')
+    expect(space.theme).toEqual(unknown)
   })
 })

@@ -26,8 +26,11 @@ import { toasts } from './toasts'
 import { installedPackages, loadPackages, pickerEntries } from './widgets/catalog'
 import PackagesDialog from './widgets/PackagesDialog.vue'
 import { loadAppearance, saveAppearance } from './theme/appearance'
-import { BUILTIN_THEME_IDS, themeMeta } from './theme/builtin'
-import { resolveThemeId, themeClass } from './theme/resolve'
+import type { ThemeChoice } from '@lifedashboard/contracts/theme'
+import { DEFAULT_THEME, themeMeta } from './theme/builtin'
+import { BUILTIN_PALETTE_IDS } from './theme/palettes'
+import { useColorScheme } from './theme/color-scheme'
+import { resolveTheme, themeClass } from './theme/resolve'
 
 type AppState = 'checking' | 'pairing' | 'ready' | 'unavailable'
 
@@ -195,25 +198,26 @@ const apiLabel = computed(() => {
 })
 
 // The dashboard default is independent of the theme resolved for the displayed screen.
-const storedThemeId = loadAppearance().themeId
-const dashboardThemeId = ref(resolveThemeId([storedThemeId], BUILTIN_THEME_IDS))
-const themeId = computed<string>(() => resolveThemeId([
-  boardRef.value?.screenThemeId ?? null,
-  spaces.value.find(space => space.id === boardRef.value?.themeSpaceId)?.themeId ?? null,
-  dashboardThemeId.value,
-], BUILTIN_THEME_IDS))
-// An unknown stored id (deleted theme) is kept as it is; the default theme is shown meanwhile.
+const dashboardTheme = ref(loadAppearance().theme)
+const scheme = useColorScheme()
+const screenTheme = computed(() => boardRef.value?.screenTheme ?? null)
+const spaceTheme = computed(() => spaces.value.find(space => space.id === boardRef.value?.themeSpaceId)?.theme ?? null)
+const themeId = computed(() => resolveTheme([screenTheme.value, spaceTheme.value, dashboardTheme.value], scheme.value))
+const shownDashboardTheme = computed(() => dashboardTheme.value && BUILTIN_PALETTE_IDS.has(dashboardTheme.value.palette) ? dashboardTheme.value : DEFAULT_THEME)
+const inheritedScreenTheme = computed(() => spaceTheme.value && BUILTIN_PALETTE_IDS.has(spaceTheme.value.palette) ? spaceTheme.value : shownDashboardTheme.value)
+const boardTheme = computed(() => screenTheme.value && BUILTIN_PALETTE_IDS.has(screenTheme.value.palette) ? screenTheme.value : inheritedScreenTheme.value)
+// Keep unavailable stored choices until an explicit selection replaces them.
 const backgroundNotice = ref<string | null>(null)
 const themeNotice = ref<string | null>(
-  storedThemeId !== null && !BUILTIN_THEME_IDS.has(storedThemeId) ? 'Theme not found, showing the default theme' : null,
+  dashboardTheme.value !== null && !BUILTIN_PALETTE_IDS.has(dashboardTheme.value.palette) ? 'Theme not found, showing the default theme' : null,
 )
 const headerNotice = computed(() => [notice.value, themeNotice.value, backgroundNotice.value, boardRef.value?.backgroundLeaseError].filter(Boolean).join(' · ') || null)
 const statusText = computed(() => [apiDown.value ? apiLabel.value : null, headerNotice.value].filter(Boolean).join(' · '))
 
-function selectTheme(id: string) {
-  dashboardThemeId.value = resolveThemeId([id], BUILTIN_THEME_IDS)
+function selectTheme(choice: ThemeChoice) {
+  dashboardTheme.value = choice
   // A failed save keeps the theme applied for this session.
-  themeNotice.value = saveAppearance({ schemaVersion: 1, themeId: dashboardThemeId.value }) ? null : 'Could not save the theme'
+  themeNotice.value = saveAppearance({ schemaVersion: 2, theme: choice }) ? null : 'Could not save the theme'
 }
 
 const rootClass = computed(() => [
@@ -276,7 +280,7 @@ onMounted(check)
         <SpaceSwitcher
           v-if="state === 'ready' && spaces.length > 0"
           :spaces="spaces"
-          :dashboard-theme-id="dashboardThemeId"
+          :dashboard-theme="dashboardTheme"
           :current-id="currentId ?? ''"
           :editing="mode === 'edit'"
           :disabled="busy"
@@ -299,6 +303,7 @@ onMounted(check)
           v-model:space-id="spaceId"
           v-model:screen-id="screenId"
           :theme-id="themeId"
+          :theme-choice="boardTheme"
           :draft-source="draftSource"
           @notice="notice = $event"
           @api="apiDown = $event === 'down'"
@@ -312,7 +317,8 @@ onMounted(check)
           :index="screenIndex"
           :editing="mode === 'edit'"
           :disabled="!boardRef?.loaded || busy"
-          :theme-id="boardRef?.screenThemeId ?? null"
+          :theme="screenTheme"
+          :inherited="inheritedScreenTheme"
           :background="boardRef?.background ?? null"
           :screen-key="boardRef?.backgroundKey ?? ''"
           :can-add="screenCount < SPACE_LIMITS.screens"
@@ -344,7 +350,7 @@ onMounted(check)
         :screen-index="screenIndex"
         :screen-count="screenCount"
         :rows="boardRef?.rows ?? null"
-        :theme-id="dashboardThemeId"
+        :theme="shownDashboardTheme"
         :api-label="apiLabel"
         :api-down="apiDown"
         @pick="pickWidget"

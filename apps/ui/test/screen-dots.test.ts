@@ -3,7 +3,8 @@ import * as boardContracts from '@lifedashboard/contracts/board'
 import * as mediaApi from '../app/background/media-api'
 import { probeMedia } from '../app/background/import-media'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { BUILTIN_THEMES } from '../app/theme/builtin'
+import { themeModules } from './helpers/theme-picker'
+import { withTheme } from '../app/board/edit-session'
 import { compileSfc, mountComponent, unmountComponents } from './helpers/sfc-renderer'
 
 const editor = compileSfc(new URL('../app/background/BackgroundEditor.vue', import.meta.url), {
@@ -11,7 +12,7 @@ const editor = compileSfc(new URL('../app/background/BackgroundEditor.vue', impo
 })
 let resized: () => void
 const component = compileSfc(new URL('../app/spaces/ScreenDots.vue', import.meta.url), {
-  '../theme/builtin': { BUILTIN_THEMES },
+  ...themeModules,
   '../background/BackgroundEditor.vue': { __esModule: true, default: editor },
 })
 beforeEach(() => {
@@ -21,7 +22,7 @@ beforeEach(() => {
 })
 afterEach(() => { unmountComponents(); vi.unstubAllGlobals() })
 function mount(overrides: Record<string, unknown> = {}) {
-  return mountComponent(component, { count: 3, index: 1, editing: true, disabled: false, canAdd: true, canRemove: true, removeTitle: '', themeId: null, background: null, screenKey: 'space:screen', ...overrides }, ['go', 'add', 'remove', 'theme', 'background'])
+  return mountComponent(component, { count: 3, index: 1, editing: true, disabled: false, canAdd: true, canRemove: true, removeTitle: '', theme: null, inherited: { palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' }, background: null, screenKey: 'space:screen', ...overrides }, ['go', 'add', 'remove', 'theme', 'background'])
 }
 function open(ui: ReturnType<typeof mount>) {
   const panel = ui.panel()
@@ -50,17 +51,22 @@ describe('screen settings popover', () => {
     const ui = mount(), panel = open(ui)
     expect(panel.style.left).toBe('260px')
     expect(panel.style.top).toBe('492px')
-    expect(ui.nodes().find(el => el.tag === 'select')?.focused).toBe(true)
+    expect(ui.button('Inherit').focused).toBe(true)
   })
 
-  it('selects an explicit theme or inheritance without deleting or navigating', () => {
-    const ui = mount({ themeId: 'builtin:paper' })
-    const picker = ui.nodes().find(el => el.props['aria-label'] === 'Screen theme')
-    expect(picker).toBeDefined()
-    expect(picker!.props.value).toBe('builtin:paper')
-    picker!.props.onChange({ target: { value: 'builtin:glass' } })
-    picker!.props.onChange({ target: { value: '' } })
-    expect(ui.events).toEqual([['theme', 'builtin:glass'], ['theme', null]])
+  it('shows inheritance and sends the selected theme into a draft', async () => {
+    const ui = mount()
+    await nextTick()
+    expect(ui.button('Inherit').props['aria-checked']).toBe(true)
+    ui.button('Gruvbox').click()
+    const choice = { palette: 'builtin:gruvbox', mode: 'dark', style: 'glass' }
+    expect(ui.events).toEqual([['theme', choice]])
+    const draft = withTheme({ id: 'screen', rows: 12, instances: [], layout: [] }, ui.events[0]![1] as any)
+    expect(draft.theme).toEqual(choice)
+    ui.props.theme = choice
+    await nextTick()
+    ui.button('Inherit').click()
+    expect(ui.events.at(-1)).toEqual(['theme', null])
   })
 
   it('closes the shared panel before requesting deletion', () => {

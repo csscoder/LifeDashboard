@@ -54,7 +54,7 @@ it('opts the mounted widget body into semantic content styling', () => {
   const component = compileSfc(new URL('../app/widgets/WidgetFrame.vue', import.meta.url), {
     '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow,
   })
-  const mounted = mountComponent(component, { themeId: 'builtin:paper' }, [])
+  const mounted = mountComponent(component, { themeId: 'builtin:gruvbox-light-solid' }, [])
   const body = mounted.nodes().find(node => String(node.props.class).split(' ').includes('widget__body'))
   expect(body).toBeDefined()
   expect(String(body!.props.class).split(' ')).toContain('ld-content')

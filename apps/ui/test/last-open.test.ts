@@ -22,7 +22,7 @@ function memoryStorage(initial?: string) {
 }
 
 function space(id: string): SpaceSummary {
-  return { id, title: id, icon: '🏠', color: 'violet', themeId: null, position: 0, revision: 1 }
+  return { id, title: id, icon: '🏠', color: 'violet', theme: null, position: 0, revision: 1 }
 }
 
 describe('last-open storage', () => {

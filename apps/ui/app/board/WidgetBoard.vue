@@ -7,6 +7,8 @@ import { useBackgroundLeases } from '../background/use-media-leases'
 import { askDelete, pendingDelete } from '../spaces/confirm-delete'
 import { afterDelete } from '../spaces/nav'
 import { resolveWidgetLook } from '../theme/resolve'
+import type { ThemeChoice } from '@lifedashboard/contracts/theme'
+import { useColorScheme } from '../theme/color-scheme'
 import { describeSource, installedPackages } from '../widgets/catalog'
 import { builtinSettingsEditors } from '../widgets/registry'
 import { refreshSecretFlags, useSecretFlags } from '../widgets/secret-flags'
@@ -23,7 +25,8 @@ const mode = defineModel<BoardMode>('mode', { required: true })
 // Both ids are v-model: the app reads them, the board writes them when it switches.
 const spaceId = defineModel<string>('spaceId', { required: true })
 const screenId = defineModel<string | null>('screenId', { required: true })
-const props = defineProps<{ themeId: string; draftSource: WidgetSource }>()
+const scheme = useColorScheme()
+const props = defineProps<{ themeId: string; themeChoice: ThemeChoice; draftSource: WidgetSource }>()
 const emit = defineEmits<{
   notice: [message: string | null]
   // 'down' after a failed save: the board stays, the header shows the API as unavailable.
@@ -105,7 +108,7 @@ function setBackground(next: ScreenBackground | null) {
 const placed = computed(() =>
   shown.value.layout.flatMap((placement) => {
     const instance = shown.value.instances.find((item) => item.id === placement.instanceId)
-    return instance ? [{ instance, placement, look: resolveWidgetLook(instance.appearance, props.themeId) }] : []
+    return instance ? [{ instance, placement, look: resolveWidgetLook(instance.appearance, props.themeId, scheme.value) }] : []
   }),
 )
 
@@ -547,13 +550,13 @@ function setRows(value: number) {
   if (editing.value && !saving.value) working.value = withRows(working.value, value)
 }
 
-const screenThemeId = computed(() => shown.value.themeId ?? null)
+const screenTheme = computed(() => shown.value.theme ?? null)
 const themeSpaceId = computed(() => space.value?.spaceId ?? null)
 
-async function setScreenTheme(themeId: string | null) {
+async function setScreenTheme(theme: ThemeChoice | null) {
   if (!loaded.value || saving.value || switching.value || mode.value === 'build') return
-  if (themeId === screenThemeId.value) return
-  const next = withTheme(shown.value, themeId)
+  if (JSON.stringify(theme) === JSON.stringify(screenTheme.value)) return
+  const next = withTheme(shown.value, theme)
   if (editing.value) working.value = next
   else await save(next)
 }
@@ -566,7 +569,7 @@ defineExpose({
   loaded,
   rows,
   setRows,
-  screenThemeId,
+  screenTheme,
   themeSpaceId,
   setScreenTheme,
   background,
@@ -690,6 +693,7 @@ defineExpose({
       </div>
     </div>
     <WidgetSettings
+      :inherited="themeChoice"
       ref="settingsPanel"
       :appearance="settingsInstance?.appearance"
       :variants="settingsInstance ? describeSource(settingsInstance.source)?.variants : undefined"

@@ -3,8 +3,11 @@ import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch 
 import { SPACE_LIMITS, type SpacePatch, type SpaceSummary } from '@lifedashboard/contracts/space'
 import { FAN_GEOMETRY, fanLayout } from './fan-layout'
 import SpacePicker from './SpacePicker.vue'
-import { BUILTIN_THEME_IDS } from '../theme/builtin'
-import { resolveThemeId, themeClass } from '../theme/resolve'
+import type { ThemeChoice } from '@lifedashboard/contracts/theme'
+import { DEFAULT_THEME } from '../theme/builtin'
+import { BUILTIN_PALETTE_IDS } from '../theme/palettes'
+import { useColorScheme } from '../theme/color-scheme'
+import { resolveTheme, themeClass } from '../theme/resolve'
 
 // The corner button with the fan of space bubbles. Geometry in rem, from the corner button's centre
 // (2 rem from the inset right edge, 1.75 rem from the inset top), as the CSS places it.
@@ -13,8 +16,10 @@ const props = defineProps<{
   currentId: string
   editing: boolean
   disabled: boolean
-  dashboardThemeId: string
+  dashboardTheme: ThemeChoice | null
 }>()
+const scheme = useColorScheme()
+const inherited = computed(() => props.dashboardTheme && BUILTIN_PALETTE_IDS.has(props.dashboardTheme.palette) ? props.dashboardTheme : DEFAULT_THEME)
 const emit = defineEmits<{
   select: [id: string]
   create: []
@@ -210,7 +215,7 @@ onUnmounted(() => {
         :aria-label="space.title"
         :aria-current="space.id === currentId ? 'true' : undefined"
         :disabled="disabled"
-        :class="`space--theme-${themeClass(resolveThemeId([space.themeId, dashboardThemeId], BUILTIN_THEME_IDS))}`"
+        :class="`space--theme-${themeClass(resolveTheme([space.theme, dashboardTheme], scheme))}`"
         @click="choose(space.id)"
       >
         <span class="space-switcher__icon" aria-hidden="true">{{ space.icon }}</span>
@@ -242,7 +247,7 @@ onUnmounted(() => {
       <span class="space-switcher__label" aria-hidden="true">New space</span>
     </div>
     <div v-if="pickerSpace" class="space-switcher__picker">
-      <SpacePicker :space="pickerSpace" :disabled="disabled" @pick="onPickerPick" @close="onPickerClose" />
+      <SpacePicker :space="pickerSpace" :inherited="inherited" :disabled="disabled" @pick="onPickerPick" @close="onPickerClose" />
     </div>
   </div>
 </template>

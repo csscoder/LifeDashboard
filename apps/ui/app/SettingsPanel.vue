@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, useTemplateRef } from 'vue'
 import { GRID_COLS } from '@lifedashboard/contracts/grid'
-import { BUILTIN_THEMES } from './theme/builtin'
+import type { ThemeChoice } from '@lifedashboard/contracts/theme'
+import { DEFAULT_THEME } from './theme/builtin'
+import ThemePicker from './theme/ThemePicker.vue'
 import UiSelect from './ui/UiSelect.vue'
 import type { PickerEntry } from './widgets/catalog'
 
@@ -14,11 +16,11 @@ const props = defineProps<{
   screenIndex: number
   screenCount: number
   rows: number | null
-  themeId: string
+  theme: ThemeChoice
   apiLabel: string
   apiDown: boolean
 }>()
-const emit = defineEmits<{ pick: [key: string]; edit: []; library: []; theme: [id: string] }>()
+const emit = defineEmits<{ pick: [key: string]; edit: []; library: []; theme: [choice: ThemeChoice] }>()
 const panel = useTemplateRef<HTMLElement>('panel')
 const open = ref(false)
 
@@ -96,20 +98,7 @@ function pick(key: string) {
 
       <fieldset class="settings__themes">
         <legend>Default dashboard theme</legend>
-        <div class="settings__theme-list">
-          <button
-            v-for="theme in BUILTIN_THEMES"
-            :key="theme.id"
-            type="button"
-            class="settings__theme"
-            :aria-label="theme.name"
-            :aria-pressed="themeId === theme.id"
-            @click="emit('theme', theme.id)"
-          >
-            <span class="settings__swatch" :class="[theme.id.replace('builtin:', 'space--theme-'), `settings__swatch--${theme.skin}`]" aria-hidden="true" />
-            {{ theme.name }}
-          </button>
-        </div>
+        <ThemePicker :model-value="theme" :inherited="DEFAULT_THEME" @update:model-value="$event && $event !== 'bare' && emit('theme', $event)" />
       </fieldset>
       <footer class="settings__footer">
         <span class="settings__status" :class="{ 'settings__status--down': apiDown }"><span />{{ apiLabel }}</span>
@@ -182,13 +171,7 @@ function pick(key: string) {
 .settings__action-end { margin-left: auto; color: var(--ld-text-muted); }
 .settings__action:hover:not(:disabled) { background: var(--ld-state-selected); }
 .settings__themes { min-width: 0; margin: 0.875rem 0 0; padding: 0.875rem 0; border: 0; border-top: var(--ld-border-width) solid var(--ld-border-subtle); }
-.settings__themes legend { float: left; width: 100%; margin-bottom: 0.625rem; padding: 0; color: var(--ld-text-muted); font-size: 0.75rem; }
-.settings__theme-list { display: flex; clear: both; gap: 0.375rem; }
-.settings__theme { display: grid; justify-items: center; gap: 0.375rem; flex: 1; min-width: 0; padding: 0.625rem 0.25rem; border: var(--ld-border-width) solid var(--ld-border-subtle); border-radius: 0.875rem; background: var(--ld-state-hover); color: var(--ld-text-secondary); font: inherit; font-size: 0.75rem; cursor: pointer; }
-.settings__theme[aria-pressed='true'] { border-color: var(--ld-info); background: var(--ld-info-subtle); color: var(--ld-info-text); }
-.settings__swatch { width: 0.875rem; height: 0.875rem; border: var(--ld-border-width) solid var(--ld-border-strong); border-radius: 50%; }
-.settings__swatch--glass { background: var(--ld-info); box-shadow: 0 0 0.625rem var(--ld-info); }
-.settings__swatch--solid, .settings__swatch--paper { background: var(--ld-bg); }
+.settings__themes legend { width: 100%; margin-bottom: 0.625rem; padding: 0; color: var(--ld-text-muted); font-size: 0.75rem; }
 .settings__footer { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding-top: 0.75rem; border-top: var(--ld-border-width) solid var(--ld-border-subtle); color: var(--ld-text-muted); font-size: 0.6875rem; }
 .settings__status { display: flex; align-items: center; gap: 0.375rem; }
 .settings__status > span { width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--ld-success); }

@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, watch, type Component } from 'vue'
 import {
-  BARE_THEME_ID,
   DEFAULT_SHADOW,
   SHADOW_LIMITS,
   type DropShadow,
   type WidgetAppearance,
 } from '@lifedashboard/contracts/board'
 import type { SettingsSchema } from '@lifedashboard/contracts/widget-settings'
-import { BUILTIN_THEMES } from '../theme/builtin'
-import { panelPosition, styleValue, withShadow, withStyle, withVariant } from './widget-settings'
+import type { ThemeChoice } from '@lifedashboard/contracts/theme'
+import { BUILTIN_PALETTE_IDS } from '../theme/palettes'
+import ThemePicker from '../theme/ThemePicker.vue'
+import { panelPosition, withShadow, withStyle, withVariant } from './widget-settings'
 import { resolveVariant, type WidgetVariants } from '@lifedashboard/contracts/widget-variants'
 import { Separator } from 'reka-ui'
 import SettingsRow from './SettingsRow.vue'
@@ -24,6 +25,7 @@ import WidgetConfigForm from './WidgetConfigForm.vue'
 // «⚙» and «×» stay clear. It sits in the top layer, so the board never clips it; light dismiss and Esc
 // are native (spec «Host UI»).
 const props = defineProps<{
+  inherited: ThemeChoice
   variants?: WidgetVariants
   appearance: WidgetAppearance | undefined
   schema: SettingsSchema | undefined
@@ -53,11 +55,6 @@ const offsets = [
   { key: 'y', label: 'Y', limits: SHADOW_LIMITS.y },
   { key: 'blur', label: 'Blur', limits: SHADOW_LIMITS.blur },
 ] as const
-const styleOptions = [
-  { value: '', label: 'Same as board' },
-  ...BUILTIN_THEMES.map((theme) => ({ value: theme.id, label: theme.name })),
-  { value: BARE_THEME_ID, label: 'No frame' },
-]
 // A built-in editor needs its schema; the generic form needs at least one setting.
 const hasWidgetBlock = computed(() => Boolean(props.schema && (props.editor || Object.keys(props.schema.properties).length > 0)))
 const versionOptions = computed(() => props.versions.map((item) => ({ value: item, label: item })))
@@ -93,11 +90,11 @@ function onFocusOut(event: FocusEvent) {
 
 function onToggle(event: ToggleEvent) {
   const opened = event.newState === 'open'
-  if (opened) panel.value?.querySelector<HTMLElement>('.ui-select')?.focus()
+  if (opened) panel.value?.querySelector<HTMLElement>('button')?.focus()
   emit('toggle', opened)
 }
 
-function setStyle(value: string) {
+function setStyle(value: ThemeChoice | 'bare' | null) {
   emit('change', withStyle(props.appearance, value))
 }
 
@@ -131,7 +128,11 @@ defineExpose({ open, close, isOpen })
       <Separator class="settings__separator" />
     </template>
     <h2 class="settings__heading">Appearance</h2>
-    <SettingsRow label="Style"><UiSelect :model-value="styleValue(appearance)" :options="styleOptions" @update:model-value="setStyle" /></SettingsRow>
+    <SettingsRow class="settings__theme" label="Style" :native-label="false">
+      <ThemePicker :model-value="appearance?.theme ?? null" inherit bare :inherited="inherited"
+        :unavailable="!!appearance?.theme && appearance.theme !== 'bare' && !BUILTIN_PALETTE_IDS.has(appearance.theme.palette)"
+        @update:model-value="setStyle" />
+    </SettingsRow>
     <SettingsRow v-if="variants" label="Look">
       <UiSelect :model-value="resolveVariant(variants, appearance?.variant)" :options="variants.items.map(item => ({ value: item.id, label: item.title }))" @update:model-value="emit('change', withVariant(appearance, $event))" />
     </SettingsRow>
@@ -177,7 +178,8 @@ defineExpose({ open, close, isOpen })
   position: fixed;
   inset: auto;
   margin: 0;
-  width: 18rem;
+  width: 21rem;
+  max-width: calc(100vw - 1.5rem);
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
   padding: 0.625rem 0.75rem;
@@ -197,6 +199,7 @@ defineExpose({ open, close, isOpen })
   gap: 0.375rem;
 }
 
+.settings__theme { grid-template-columns: minmax(0, 1fr); }
 .settings__heading { margin: 0; font: inherit; font-weight: 600; }
 .settings__version-hint { margin: 0; font-size: 0.75rem; line-height: 1rem; color: var(--ld-text-secondary); }
 .settings__separator { height: var(--ld-border-width); background: var(--ld-border-default); margin: 0.5rem 0; }

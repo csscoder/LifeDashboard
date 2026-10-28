@@ -28,7 +28,7 @@ describe('board settings integration', () => {
   })
 
   it('reset keeps secrets and clears the look after confirming the exact copy', async () => {
-    const working = { value: { id: 'screen', rows: 12, instances: [{ id: 'w1', source: { kind: 'builtin', type: 'clock-analog-1' }, config: { zone: 'UTC' }, appearance: { themeId: 'builtin:bare', shadow: DEFAULT_SHADOW, variant: 'roman' } }], layout: [] } as ScreenBoard }
+    const working = { value: { id: 'screen', rows: 12, instances: [{ id: 'w1', source: { kind: 'builtin', type: 'clock-analog-1' }, config: { zone: 'UTC' }, appearance: { theme: 'bare', shadow: DEFAULT_SHADOW, variant: 'roman' } }], layout: [] } as ScreenBoard }
     const askDelete = vi.fn().mockResolvedValue(true)
     const api = { clearWidgetSecret: vi.fn() }
     const body = source.slice(source.indexOf('async function resetSettings()'), source.indexOf('\nconst settingsInstance'))

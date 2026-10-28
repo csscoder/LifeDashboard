@@ -1,4 +1,4 @@
-import { nextTick, onMounted, onUnmounted, reactive, watch } from 'vue'
+import { onMounted, onUnmounted, reactive, watch } from 'vue'
 import type { Size } from '@lifedashboard/contracts/grid'
 import { sizeClass, type WidgetContext } from '@lifedashboard/contracts/widget-gateway'
 import { themeMeta } from '../theme/builtin'
@@ -46,8 +46,7 @@ export function useWidgetContext(source: {
   })
 
   // Tokens are read after the frame re-renders with the new theme class.
-  async function readTheme() {
-    await nextTick()
+  function readTheme() {
     const id = source.themeId()
     const frame = source.frame()
     context.theme = { id, scheme: themeMeta(id).mode, tokens: frame ? readThemeTokens(frame) : {} }
@@ -83,9 +82,9 @@ export function useWidgetContext(source: {
   watch(source.frameMode, (frame) => {
     context.frame = frame
   })
-  // `foreign` changes the computed tokens without changing the id (a widget fixed to Glass while the
-  // board switches Glass → Paper), so the pair is watched.
-  watch(() => [source.themeId(), source.foreign()] as const, readTheme)
+  // `foreign` can change the computed tokens without changing the id, so watch both.
+  // Post-flush reads the frame's updated class before the caller's nextTick resolves.
+  watch(() => [source.themeId(), source.foreign()] as const, readTheme, { flush: 'post' })
   onMounted(() => {
     if (typeof IntersectionObserver !== 'undefined') {
       observer = new IntersectionObserver((entries) => {
@@ -98,7 +97,7 @@ export function useWidgetContext(source: {
       if (frame) observer.observe(frame)
     }
     onResize()
-    void readTheme()
+    readTheme()
     window.addEventListener('resize', onResize)
     document.addEventListener('visibilitychange', onVisibility)
   })
