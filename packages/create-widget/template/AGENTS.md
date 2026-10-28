@@ -20,6 +20,15 @@ Read it when a rule below is unclear or a task is not covered here.
 - Keep `title` and `id` in `widget.json` as created, unless the user asks to change them.
 - Read only this project's files, the SDK docs and the `.d.ts` types. Do not read the compiled files of the SDK: the docs cover the dev shell URL, themes and limits.
 
+## Settings and looks
+
+- Declare user options (time zone, units, city) in `settings` in `widget.json`. The dashboard draws one settings panel for every widget. Do not build a settings form in the widget or in a modal.
+- The dashboard stores the values in its database per widget instance. Every plain setting needs `default`: the factory value that «Reset to defaults» restores.
+- API keys and tokens are `secret` settings with `bind`. The widget sees only `true` or `false`.
+- `settings` hold what the user chooses; `widget.state` holds data the widget produces.
+- Several visual designs of one function (clock faces, hands, gauge styles) are one widget with `variants`, not several widgets. A variant changes the look only, never data or behavior. Draw every variant with `--ld-*` tokens. Read `context.variant`.
+- Workflow step 1 also covers every variant.
+
 ## Workflow
 
 1. `npx ld-widget dev`: open the shell at min, default and max size, in every theme, framed and frameless. Without a browser, run `npx ld-widget shot` and look at each image in `.ld-widget/shots/`.

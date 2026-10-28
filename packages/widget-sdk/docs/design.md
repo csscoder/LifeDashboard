@@ -109,3 +109,43 @@ Text must keep readable contrast in every theme. Put `text-*` on `surface-*` tok
 - `frameless` (manifest `frame`, needs sdk 3): the host draws no card. The widget draws its own background, or none.
 - Declare `"frame": "frameless"` for object-like widgets: clocks, gauges and stickers. Such a widget draws no card background.
 - Read `context.frame` when the widget must change its styling by frame.
+
+## Looks (variants)
+
+Several visual designs of one function (clock faces, hands, gauge styles) are one widget with `variants`, not several widgets. A variant changes the look only, never data or behavior. Draw every variant with `--ld-*` tokens. Read `context.variant`, which updates reactively when the user changes the Look selector in the dashboard's settings panel.
+
+Declare `variants` in `widget.json` (sdk 5). It has `default` and `items`, with 2 to 16 entries. Each item has a distinct `id` matching `^[a-z][a-z0-9-]{0,31}$` and a plain-text `title` of 1 to 60 characters. `default` must name an item. Missing or unknown stored ids resolve to the default; without variants, `context.variant` is an empty string.
+
+For a clock, add this manifest field:
+
+```json
+"variants": {
+  "default": "classic",
+  "items": [
+    { "id": "classic", "title": "Classic" },
+    { "id": "minimal", "title": "Minimal" },
+    { "id": "roman", "title": "Roman" }
+  ]
+}
+```
+
+Switch the face in `src/index.vue` while sharing the same time and settings:
+
+```vue
+<script setup lang="ts">
+import { useWidget } from '@lifedashboard/widget-sdk'
+import ClassicFace from './ClassicFace.vue'
+import MinimalFace from './MinimalFace.vue'
+import RomanFace from './RomanFace.vue'
+
+const { context } = useWidget()
+</script>
+
+<template>
+  <MinimalFace v-if="context.variant === 'minimal'" />
+  <RomanFace v-else-if="context.variant === 'roman'" />
+  <ClassicFace v-else />
+</template>
+```
+
+Each face uses theme tokens and fits the widget rectangle. Workflow step 1 also covers every variant: check each look at min, default and max size, in every theme, framed and frameless.

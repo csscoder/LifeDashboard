@@ -20,6 +20,7 @@ import {
   WIDGET_ERROR_CODES,
 } from '@lifedashboard/contracts/widget-gateway'
 import { NETWORK_ORIGINS_MAX, PACKAGE_LIMITS, WIDGET_PERMISSIONS } from '@lifedashboard/contracts/widget-package'
+import { VARIANT_LIMITS } from '@lifedashboard/contracts/widget-variants'
 import { SETTINGS_LIMITS } from '@lifedashboard/contracts/widget-settings'
 import { extractThemeTokens } from '../src/dev/themes.ts'
 
@@ -86,6 +87,7 @@ export async function docValues(themeTokens: readonly string[]): Promise<Record<
     CODE_BYTES: String(PACKAGE_LIMITS.codeBytes),
     VUE_RANGE: pkg.peerDependencies.vue!,
     TITLE_MAX: String(PACKAGE_LIMITS.maxTextLength),
+    VARIANTS_MAX: String(VARIANT_LIMITS.items),
     SETTINGS_PROPERTIES: String(SETTINGS_LIMITS.properties),
     SETTINGS_DESCRIPTION_LENGTH: String(SETTINGS_LIMITS.descriptionLength),
     SETTINGS_ENUM_ITEMS: String(SETTINGS_LIMITS.enumItems),

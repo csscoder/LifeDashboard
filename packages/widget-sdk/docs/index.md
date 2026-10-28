@@ -41,7 +41,8 @@ AGENTS.md            rules for coding agents
   "styles": [],
   "sizing": { "default": { "w": 2, "h": 2 }, "min": { "w": 1, "h": 1 }, "max": { "w": 4, "h": 4 } },
   "permissions": ["state"],
-  "frame": "framed"
+  "frame": "framed",
+  "variants": { "default": "classic", "items": [{ "id": "classic", "title": "Classic" }, { "id": "minimal", "title": "Minimal" }] }
 }
 ```
 
@@ -49,6 +50,7 @@ AGENTS.md            rules for coding agents
 - `permissions`: any of `state`, `notifications`, `network`. Declare each permission the code uses.
 - `network`: optional HTTP origins, at most 16. A present list needs at least one origin. Only these origins are reachable through `widget.http`.
 - `sizing`: `min`, `default` and `max` in grid cells. See [design.md](design.md).
+- `variants`: optional looks for one widget; needs sdk 5. See [design.md](design.md#looks-variants).
 - `settings`: see [settings.md](settings.md).
 - `frame`: `framed` (default) or `frameless`; needs sdk 3. See [design.md](design.md).
 

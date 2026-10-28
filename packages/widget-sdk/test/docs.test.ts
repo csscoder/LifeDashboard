@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { BRIDGE_LIMITS, GATEWAY_OPS, HTTP_LIMITS, STATE_MAX_BYTES, WIDGET_ERROR_CODES } from '@lifedashboard/contracts/widget-gateway'
+import { VARIANT_LIMITS } from '@lifedashboard/contracts/widget-variants'
 import { BUILTIN_THEMES, checkDocs, docValues, freshDocs, renderDocs, themeTokenNames } from '../scripts/docs.ts'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
@@ -15,7 +16,7 @@ const DOC_KEYS = [
   'NETWORK_ORIGINS_MAX', 'BRIDGE_MAX_MESSAGE_BYTES', 'BRIDGE_REQUEST_TIMEOUT_MS', 'BRIDGE_CONFIRM_TIMEOUT_MS',
   'BRIDGE_MAX_IN_FLIGHT', 'CONFIRMATION_TTL_MS', 'CODE_BYTES', 'VUE_RANGE', 'TITLE_MAX', 'SETTINGS_PROPERTIES',
   'SETTINGS_DESCRIPTION_LENGTH', 'SETTINGS_ENUM_ITEMS', 'SETTINGS_MAX_LENGTH', 'SECRET_MIN_LENGTH', 'REDACTED',
-  'GRID_COLS', 'ROWS_MAX', 'ERROR_CODES', 'THEME_TOKENS', 'THEME_IDS', 'CSP',
+  'VARIANTS_MAX', 'GRID_COLS', 'ROWS_MAX', 'ERROR_CODES', 'THEME_TOKENS', 'THEME_IDS', 'CSP',
 ].sort()
 
 async function readPages(dir: string): Promise<Map<string, string>> {
@@ -52,6 +53,7 @@ describe('docValues', () => {
 
   it('takes numbers from the platform constants', async () => {
     const values = await docValues(await themeTokenNames())
+    expect(values.VARIANTS_MAX).toBe(String(VARIANT_LIMITS.items))
     expect(values.STATE_MAX_BYTES).toBe(String(STATE_MAX_BYTES))
     expect(values.HTTP_ANSWER_BYTES).toBe(String(HTTP_LIMITS.answerBytes))
     expect(values.BRIDGE_CONFIRM_TIMEOUT_MS).toBe(String(BRIDGE_LIMITS.confirmTimeoutMs))
@@ -86,6 +88,15 @@ describe('freshDocs and the committed docs', () => {
 })
 
 describe('page content', () => {
+  it('documents looks in the manifest, design guidance and context API', async () => {
+    const docs = await freshDocs()
+    expect(docs.get('design.md')).toContain('## Looks (variants)')
+    expect(docs.get('design.md')).toContain('16')
+    expect(docs.get('design.md')).toContain('context.variant')
+    expect(docs.get('api.md')).toMatch(/\| `variant` \| .*Since sdk 5/)
+    expect(docs.get('index.md')).toContain('`variants`')
+  })
+
   it('errors.md has one heading per WidgetErrorCode and no other code headings', async () => {
     const errors = (await freshDocs()).get('errors.md')!
     const headings = errors.match(/^### .+$/gm) ?? []

@@ -23,6 +23,7 @@ const widget = useWidget() // call inside component setup; throws outside a widg
 | `theme` | `{ id, scheme, tokens }`: `scheme` is `light` or `dark`; `tokens` maps each `--ld-*` name to its resolved value |
 | `rootFontSize` | the dashboard's root font size in px, so `rem` in the frame matches the board |
 | `config` | the manifest settings, with defaults for missing or invalid values. A secret setting is a boolean: `true` when set |
+| `variant` | the selected look id, or an empty string without variants. Missing or unknown ids fall back to the manifest default. Since sdk 5 |
 | `locale` | the dashboard locale |
 | `visible` | `false` while the widget is not visible to the user. Pause animation and polling then |
 
@@ -102,6 +103,7 @@ Errors are `WidgetError` objects with a `code`. See [errors.md](errors.md).
 - Level 2: the settings schema (`settings`), typed HTTP (`http.get`, `http.send`) and `context.frame`.
 - Level 3: the manifest `frame` field.
 - Level 4: named modal workspaces through `widget.modal`.
+- Level 5: manifest `variants` and `context.variant`.
 
 ## modal
 

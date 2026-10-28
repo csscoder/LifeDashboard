@@ -2,6 +2,18 @@
 
 Settings let the user configure a widget without changing its code. Declare them in `widget.json` under `settings`, which needs sdk 2.
 
+## Who draws the panel
+
+Declare user options (time zone, units, city) in `settings` in `widget.json`. The dashboard draws one settings panel for every widget. Do not build a settings form in the widget or in a modal.
+
+## Storage and reset
+
+The dashboard stores the values in its database per widget instance. Every plain setting needs `default`: the factory value that «Reset to defaults» restores. Reset also restores the default look and appearance; it keeps secrets.
+
+## Settings or state
+
+`settings` hold what the user chooses; `widget.state` holds data the widget produces. For example, units belong in settings, while a saved counter belongs in state. State requires the `state` permission.
+
 ## Schema
 
 `settings` is an object schema with `type: "object"`, `properties` and an optional `required` list of setting keys from `properties`.
@@ -38,9 +50,9 @@ Types: `string`, `number`, `integer`, `boolean` and `secret`.
 
 `widget-env.d.ts` in the project declares the types of `config`. `ld-widget check` and `ld-widget build` regenerate it from `widget.json`. Do not edit it.
 
-## Secret settings
+## Secrets for API keys
 
-A secret setting holds a credential that the widget must not see.
+API keys and tokens are `secret` settings with `bind`. The widget sees only `true` or `false`, never the credential.
 
 - `bind` names where the host injects the value: `origin` (one of the manifest `network` origins) and exactly one of `header` (with optional `prefix`) or `query`.
 - `origin` must be `https`, or `http` on `127.0.0.1`, `localhost` or `[::1]`.
