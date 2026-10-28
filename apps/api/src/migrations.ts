@@ -1,3 +1,4 @@
+import { legacyTheme } from '@lifedashboard/contracts/theme'
 import { existsSync } from 'node:fs'
 import type { DatabaseSync } from 'node:sqlite'
 import { moveToOrphaned, userwidgetsDir, versionDir, writeV1Version } from './userwidgets.ts'
@@ -46,6 +47,27 @@ SELECT package_id, version, hash, manifest, installed_at FROM widget_package_ver
 DROP TABLE widget_package_versions;
 ALTER TABLE widget_package_versions_new RENAME TO widget_package_versions;
 `)
+}
+
+function migrateThemeChoices(db: DatabaseSync): void {
+  db.exec('ALTER TABLE spaces ADD COLUMN theme TEXT; ALTER TABLE screens ADD COLUMN theme TEXT;')
+  for (const table of ['spaces', 'screens']) {
+    const write = db.prepare(`UPDATE ${table} SET theme = ? WHERE id = ?`)
+    for (const row of db.prepare(`SELECT id, theme_id FROM ${table} WHERE theme_id IS NOT NULL`).all() as { id: string; theme_id: string }[]) {
+      const theme = legacyTheme(row.theme_id)
+      if (theme !== null && theme !== 'bare') write.run(JSON.stringify(theme), row.id)
+    }
+  }
+  const write = db.prepare('UPDATE widgets SET appearance = ? WHERE id = ?')
+  for (const row of db.prepare('SELECT id, appearance FROM widgets WHERE appearance IS NOT NULL').all() as { id: string; appearance: string }[]) {
+    let appearance: unknown
+    try { appearance = JSON.parse(row.appearance) } catch { continue }
+    if (appearance === null || typeof appearance !== 'object' || Array.isArray(appearance) || !Object.hasOwn(appearance, 'themeId')) continue
+    const parsed = appearance as Record<string, unknown>
+    parsed.theme = legacyTheme(parsed.themeId)
+    delete parsed.themeId
+    write.run(JSON.stringify(parsed), row.id)
+  }
 }
 
 // Applied in order inside a transaction; migration n sets PRAGMA user_version = n.
@@ -217,4 +239,5 @@ WHERE CASE WHEN json_valid(background)
   ELSE 0 END;
 `,
   `CREATE INDEX widget_audit_at ON widget_audit(at);`,
+  migrateThemeChoices,
 ]

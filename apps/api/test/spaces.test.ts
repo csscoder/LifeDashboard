@@ -87,7 +87,7 @@ describe('GET /api/v1/spaces', () => {
   it('lists the seed space', async () => {
     const response = await call(t.app, { url: '/api/v1/spaces', cookie })
     expect(response.statusCode).toBe(200)
-    expect(response.json().data).toEqual([{ id: SEED_SPACE_ID, title: 'Home', icon: '🏠', color: 'violet', themeId: null, position: 0, revision: 1 }])
+    expect(response.json().data).toEqual([{ id: SEED_SPACE_ID, title: 'Home', icon: '🏠', color: 'violet', theme: null, position: 0, revision: 1 }])
   })
 })
 
@@ -95,8 +95,8 @@ describe('POST /api/v1/spaces', () => {
   it('creates spaces with the next colour, the next position and one empty screen', async () => {
     const first = (await create()).json().data as SpaceSummary
     const second = (await create()).json().data as SpaceSummary
-    expect(first).toEqual({ id: expect.any(String), title: 'New space', icon: '⭐', color: 'blue', themeId: null, position: 1, revision: 1 })
-    expect(second).toEqual({ id: expect.any(String), title: 'New space', icon: '⭐', color: 'teal', themeId: null, position: 2, revision: 1 })
+    expect(first).toEqual({ id: expect.any(String), title: 'New space', icon: '⭐', color: 'blue', theme: null, position: 1, revision: 1 })
+    expect(second).toEqual({ id: expect.any(String), title: 'New space', icon: '⭐', color: 'teal', theme: null, position: 2, revision: 1 })
     expect((await listSpaces()).map((space) => [space.id, space.position])).toEqual([
       [SEED_SPACE_ID, 0],
       [first.id, 1],
@@ -126,7 +126,7 @@ describe('PATCH /api/v1/spaces/:spaceId', () => {
   it('updates title, icon and colour, keeps the revision', async () => {
     const response = await patch(SEED_SPACE_ID, { title: '  House ', icon: '💼', color: 'pink' })
     expect(response.statusCode).toBe(200)
-    const expected = { id: SEED_SPACE_ID, title: 'House', icon: '💼', color: 'pink', themeId: null, position: 0, revision: 1 }
+    const expected = { id: SEED_SPACE_ID, title: 'House', icon: '💼', color: 'pink', theme: null, position: 0, revision: 1 }
     expect(response.json().data).toEqual(expected)
     expect(await listSpaces()).toEqual([expected])
   })
@@ -578,7 +578,7 @@ describe('package widget version transitions', () => {
     }
     original = oneWidget(A, SEED_SCREEN_ID)
     original.instances[0]!.source = { kind: 'package', packageId: 'dev.test.hello', version: '1.0.0' }
-    original.instances[0]!.appearance = { themeId: 'builtin:glass', shadow: null, variant: null }
+    original.instances[0]!.appearance = { theme: { palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' }, shadow: null, variant: null }
     original.layout[0] = { instanceId: A, x: 0, y: 0, w: 3, h: 3 }
     const saved = await put({ expectedRevision: 1, screens: [original] })
     expect(saved.statusCode, saved.body).toBe(200)
@@ -653,18 +653,18 @@ describe('package widget version transitions', () => {
 })
 
 describe('widget appearance', () => {
-  const look = { themeId: 'builtin:bare', shadow: { x: 2, y: 4, blur: 12, color: '#102030', opacity: 0.25 }, variant: null }
+  const look = { theme: 'bare', shadow: { x: 2, y: 4, blur: 12, color: '#102030', opacity: 0.25 }, variant: null }
   const styled = (appearance: unknown) => ({
     ...screen,
     instances: [{ ...screen.instances[0]!, appearance }, screen.instances[1]!],
   })
 
-  it('reads a legacy appearance row with variant null', async () => {
+  it('reads an appearance row without a theme with variant null', async () => {
     expect((await put({ expectedRevision: 1, screens: [screen] })).statusCode).toBe(200)
     t.db.prepare('UPDATE widgets SET appearance = ? WHERE id = ?')
-      .run('{"themeId":"builtin:paper","shadow":null}', screen.instances[0]!.id)
+      .run(JSON.stringify({ shadow: look.shadow, variant: null }), screen.instances[0]!.id)
     const board = await getBoard()
-    expect(board.screens[0]!.instances[0]!.appearance).toEqual({ themeId: 'builtin:paper', shadow: null, variant: null })
+    expect(board.screens[0]!.instances[0]!.appearance).toEqual({ theme: null, shadow: look.shadow, variant: null })
     const response = await put({ expectedRevision: board.revision, screens: board.screens })
     expect(response.statusCode).toBe(200)
     expect(response.json().data.screens).toEqual(board.screens)
@@ -683,14 +683,14 @@ describe('widget appearance', () => {
   })
 
   it('stores NULL for an empty appearance and reads the old board JSON back', async () => {
-    const response = await put({ expectedRevision: 1, screens: [styled({ themeId: null, shadow: null, variant: null })] })
+    const response = await put({ expectedRevision: 1, screens: [styled({ theme: null, shadow: null, variant: null })] })
     expect(response.statusCode).toBe(200)
     expect(t.db.prepare('SELECT appearance FROM widgets ORDER BY rowid').all()).toEqual([{ appearance: null }, { appearance: null }])
     expect(JSON.stringify((await getBoard()).screens[0])).toBe(JSON.stringify(screen))
   })
 
   it('answers 400 for an invalid appearance and changes nothing', async () => {
-    const response = await put({ expectedRevision: 1, screens: [styled({ themeId: null, shadow: { ...look.shadow, blur: 49 } })] })
+    const response = await put({ expectedRevision: 1, screens: [styled({ theme: null, shadow: { ...look.shadow, blur: 49 } })] })
     expect(response.statusCode).toBe(400)
     expect(errorCode(response)).toBe('VALIDATION_ERROR')
     expect(await getBoard()).toEqual({ spaceId: SEED_SPACE_ID, revision: 1, screens: [EMPTY_SCREEN] })
@@ -699,75 +699,47 @@ describe('widget appearance', () => {
 
 
 describe('space and screen theme persistence', () => {
-  it('sets and clears a space theme without changing the board or its revision', async () => {
-    const before = (await put({ expectedRevision: 1, screens: [screen] })).json().data as SpaceBoard
-    const saved = await patch(SEED_SPACE_ID, { themeId: 'builtin:paper' })
-    expect(saved.statusCode).toBe(200)
-    expect(saved.json().data).toMatchObject({ themeId: 'builtin:paper', revision: 2 })
-    expect((await listSpaces())[0]!.themeId).toBe('builtin:paper')
-    expect(await getBoard()).toEqual(before)
-    expect((await patch(SEED_SPACE_ID, { title: 'Home' })).json().data.themeId).toBe('builtin:paper')
-    const cleared = await patch(SEED_SPACE_ID, { themeId: null })
-    expect(cleared.statusCode).toBe(200)
-    expect((await listSpaces())[0]).toMatchObject({ themeId: null, revision: 2, title: 'Home' })
+  const paper = { palette: 'builtin:lifedashboard', mode: 'light', style: 'solid' }
+  const obsidian = { palette: 'builtin:lifedashboard', mode: 'dark', style: 'solid' }
+  const gruvbox = { palette: 'builtin:gruvbox', mode: 'auto', style: 'glass' }
+
+  it('stores structured and legacy space themes, preserves them on metadata edits and clears them', async () => {
+    expect((await patch(SEED_SPACE_ID, { theme: gruvbox })).json().data).toMatchObject({ theme: gruvbox, revision: 1 })
+    expect((await listSpaces())[0]!.theme).toEqual(gruvbox)
+    expect((await patch(SEED_SPACE_ID, { themeId: 'builtin:paper' })).json().data.theme).toEqual(paper)
+    expect((await patch(SEED_SPACE_ID, { title: 'Home' })).json().data.theme).toEqual(paper)
+    expect((await patch(SEED_SPACE_ID, { theme: null })).json().data.theme).toBeNull()
+    expect(t.db.prepare('SELECT theme_id, theme FROM spaces').get()).toEqual({ theme_id: null, theme: null })
   })
 
-  it.each(['builtin:future-theme', `user:${A}`])('round-trips an unknown valid theme %s at both scopes', async (themeId) => {
-    expect((await patch(SEED_SPACE_ID, { themeId })).statusCode).toBe(200)
-    expect((await listSpaces())[0]!.themeId).toBe(themeId)
-    const response = await put({ expectedRevision: 1, screens: [{ ...EMPTY_SCREEN, themeId }] })
+  it('canonicalizes legacy screen and widget themes on PUT and GET', async () => {
+    const legacy = { ...screen, themeId: 'builtin:obsidian', instances: [{ ...screen.instances[0]!, appearance: { themeId: 'builtin:bare', shadow: null } }, screen.instances[1]!] }
+    const response = await put({ expectedRevision: 1, screens: [legacy] })
     expect(response.statusCode).toBe(200)
-    expect((await getBoard()).screens[0]!.themeId).toBe(themeId)
+    const expected = { ...screen, theme: obsidian, instances: [{ ...screen.instances[0]!, appearance: { theme: 'bare', shadow: null, variant: null } }, screen.instances[1]!] }
+    expect(response.json().data.screens).toEqual([expected])
+    expect((await getBoard()).screens).toEqual([expected])
+    expect(JSON.stringify(response.json().data)).not.toContain('themeId')
+    expect(t.db.prepare('SELECT theme_id FROM screens').get()).toEqual({ theme_id: null })
   })
 
-  it('round-trips screen themes canonically and retains them through widget and row edits', async () => {
-    const themed = { id: screen.id, rows: screen.rows, themeId: 'builtin:paper', instances: screen.instances, layout: screen.layout }
-    themed.instances = structuredClone(themed.instances)
-    themed.instances[0]!.appearance = { themeId: 'builtin:bare', shadow: null, variant: null }
-    const response = await put({ expectedRevision: 1, screens: [themed] })
-    expect(response.statusCode).toBe(200)
-    expect(JSON.stringify(response.json().data.screens[0])).toBe(JSON.stringify(themed))
+  it('retains structured screen themes through edits, rejects stale writes and clears themes', async () => {
+    expect((await put({ expectedRevision: 1, screens: [{ ...screen, theme: gruvbox }] })).statusCode).toBe(200)
     const loaded = await getBoard()
     loaded.screens[0]!.rows = 20
-    loaded.screens[0]!.instances[1]!.config = { title: 'Changed' }
-    expect((await put({ expectedRevision: loaded.revision, screens: loaded.screens })).statusCode).toBe(200)
-    const edited = await getBoard()
-    expect(edited.screens[0]).toMatchObject({ themeId: 'builtin:paper', rows: 20 })
-    expect(edited.screens[0]!.instances[0]!.appearance).toEqual({ themeId: 'builtin:bare', shadow: null, variant: null })
-    expect(edited.screens[0]!.instances[1]!.config).toEqual({ title: 'Changed' })
-    expect((await listSpaces())[0]!.themeId).toBeNull()
-  })
-
-  it.each(['null', 'absent'])('clears the screen theme with %s without changing widgets', async (mode) => {
-    const response = await put({ expectedRevision: 1, screens: [{ ...screen, themeId: 'builtin:paper' }] })
-    expect(response.statusCode).toBe(200)
-    expect(response.json().data.screens[0].themeId).toBe('builtin:paper')
-    const cleared = await put({ expectedRevision: 2, screens: [{ ...screen, ...(mode === 'null' && { themeId: null }) }] })
-    expect(cleared.statusCode).toBe(200)
+    expect((await put({ expectedRevision: 2, screens: loaded.screens })).statusCode).toBe(200)
+    expect((await getBoard()).screens[0]).toMatchObject({ theme: gruvbox, rows: 20 })
+    expect((await put({ expectedRevision: 2, screens: [screen] })).statusCode).toBe(409)
+    expect((await put({ expectedRevision: 3, screens: [{ ...screen, theme: null }] })).statusCode).toBe(200)
     expect((await getBoard()).screens).toEqual([screen])
-    expect(t.db.prepare('SELECT theme_id FROM screens WHERE id = ?').get(SEED_SCREEN_ID)).toEqual({ theme_id: null })
+    expect(t.db.prepare('SELECT theme FROM screens').get()).toEqual({ theme: null })
   })
 
-  it('rejects a stale screen theme write and preserves the newer theme', async () => {
-    await put({ expectedRevision: 1, screens: [{ ...screen, themeId: 'builtin:paper' }] })
-    const response = await put({ expectedRevision: 1, screens: [{ ...screen, themeId: 'builtin:glass' }] })
-    expect(response.statusCode).toBe(409)
-    expect(errorCode(response)).toBe('REVISION_CONFLICT')
-    expect(await getBoard()).toEqual({ spaceId: SEED_SPACE_ID, revision: 2, screens: [{ ...screen, themeId: 'builtin:paper' }] })
-  })
-
-  it.each(['builtin:bare', 'paper', 'builtin:', 'user:invalid', 7, {}])('rejects invalid theme %j without modifying either scope', async (themeId) => {
-    await patch(SEED_SPACE_ID, { themeId: 'builtin:paper' })
-    await put({ expectedRevision: 1, screens: [{ ...screen, themeId: 'builtin:glass' }] })
-    const beforeSpaces = await listSpaces()
-    const beforeBoard = await getBoard()
-    const space = await patch(SEED_SPACE_ID, { title: 'Rejected', themeId })
-    expect(space.statusCode).toBe(400)
-    expect(errorCode(space)).toBe('VALIDATION_ERROR')
-    const board = await put({ expectedRevision: 2, screens: [{ ...EMPTY_SCREEN, themeId }] })
-    expect(board.statusCode).toBe(400)
-    expect(errorCode(board)).toBe('VALIDATION_ERROR')
-    expect(await listSpaces()).toEqual(beforeSpaces)
-    expect(await getBoard()).toEqual(beforeBoard)
+  it.each([{ palette: 'x' }, 'bare', 7, {}])('rejects invalid structured theme %j without modifying either scope', async (theme) => {
+    const before = await getBoard()
+    expect((await patch(SEED_SPACE_ID, { theme })).statusCode).toBe(400)
+    expect((await put({ expectedRevision: 1, screens: [{ ...screen, theme }] })).statusCode).toBe(400)
+    expect(await getBoard()).toEqual(before)
+    expect((await listSpaces())[0]!.theme).toBeNull()
   })
 })

@@ -296,7 +296,7 @@ describe('migration 10: space and screen themes', () => {
     const states = previous.prepare('SELECT * FROM widget_state').all()
     previous.close()
 
-    const db = await openDatabase(file, ctx())
+    const db = await openDatabase(file, ctx(), MIGRATIONS.slice(0, 10))
     expect(db.prepare('SELECT title, icon, color, revision, theme_id FROM spaces').all()).toEqual([
       { title: 'Home', icon: '💼', color: 'pink', revision: 7, theme_id: null },
     ])
@@ -349,5 +349,36 @@ describe('migration 12: generic background media', () => {
     expect(db.prepare('SELECT * FROM background_media_leases').all()).toEqual(leases)
     db.close()
     expect(existsSync(`${file}.bak-v11`)).toBe(true)
+  })
+})
+
+
+describe('theme choice migration', () => {
+  it('maps legacy scope themes and appearances while retaining unrelated and malformed data', async () => {
+    const previous = await openDatabase(file, ctx(), MIGRATIONS.slice(0, 13))
+    previous.exec("UPDATE spaces SET theme_id = 'builtin:paper'; UPDATE screens SET theme_id = 'builtin:glass'")
+    for (const [id, themeId] of [['null', null], ['unknown', 'builtin:nope']]) {
+      previous.prepare('INSERT INTO spaces (id,title,position,revision,created_at,updated_at,theme_id) VALUES (?,?,?,1,?,?,?)').run(id!, id!, id === 'null' ? 1 : 2, 'x', 'x', themeId!)
+      previous.prepare('INSERT INTO screens (id,space_id,position,theme_id) VALUES (?,?,0,?)').run(id!, id!, themeId!)
+    }
+    const shadow = { x: 2, y: 4, blur: 12, color: '#102030', opacity: 0.25 }
+    const fixtures = [
+      [{ themeId: 'builtin:bare', shadow: null }, { theme: 'bare', shadow: null }],
+      [{ themeId: 'builtin:glass', shadow }, { theme: { palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' }, shadow }],
+      [{ themeId: null, shadow: null, variant: 'roman' }, { theme: null, shadow: null, variant: 'roman' }],
+      [{ themeId: 'builtin:nope', shadow: null, variant: 'roman' }, { theme: null, shadow: null, variant: 'roman' }],
+      [{ shadow, variant: null }, { shadow, variant: null }],
+    ]
+    for (const [i, [before]] of fixtures.entries()) previous.prepare('INSERT INTO widgets (id,screen_id,source_kind,source_type,config,config_version,appearance,x,y,w,h) VALUES (?, ?, ?, ?, ?, 1, ?, 0,0,2,2)').run(`w${i}`, SEED_SCREEN_ID, 'builtin', 'placeholder', '{}', JSON.stringify(before))
+    previous.prepare('INSERT INTO widgets (id,screen_id,source_kind,source_type,config,config_version,appearance,x,y,w,h) VALUES (?, ?, ?, ?, ?, 1, ?, 0,0,2,2)').run('bad', SEED_SCREEN_ID, 'builtin', 'placeholder', '{}', 'not json')
+    previous.close()
+    const db = await openDatabase(file, ctx())
+    expect(userVersion(db)).toBe(14)
+    expect(JSON.parse((db.prepare('SELECT theme FROM spaces WHERE id = ?').get(SEED_SPACE_ID) as { theme: string }).theme)).toEqual({ palette: 'builtin:lifedashboard', mode: 'light', style: 'solid' })
+    expect(JSON.parse((db.prepare('SELECT theme FROM screens WHERE id = ?').get(SEED_SCREEN_ID) as { theme: string }).theme)).toEqual({ palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' })
+    for (const table of ['spaces', 'screens']) expect(db.prepare(`SELECT theme FROM ${table} WHERE id IN ('null','unknown')`).all()).toEqual([{ theme: null }, { theme: null }])
+    for (const [i, [, expected]] of fixtures.entries()) expect(JSON.parse((db.prepare('SELECT appearance FROM widgets WHERE id = ?').get(`w${i}`) as { appearance: string }).appearance)).toEqual(expected)
+    expect(db.prepare("SELECT appearance FROM widgets WHERE id = 'bad'").get()).toEqual({ appearance: 'not json' })
+    db.close()
   })
 })

@@ -1,3 +1,4 @@
+import type { ThemeChoice } from '@lifedashboard/contracts/theme'
 import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
 import type { FastifyInstance } from 'fastify'
@@ -67,7 +68,7 @@ const REVISION_SCHEMA = {
   },
 } as const
 
-const SPACE_COLUMNS = 'SELECT id, title, icon, color, theme_id AS themeId, position, revision FROM spaces'
+const SPACE_COLUMNS = 'SELECT id, title, icon, color, theme, position, revision FROM spaces'
 
 export interface SpacesDeps {
   db: DatabaseSync
@@ -126,12 +127,18 @@ export function registerSpaces(app: FastifyInstance, { db, now, invalidateWidget
   )
 }
 
+type SpaceRow = Omit<SpaceSummary, 'theme'> & { theme: string | null }
+
+function spaceOf(row: SpaceRow): SpaceSummary {
+  return { ...row, theme: row.theme === null ? null : JSON.parse(row.theme) as ThemeChoice }
+}
+
 function listSpaces(db: DatabaseSync): SpaceSummary[] {
-  return db.prepare(`${SPACE_COLUMNS} ORDER BY position, created_at`).all() as unknown as SpaceSummary[]
+  return (db.prepare(`${SPACE_COLUMNS} ORDER BY position, created_at`).all() as unknown as SpaceRow[]).map(spaceOf)
 }
 
 function readSpace(db: DatabaseSync, spaceId: string): SpaceSummary {
-  return db.prepare(`${SPACE_COLUMNS} WHERE id = ?`).get(spaceId) as unknown as SpaceSummary
+  return spaceOf(db.prepare(`${SPACE_COLUMNS} WHERE id = ?`).get(spaceId) as unknown as SpaceRow)
 }
 
 // One BEGIN IMMEDIATE transaction: the checks and the write see the same revisions.
@@ -167,10 +174,10 @@ function createSpace(db: DatabaseSync, now: Date): SpaceSummary {
 function updateSpace(db: DatabaseSync, spaceId: string, raw: unknown, now: Date): SpaceSummary {
   const result = parseSpacePatch(raw)
   if (!result.ok) throw new ApiError('VALIDATION_ERROR', result.error)
-  const { title = null, icon = null, color = null, themeId } = result.value
+  const { title = null, icon = null, color = null, theme } = result.value
   spaceRevision(db, spaceId)
-  const sql = 'UPDATE spaces SET title = COALESCE(?, title), icon = COALESCE(?, icon), color = COALESCE(?, color), theme_id = CASE WHEN ? THEN ? ELSE theme_id END, updated_at = ? WHERE id = ?'
-  db.prepare(sql).run(title, icon, color, Number(themeId !== undefined), themeId ?? null, now.toISOString(), spaceId)
+  const sql = 'UPDATE spaces SET title = COALESCE(?, title), icon = COALESCE(?, icon), color = COALESCE(?, color), theme = CASE WHEN ? THEN ? ELSE theme END, updated_at = ? WHERE id = ?'
+  db.prepare(sql).run(title, icon, color, Number(theme !== undefined), theme ? JSON.stringify(theme) : null, now.toISOString(), spaceId)
   return readSpace(db, spaceId)
 }
 
@@ -253,21 +260,21 @@ function readBoard(db: DatabaseSync, spaceId: string): SpaceBoard {
     .prepare('SELECT w.* FROM widgets w JOIN screens s ON s.id = w.screen_id WHERE s.space_id = ? ORDER BY w.rowid')
     .all(spaceId) as unknown as WidgetRow[]
   const screens = db
-    .prepare('SELECT id, rows, theme_id, background FROM screens WHERE space_id = ? ORDER BY position')
-    .all(spaceId) as unknown as { id: string; rows: number; theme_id: string | null; background: string | null }[]
+    .prepare('SELECT id, rows, theme, background FROM screens WHERE space_id = ? ORDER BY position')
+    .all(spaceId) as unknown as { id: string; rows: number; theme: string | null; background: string | null }[]
   return {
     spaceId,
     revision,
-    screens: screens.map(({ id, rows, theme_id, background }) => {
+    screens: screens.map(({ id, rows, theme, background }) => {
       const placed = widgets.filter((row) => row.screen_id === id)
       return {
         id,
         rows,
-        ...(theme_id !== null && { themeId: theme_id }),
+        ...(theme !== null && { theme: JSON.parse(theme) as ThemeChoice }),
         ...(background !== null && { background: parseScreenBackground(JSON.parse(background)) as ScreenBackground }),
         instances: placed.map((row) => {
           const parsed = row.appearance === null ? null : JSON.parse(row.appearance) as WidgetAppearance
-          const appearance = parsed && normalizeAppearance({ ...parsed, variant: parsed.variant ?? null })
+          const appearance = parsed && normalizeAppearance({ ...parsed, theme: parsed.theme ?? null, variant: parsed.variant ?? null })
           return {
             id: row.id,
             source: sourceOf(row),
@@ -345,8 +352,8 @@ function saveBoard(db: DatabaseSync, spaceId: string, body: SaveBoardRequest, no
     const previous = new Map((db.prepare('SELECT w.* FROM widgets w JOIN screens s ON s.id = w.screen_id WHERE s.space_id = ?')
       .all(spaceId) as unknown as WidgetRow[]).map((row) => [row.id, row]))
     const changedIds = new Set(previous.keys())
-    const setScreen = db.prepare('UPDATE screens SET rows = ?, theme_id = ?, background = ? WHERE id = ?')
-    for (const screen of screens) setScreen.run(screen.rows, screen.themeId ?? null, screen.background ? JSON.stringify(screen.background) : null, screen.id)
+    const setScreen = db.prepare('UPDATE screens SET rows = ?, theme = ?, background = ? WHERE id = ?')
+    for (const screen of screens) setScreen.run(screen.rows, screen.theme ? JSON.stringify(screen.theme) : null, screen.background ? JSON.stringify(screen.background) : null, screen.id)
     db.prepare('DELETE FROM widgets WHERE screen_id IN (SELECT id FROM screens WHERE space_id = ?)').run(spaceId)
     const insert = db.prepare(
       'INSERT INTO widgets (id, screen_id, source_kind, source_type, source_version, config, config_version, appearance, x, y, w, h) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
