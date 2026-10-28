@@ -111,7 +111,6 @@ To rebuild an installed widget, copy its `source/` and `assets/` (paths are show
 
 - The [clock](examples/widgets/showcase-clock), [counter](examples/widgets/showcase-counter) and [weather](examples/widgets/showcase-weather) above are small, installable SDK examples with focused tests.
 - [`examples/widgets/hello`](examples/widgets/hello) demonstrates persisted state, revision conflicts, notifications, and a background video from `assets/`.
-- [`examples/widgets/hermes-tasks`](examples/widgets/hermes-tasks) shows and edits tasks of a local Hermes Tasks container on `127.0.0.1:8787` through `http.get`/`http.send`.
 - [`examples/widgets/hostile`](examples/widgets/hostile) is a security test fixture, **not** a production widget template.
 - [`apps/ui/app/widgets/builtin/clocks/analog_1`](apps/ui/app/widgets/builtin/clocks/analog_1) shows an animated built-in clock implemented with Vue, SVG, and GSAP.
 
