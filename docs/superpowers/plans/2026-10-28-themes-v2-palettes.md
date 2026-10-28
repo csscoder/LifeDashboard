@@ -420,6 +420,7 @@ Keep the existing storage edge cases (throwing `getItem`/`setItem`, unknown fiel
 
 **Files:**
 - Create: `apps/ui/app/theme/ThemePicker.vue`
+- Modify: `apps/ui/test/helpers/sfc-renderer.ts` (test harness only: native event delivery for reka-ui keyboard handling)
 - Test: `apps/ui/test/theme-picker.test.ts` (new)
 
 **Interfaces:**
@@ -437,6 +438,14 @@ Keep the existing storage edge cases (throwing `getItem`/`setItem`, unknown fiel
   - With `null` or `'bare'`, the Mode and Style groups are disabled.
   - Pressing ArrowRight on the focused tile moves the selection to the next palette.
 
+  Harness adaptation, needed because reka-ui 2.11 `RovingFocusItem` registers its keydown handler with `useEventListener` and `RadioGroupItem` selects on focus → click:
+  - `HostNode` gains `addEventListener`/`removeEventListener`/`dispatchEvent` that call both registered listeners and the matching `on<Event>` prop;
+  - `HostNode` gains `dataset` and `click()`;
+  - `focus()` dispatches `focus` and sets the active element;
+  - `window` listeners receive dispatched events;
+  - the existing tests (`ui-controls-reka.test.ts` and others using the helper) must still pass unchanged.
+  The ArrowRight test drives the real reka components through this path; no new dependency.
+
 - [ ] **Step 2: Run** `pnpm -C apps/ui test -- theme-picker`. Expected: FAIL.
 
 - [ ] **Step 3: Implement** with a reka-ui `RadioGroupRoot` for the tiles in a 4-column grid, and `UiRadioGroup` for Mode (`Light`, `Dark`, `Auto`) and Style (`Solid`, `Glass`).
@@ -444,7 +453,7 @@ Keep the existing storage edge cases (throwing `getItem`/`setItem`, unknown fiel
   - Options: `Inherit` and `No frame`.
   - Tile content: a background of `var(--ld-bg)`, a text line in `var(--ld-text-primary)`, an accent dot in `var(--ld-accent)`, and the name.
 
-- [ ] **Step 4: Run** `pnpm -C apps/ui test -- theme-picker`. Expected: PASS.
+- [ ] **Step 4: Run** `pnpm -C apps/ui test -- theme-picker ui-controls-reka ui-controls ui-select settings-row`. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(ui): add the palette, mode and style picker`
 
 ---
