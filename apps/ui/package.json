@@ -8,6 +8,7 @@
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
     "gen:themes": "node scripts/gen-themes.ts",
+    "fetch:fonts": "node scripts/fetch-fonts.ts",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {

@@ -4,6 +4,7 @@
  */
 @layer ld.reset, ld.base, ld.frame, ld.skin, ld.theme, ld.utilities, ld.widget, ld.comfort;
 
+@import './fonts.css';
 @import './content.css';
 @import './frame.css';
 @import './skins/glass.css';
