@@ -132,6 +132,14 @@ describe('page content', () => {
     expect(api).toContain('dist/types/widget-sdk/src/index.d.ts')
   })
 
+  it('documents the per-widget text size through contentScale', async () => {
+    const docs = await freshDocs()
+    expect(docs.get('api.md')).toMatch(/\| `contentScale` \| .*Since sdk 6/)
+    expect(docs.get('api.md')).toContain('Level 6: `context.contentScale`')
+    expect(docs.get('design.md')).toContain('var(--ld-content-scale)')
+    expect(docs.get('design.md')).toContain('150 %')
+  })
+
   it('index.md links every other page', async () => {
     const index = (await freshDocs()).get('index.md')!
     for (const page of PAGES.filter((name) => name !== 'index.md')) expect(index).toContain(`(${page})`)
