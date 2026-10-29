@@ -78,8 +78,8 @@ export function pause(settings: FocusSettings, run: FocusRun, now: number, by: '
 }
 
 export function skip(settings: FocusSettings, run: FocusRun, now: number, newId: () => string): Step {
+  // Ruling 15: a ready phase is skipped too; it records nothing (no focused time).
   return act(settings, run, now, newId, (current) => {
-    if (current.status === 'ready') return { run: current }
     const next = current.phase === 'focus'
       ? afterFocus(current, settings, current.streak, false, now)
       : begin(current, 'focus', settings, false, now)

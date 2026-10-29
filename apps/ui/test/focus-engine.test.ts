@@ -200,6 +200,28 @@ describe('focus engine', () => {
     })
   })
 
+  // Ruling 15: skip on a ready phase moves on like a natural end, without a session or a streak gain.
+  describe('skip on a ready phase', () => {
+    const ready = initialRun(S)
+
+    it('moves a ready focus to a ready short break', () => {
+      expect(skip(S, { ...ready, streak: 1 }, T0, id)).toEqual({
+        run: { ...ready, streak: 1, phase: 'short', durationMs: SHORT, remainingMs: SHORT },
+      })
+    })
+
+    it('moves a ready break to a ready focus', () => {
+      const short: FocusRun = { ...ready, phase: 'short', durationMs: SHORT, remainingMs: SHORT, streak: 1 }
+      expect(skip(S, short, T0, id)).toEqual({ run: { ...ready, streak: 1 } })
+    })
+
+    it('moves a ready focus at the end of a cycle to a long break and resets streak', () => {
+      expect(skip(S, { ...ready, streak: S.longBreakEvery - 1 }, T0, id)).toEqual({
+        run: { ...ready, streak: 0, phase: 'long', durationMs: 900_000, remainingMs: 900_000 },
+      })
+    })
+  })
+
   // Ruling 6: an action in a status it does not apply to changes nothing.
   describe('inapplicable actions', () => {
     const ready = initialRun(S)
@@ -209,7 +231,6 @@ describe('focus engine', () => {
       expect(start(S, paused, T0 + 700_000, id)).toEqual({ run: paused })
       expect(resume(S, running(), T0 + 1_000, id)).toEqual({ run: running() })
       expect(resume(S, ready, T0, id)).toEqual({ run: ready })
-      expect(skip(S, ready, T0, id)).toEqual({ run: ready })
       expect(reset(S, ready, T0, id)).toEqual({ run: ready })
       expect(pause(S, paused, T0 + 700_000, 'hidden', id)).toEqual({ run: paused })
       expect(pause(S, ready, T0, 'user', id)).toEqual({ run: ready })

@@ -42,19 +42,19 @@ watch(
 )
 onUnmounted(stop)
 
-/** ▶/⏸, the tomato and Space; prime on the user gesture so the phase-end chime and notification may play. */
-async function toggle() {
+/** ▶/⏸, the tomato and Space. Ruling 14: act now; prime in the same gesture so the phase-end chime and notification may play. */
+function toggle() {
   if (!state.loaded) return
   const action = toggleAction(run.value)
-  if (action !== 'pause') await alerts.prime()
   focusStore[action]()
+  if (action !== 'pause') void alerts.prime()
 }
 
 // Only the focused tile itself: inner buttons already activate on Space.
 function onKey(event: KeyboardEvent) {
   if (event.target !== event.currentTarget) return
   event.preventDefault()
-  void toggle()
+  toggle()
 }
 </script>
 
@@ -114,10 +114,11 @@ function onKey(event: KeyboardEvent) {
         <span :class="{ 'pomodoro__muted': !run.label }">{{ run.label || project?.name || 'No task' }}</span>
       </div>
 
-      <div v-if="run.status !== 'ready'" class="pomodoro__controls">
+      <div class="pomodoro__controls">
         <button type="button" :aria-label="run.status === 'running' ? 'Pause' : 'Start'" :disabled="!state.loaded" @click="toggle">{{ run.status === 'running' ? '⏸' : '▶' }}</button>
         <button type="button" aria-label="Skip" :disabled="!state.loaded" @click="focusStore.skip()">⏭</button>
-        <button type="button" aria-label="Reset" :disabled="!state.loaded" @click="focusStore.reset()">↺</button>
+        <!-- aria-disabled, not disabled: stays focusable while ready, where reset changes nothing. -->
+        <button type="button" aria-label="Reset" :aria-disabled="run.status === 'ready'" :disabled="!state.loaded" @click="focusStore.reset()">↺</button>
       </div>
     </template>
   </div>
@@ -217,7 +218,8 @@ function onKey(event: KeyboardEvent) {
   cursor: pointer;
 }
 .pomodoro button:focus-visible { outline: 0.125rem solid var(--ld-focus-ring); outline-offset: 0.125rem; }
-.pomodoro button:disabled { opacity: 0.6; cursor: default; }
+.pomodoro button:disabled,
+.pomodoro button[aria-disabled='true'] { opacity: 0.6; cursor: default; }
 
 .pomodoro__error { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; color: var(--ld-text-secondary); }
 .pomodoro__retry { padding: 0 0.5rem; }
