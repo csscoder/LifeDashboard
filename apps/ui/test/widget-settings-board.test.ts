@@ -5,7 +5,7 @@ import { resetWidget } from '../app/board/edit-session'
 import { DEFAULT_SHADOW, type ScreenBoard } from '@lifedashboard/contracts/board'
 
 const source = readFileSync(new URL('../app/board/WidgetBoard.vue', import.meta.url), 'utf8')
-const confirmation = 'Style, shadow, look and widget options return to their defaults. API keys stay set; use Clear to remove them.'
+const confirmation = 'Style, shadow, look, text size and widget options return to their defaults. API keys stay set; use Clear to remove them.'
 
 describe('board settings integration', () => {
   it('panel stays outside widget cards regardless of the instance appearance', () => {
@@ -28,7 +28,7 @@ describe('board settings integration', () => {
   })
 
   it('reset keeps secrets and clears the look after confirming the exact copy', async () => {
-    const working = { value: { id: 'screen', rows: 12, instances: [{ id: 'w1', source: { kind: 'builtin', type: 'clock-analog-1' }, config: { zone: 'UTC' }, appearance: { theme: 'bare', shadow: DEFAULT_SHADOW, variant: 'roman' } }], layout: [] } as ScreenBoard }
+    const working = { value: { id: 'screen', rows: 12, instances: [{ id: 'w1', source: { kind: 'builtin', type: 'clock-analog-1' }, config: { zone: 'UTC' }, appearance: { theme: 'bare', shadow: DEFAULT_SHADOW, variant: 'roman', scale: 40 } }], layout: [] } as ScreenBoard }
     const askDelete = vi.fn().mockResolvedValue(true)
     const api = { clearWidgetSecret: vi.fn() }
     const body = source.slice(source.indexOf('async function resetSettings()'), source.indexOf('\nconst settingsInstance'))

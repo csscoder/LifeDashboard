@@ -2,6 +2,7 @@ import * as Vue from 'vue'
 import { describe, expect, it } from 'vitest'
 import * as variantsModule from '@lifedashboard/contracts/widget-variants'
 import * as board from '@lifedashboard/contracts/board'
+import { SCALE_LIMITS } from '@lifedashboard/contracts/board'
 import { themeModules } from './helpers/theme-picker'
 import * as widgetSettings from '../app/board/widget-settings'
 import { compileSfc, mountComponent } from './helpers/sfc-renderer'
@@ -28,6 +29,7 @@ const component = compileSfc(new URL('../app/board/WidgetSettings.vue', import.m
   './widget-settings': widgetSettings,
   './WidgetConfigForm.vue': GenericForm,
   '../ui/UiSelect.vue': UiSelect,
+  '../ui/UiNumberField.vue': control('ui-numberfield'),
   '@lifedashboard/contracts/widget-variants': variantsModule,
   './SettingsRow.vue': Row,
   'reka-ui': { Separator: control('separator') },
@@ -48,6 +50,26 @@ describe('widget settings panel', () => {
     await Vue.nextTick()
     ui.panel().props.onToggle({ newState: 'open' })
     expect(ui.button('Inherit').focused).toBe(true)
+  })
+  it('sets the text size as an integer within SCALE_LIMITS, framed or bare', () => {
+    for (const theme of [null, 'bare'] as const) {
+      const appearance = { theme, shadow: null, variant: null, scale: 25 }
+      const ui = mount(undefined, { appearance })
+      expect(ui.text()).toContain('Text size, %')
+      const field = ui.nodes().find((el) => el.tag === 'ui-numberfield')!
+      expect('integer' in field.props).toBe(true)
+      expect(field.props.min).toBe(SCALE_LIMITS[0])
+      expect(field.props.max).toBe(SCALE_LIMITS[1])
+      expect(field.props.modelValue).toBe(25)
+      field.props.pick(-10)
+      expect(ui.events.at(-1)).toEqual(['change', { theme, shadow: null, variant: null, scale: -10 }])
+      field.props.pick(0)
+      expect(ui.events.at(-1)).toEqual(['change', { theme, shadow: null, variant: null, scale: null }])
+    }
+  })
+  it('shows 0 for a widget without a stored text size', () => {
+    const field = mount(undefined, { appearance: undefined }).nodes().find((el) => el.tag === 'ui-numberfield')!
+    expect(field.props.modelValue).toBe(0)
   })
   it('hides Look without variants', () => { expect(mount().text()).not.toContain('Look') })
   it('resolves missing looks and preserves style and shadow when picking a look', () => {

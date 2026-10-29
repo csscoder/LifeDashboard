@@ -418,7 +418,7 @@ function changeConfig(next: Record<string, unknown>) {
 async function resetSettings() {
   const id = settingsId.value
   if (!id || !editing.value || saving.value) return
-  const ok = await askDelete('Style, shadow, look and widget options return to their defaults. API keys stay set; use Clear to remove them.', { confirm: 'Reset', cancel: 'Cancel' })
+  const ok = await askDelete('Style, shadow, look, text size and widget options return to their defaults. API keys stay set; use Clear to remove them.', { confirm: 'Reset', cancel: 'Cancel' })
   if (ok && editing.value && !saving.value && working.value.instances.some((item) => item.id === id)) working.value = resetWidget(working.value, id)
   gearOf(id)?.focus({ preventScroll: true })
 }

@@ -2,6 +2,7 @@
 import { computed, ref, useTemplateRef, watch, type Component } from 'vue'
 import {
   DEFAULT_SHADOW,
+  SCALE_LIMITS,
   SHADOW_LIMITS,
   type DropShadow,
   type WidgetAppearance,
@@ -10,7 +11,7 @@ import type { SettingsSchema } from '@lifedashboard/contracts/widget-settings'
 import type { ThemeChoice } from '@lifedashboard/contracts/theme'
 import { BUILTIN_PALETTE_IDS } from '../theme/palettes'
 import ThemePicker from '../theme/ThemePicker.vue'
-import { panelPosition, withShadow, withStyle, withVariant } from './widget-settings'
+import { panelPosition, withScale, withShadow, withStyle, withVariant } from './widget-settings'
 import { resolveVariant, type WidgetVariants } from '@lifedashboard/contracts/widget-variants'
 import { Separator } from 'reka-ui'
 import SettingsRow from './SettingsRow.vue'
@@ -19,6 +20,7 @@ import UiSwitch from '../ui/UiSwitch.vue'
 import UiSlider from '../ui/UiSlider.vue'
 import UiColorField from '../ui/UiColorField.vue'
 import UiSelect from '../ui/UiSelect.vue'
+import UiNumberField from '../ui/UiNumberField.vue'
 import WidgetConfigForm from './WidgetConfigForm.vue'
 
 // One per board: a non-modal popover beside the widget being tuned, anchored to the widget item so its
@@ -145,6 +147,10 @@ defineExpose({ open, close, isOpen })
         <UiColorField :model-value="shadow.color" :alpha="shadow.opacity" @update:model-value="setShadow('color', $event)" @update:alpha="setShadow('opacity', $event)" />
       </SettingsRow>
     </template>
+    <SettingsRow label="Text size, %">
+      <UiNumberField integer :min="SCALE_LIMITS[0]" :max="SCALE_LIMITS[1]" :model-value="appearance?.scale ?? 0"
+        @update:model-value="emit('change', withScale(appearance, $event))" />
+    </SettingsRow>
     <template v-if="hasWidgetBlock">
       <Separator class="settings__separator" />
       <h2 class="settings__heading">Widget</h2>
