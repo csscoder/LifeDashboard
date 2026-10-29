@@ -202,10 +202,15 @@ defineExpose({ open, close, isOpen })
   line-height: 1.25rem;
 }
 
+/* A flex column, not a grid: with the max-height above, WebKit (the desktop app) sizes the auto rows of a
+   scrolling grid too small and the rows overlap. Rows keep their content height. */
 .settings:popover-open {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.375rem;
 }
+
+.settings:popover-open > * { flex: none; }
 
 .settings__theme { grid-template-columns: minmax(0, 1fr); }
 .settings__heading { margin: 0; font: inherit; font-weight: 600; }
