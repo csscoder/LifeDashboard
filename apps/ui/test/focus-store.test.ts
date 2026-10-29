@@ -237,13 +237,42 @@ describe('focus store', () => {
     expect(api.saveFocus).toHaveBeenCalledTimes(1)
   })
 
+  // Ruling 12: a session the server rejects can never be stored, so it must not block later writes.
+  it('rejected write drops its session', async () => {
+    const { store, server, notice } = await loaded({ run: paused(10_000) })
+    server.saveOutcomes.push('invalid')
+    // A reset focus with more than a minute of focus records a session.
+    store.reset()
+    await flush()
+    expect(server.saves.at(-1)!.body.session).toBeDefined()
+    expect(notice).toHaveBeenCalledWith('Focus change rejected: Unknown project')
+    expect(store.state.run.status).toBe('paused')
+    store.resume()
+    await flush()
+    expect(server.saves.at(-1)!.body.session).toBeUndefined()
+    expect(server.sessions.size).toBe(0)
+  })
+
   it('setTask validates', async () => {
-    const { store } = await loaded()
+    const project: FocusProject = { id: 'p1', name: 'Old', color: 'blue', archivedAt: iso(T0) }
+    const { store } = await loaded({ projects: [project] })
     expect(store.setTask('a‮b', null)).toEqual(expect.any(String))
     expect(store.state.run.label).toBeNull()
     expect(store.setTask('x'.repeat(121), null)).toEqual(expect.any(String))
-    expect(store.setTask('Write plan', null)).toBeNull()
-    expect(store.state.run.label).toBe('Write plan')
+    expect(store.setTask('Write plan', 'unknown')).toEqual(expect.any(String))
+    expect(store.state.run).toMatchObject({ label: null, projectId: null })
+    expect(store.setTask('Write plan', 'p1')).toBeNull()
+    expect(store.state.run).toMatchObject({ label: 'Write plan', projectId: 'p1' })
+  })
+
+  // Ruling 13: today's totals never silently read as zero.
+  it('failed sessions request fails the load', async () => {
+    const { store, api } = setup()
+    api.focusSessions.mockResolvedValueOnce(unavailable)
+    await store.load()
+    expect(store.state).toMatchObject({ loaded: false, loadError: true })
+    await store.load()
+    expect(store.state).toMatchObject({ loaded: true, loadError: false })
   })
 
   it('saveSettings validates and reaches the server', async () => {

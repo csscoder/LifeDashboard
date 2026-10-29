@@ -194,7 +194,7 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
     const result = await deps.api.saveFocus(body)
     if (current !== generation) return
     if (result.ok) return confirmed(body, result.data.revision)
-    if (result.kind === 'invalid') return rejected(result.message)
+    if (result.kind === 'invalid') return rejected(body, result.message)
     if (result.kind !== 'conflict') return failed(body)
     const server = await deps.api.focus()
     if (current !== generation) return
@@ -225,9 +225,11 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
     }, RETRY_MS[failures++] ?? RETRY_LATER_MS)
   }
 
-  // Not retried: the server state replaces the change; unconfirmed sessions go with the next write.
-  async function rejected(message: string) {
+  // Not retried: the server state replaces the change; the rejected session can never be stored (Ruling 12),
+  // other unconfirmed sessions go with the next write.
+  async function rejected(body: FocusPutRequest, message: string) {
     const current = generation
+    unconfirmed = unconfirmed.filter(({ id }) => id !== body.session?.id)
     deps.notice(`Focus change rejected: ${message}`)
     const server = await deps.api.focus()
     if (current !== generation) return
@@ -249,7 +251,12 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
       const day = engine.dayKey(deps.now())
       const sessions = await deps.api.focusSessions(day, day)
       if (current !== generation) return
-      const today = sessions.ok ? sessions.data : []
+      // Ruling 13: today's totals never silently read as zero.
+      if (!sessions.ok) {
+        state.loadError = true
+        return
+      }
+      const today = sessions.data
       state.today = { day, count: today.filter(({ completed }) => completed).length, focusMs: today.reduce((sum, { focusMs }) => sum + focusMs, 0) }
       // A hidden pause resumes only within the app session that made it.
       const stored: FocusRun = result.data.run.pausedBy === 'hidden' ? { ...result.data.run, pausedBy: 'user' } : result.data.run
@@ -312,6 +319,8 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
     setTask(label, projectId) {
       const parsed = parseFocusRun({ ...state.run, label, projectId })
       if (!parsed.ok) return parsed.error
+      // Ruling 12: the server rejects an unknown project, and a session carrying it could never be stored.
+      if (projectId !== null && !state.projects.some(({ id }) => id === projectId)) return 'Unknown project'
       act((run) => ({ run: { ...run, label, projectId } }))
       return null
     },
