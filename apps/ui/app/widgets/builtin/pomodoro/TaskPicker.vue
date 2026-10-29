@@ -23,8 +23,8 @@ const busy = ref(false)
 
 // The content opens in the space, like UiColorField picks its target: the body lacks the theme tokens, and every
 // tile card is a stacking context, so in the tile it would sit under later tiles. Outside a space it goes to the body.
-const trigger = useTemplateRef<{ $el: Element }>('trigger')
-const portalTarget = shallowRef<Element | string>('body')
+const trigger = useTemplateRef<{ $el: HTMLElement }>('trigger')
+const portalTarget = shallowRef<HTMLElement | string>('body')
 
 const projects = computed(() => state.projects.filter(({ archivedAt }) => archivedAt === null))
 const color = computed(() => picked.value ?? nextColor(projects.value.map((project) => project.color)))
@@ -34,7 +34,7 @@ const label = computed(() => draft.value.trim() || null)
 function onOpen(next: boolean) {
   open.value = next
   if (next) {
-    portalTarget.value = trigger.value?.$el.closest('.space') ?? 'body'
+    portalTarget.value = trigger.value?.$el.closest<HTMLElement>('.space') ?? 'body'
     draft.value = state.run.label ?? ''
     labelError.value = projectError.value = projectName.value = ''
     adding.value = false
