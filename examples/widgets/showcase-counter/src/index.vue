@@ -237,7 +237,7 @@ button:focus-visible { outline: 2px solid var(--ld-focus-ring); outline-offset: 
 .counter__error button { padding: 0; border: 0; background: none; color: var(--ld-accent-text); font: inherit; text-decoration: underline; cursor: pointer; }
 .counter__error button:disabled { color: var(--ld-text-disabled); cursor: default; }
 
-@container (max-height: 15rem) {
+@container (max-height: 15em) {
   .counter__card { gap: 0.375em; }
   .counter__eyebrow { display: none; }
   .counter__count { font-size: clamp(1.5em, calc(14cqh * var(--ld-content-scale, 1)), 2.75em); }

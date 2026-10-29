@@ -11,7 +11,7 @@ pnpm -C examples/widgets/showcase-weather check
 pnpm -C examples/widgets/showcase-weather build
 ```
 
-Install the generated `dist/dev.lifedashboard.showcase.weather-1.0.0/` folder through the dashboard package manager. The manifest requests only `network` access to `https://api.open-meteo.com`; no API key is needed. Configure the city label, latitude and longitude in widget settings. The city label does not geocode coordinates. Defaults are London, `51.5074`, `-0.1278`.
+Install the generated `dist/dev.lifedashboard.showcase.weather-1.0.1/` folder through the dashboard package manager. The manifest requests only `network` access to `https://api.open-meteo.com`; no API key is needed. Configure the city label, latitude and longitude in widget settings. The city label does not geocode coordinates. Defaults are London, `51.5074`, `-0.1278`.
 
 Data refreshes every 15 minutes while the widget is visible. Use Refresh for an immediate update. A failed refresh keeps the last verified data with a Stale label; without a verified response the widget shows Weather unavailable. Changing coordinates clears the previous data and ignores any older in-flight responses; changing only the city label keeps the current data. There is no sample-data fallback or persisted weather cache.
 
