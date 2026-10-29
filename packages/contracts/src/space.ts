@@ -49,7 +49,7 @@ export type AddScreenRequest = DeleteRequest
 
 const PATCH_KEYS = ['title', 'icon', 'color', 'theme', 'themeId']
 
-function isSpaceColor(value: unknown): value is SpaceColor {
+export function isSpaceColor(value: unknown): value is SpaceColor {
   return typeof value === 'string' && Object.keys(SPACE_COLORS).includes(value)
 }
 
