@@ -1,6 +1,6 @@
 # Pomodoro widget and dashboard focus status
 
-Status: design approved in chat on 2026-10-29 (5 sections); written spec awaiting user review.
+Status: design approved in chat on 2026-10-29 (5 sections); Codex review approved (3 rounds); written spec awaiting user review.
 
 Branch: `feat/pomodoro-focus`, from `main` at `387fd98`.
 
@@ -19,7 +19,9 @@ The widget is a basic, opinionated focus tool, not a task manager. Hermes Tasks 
 - Widget state (`widget.state`) is limited to `STATE_MAX_BYTES = 65_536` per instance (`packages/contracts/src/widget-gateway.ts`). Deleting a widget deletes its `widget_state` row (`apps/api/src/spaces.ts:241`, `:320`).
 - `widget.notify()` ends in `showToast` (`apps/ui/app/toasts.ts`), an in-app toast for 6 s. No system notifications exist.
 - Built-in widgets are registered in `BUILTIN_WIDGETS` (`packages/contracts/src/builtin-widgets.ts`), `builtinWidgetRenderers` and `builtinSettingsEditors` (`apps/ui/app/widgets/registry.ts`). They are trusted in-process Vue code.
+- The settings panel shows the «Widget» block only when the widget has a settings schema: `hasWidgetBlock` in `apps/ui/app/board/WidgetSettings.vue` requires `props.schema` even for a built-in editor.
 - `WidgetContext` gained `contentScale` at sdk 6 (commit `a39c0c2`); `useWidgetContext` (`apps/ui/app/widgets/context.ts`) keeps it reactive and `SandboxWidget.vue` sends context changes to the frame.
+- `packages/widget-sdk/docs/` is generated from `packages/widget-sdk/docs-src/` by `scripts/docs.ts`; the package build fails when `docs/` is stale (`scripts/build.ts`).
 - The desktop app (`apps/desktop`) uses Tauri 2.12.3 with only `tauri-plugin-dialog`. Its capability `main-window` grants window dragging to the remote URL `http://127.0.0.1:3101/*`. `tauri.conf.json` `identifier` is `dev.lifedashboard.desktop`; the bundle is ad-hoc signed.
 - The UI language is English (widget titles, toasts).
 - `SpaceColor` (`packages/contracts/src/space.ts`) is the existing 8-colour palette.
@@ -85,7 +87,7 @@ CREATE TABLE focus_sessions (
 CREATE INDEX focus_sessions_day ON focus_sessions(day);
 ```
 
-The `focus` row is created with defaults on first read. Projects are archived, never deleted, so history keeps its references.
+The `focus` row is created on first read with default settings and the initial run: `phase: 'focus'`, `status: 'ready'`, `durationMs = remainingMs = focusMin × 60_000` (1 500 000 ms for the default 25 min), every other field `null`, `0` or empty. Projects are archived, never deleted, so history keeps its references.
 
 ### Contracts (`packages/contracts/src/focus.ts`)
 
@@ -101,16 +103,18 @@ export interface FocusSettings {
   sound: boolean           // default true
 }
 
-export type FocusPhase = 'idle' | 'focus' | 'short' | 'long'
+export type FocusPhase = 'focus' | 'short' | 'long'
 
 export interface FocusRun {
   phase: FocusPhase
   status: 'ready' | 'running' | 'paused'
+  durationMs: number           // full length of the current phase, fixed when the phase begins
   endsAt: number | null        // epoch ms, set when running
-  remainingMs: number | null   // set when ready or paused
+  remainingMs: number          // time left; authoritative when ready or paused
+  resumedAt: number | null     // epoch ms of the last start or resume, set when running
   pausedBy: 'user' | 'hidden' | null
-  phaseStartedAt: string | null // ISO, start of the current focus interval
-  focusedMs: number            // focus time accumulated in the current interval before the last pause
+  phaseStartedAt: string | null // ISO, first start of the current focus interval
+  focusedMs: number            // focus time of the current interval up to resumedAt
   streak: number               // completed pomodoros since the last long break
   label: string | null         // ≤ 120 characters
   projectId: string | null
@@ -138,6 +142,8 @@ Parsers follow the `ParseResult` style of `parseSpacePatch`: unknown keys, out-o
 | `POST /api/v1/focus/projects` | `{ name, color }` | The created project. |
 | `PATCH /api/v1/focus/projects/:id` | `{ name?, color?, archived? }` | The updated project. |
 
+A session is inserted with `INSERT OR IGNORE` on its client-generated `id`, so a repeated `PUT` never duplicates it.
+
 Statistics (day, week, project shares) are aggregated in the UI from the sessions list.
 
 ### What is recorded
@@ -151,19 +157,23 @@ Statistics (day, week, project shares) are aggregated in the UI from the session
 
 ### `engine.ts`
 
-Pure functions over `(settings, run, now)` returning `{ run, session? }`; no timers, no I/O:
+Pure functions over `(settings, run, now)` returning `{ run, session? }`; no timers, no I/O.
 
-- `start(now)`: from `ready` or `idle`, set `running` with `endsAt = now + remainingMs` (or the phase's full duration).
-- `pause(now, by)`: `running` → `paused`, `remainingMs = endsAt − now`, accumulate `focusedMs`, record `pausedBy`.
-- `resume(now)`: `paused` → `running`.
-- `skip(now)`: end the current phase early; a focus interval produces a session per «What is recorded».
-- `reset(now)`: return the current phase to its full duration in `ready`; a focus interval produces a session per «What is recorded».
-- `advance(now)`: if `running` and `now ≥ endsAt`, finish the phase:
-  - focus → session with `completed = true`, `streak + 1`; next phase is `long` when the new `streak` is a multiple of `longBreakEvery` (then `streak` resets to 0), otherwise `short`;
-  - a break → `focus`;
-  - the next phase starts `running` when its auto-start setting is on, otherwise `ready`.
-- `restore(run)`: for a run loaded as `running`, return it `paused` by `user` with `remainingMs = endsAt − seenAt`. Time while the app was closed is never counted.
+**Deadline first.** Every action on a `running` run (`pause`, `skip`, `reset`, a presence pause) first applies `advance(now)`. A phase whose `endsAt` has passed therefore ends exactly once, as completed, at `endsAt`; the action then applies to the next phase only if it is `running` (otherwise it is a no-op).
+
+- `begin(phase, settings, autoStart, now)` (internal): a new phase with `durationMs` from the settings at this moment (minutes × 60 000), `remainingMs = durationMs`, `focusedMs = 0`, `phaseStartedAt = null`, `status: 'ready'`; when `autoStart`, it then applies `start(now)`, so an auto-started phase gets `endsAt`, `resumedAt`, `seenAt` and, for focus, `phaseStartedAt`.
+- `start(now)`: `ready` → `running`; `endsAt = now + remainingMs`, `resumedAt = seenAt = now`; `phaseStartedAt` is set to `now` if it is `null`.
+- `pause(now, by)`: `running` → `paused`; `remainingMs = endsAt − now`, `focusedMs += now − resumedAt` (focus phase only), `resumedAt = null`, `pausedBy = by`.
+- `resume(now)`: `paused` → `running`, like `start` (including `resumedAt = seenAt = now`).
+- `advance(now)`: if `running` and `now ≥ endsAt`, finish the phase at `endsAt`:
+  - focus → session with `completed = true`, `plannedMs = durationMs`, `focusMs = focusedMs + (endsAt − resumedAt)`, `endedAt = endsAt`; `streak + 1`; next phase is `long` when the new `streak` is a multiple of `longBreakEvery` (then `streak` resets to 0), otherwise `short`; it begins with `autoStartBreak`;
+  - a break → `focus`, begun with `autoStartFocus`.
+- `skip(now)`: ends the current phase early and moves to the same next phase as a natural end, always `ready` (no auto-start). A skipped focus does not raise `streak` and records a session per «What is recorded». Skipping a `ready` phase records nothing.
+- `reset(now)`: the current phase returns to `ready` with `remainingMs = durationMs`, `focusedMs = 0`, `phaseStartedAt = null`; a focus interval records a session per «What is recorded».
+- `restore(run)`: for a run loaded as `running`, return it `paused` by `user` with `remainingMs = endsAt − seenAt` and `focusedMs += seenAt − resumedAt` (focus phase only). Time after the last heartbeat, including while the app was closed, is never counted. If `seenAt ≥ endsAt`, the phase is finished by `advance(endsAt)` instead.
 - `dayKey(date)`: local `YYYY-MM-DD`.
+
+New settings never change the current phase: its `durationMs`, `remainingMs` and `endsAt` stay; the next `begin` uses the new values. `durationMs` drives the ring, `plannedMs` and `reset`.
 
 ### `store.ts`
 
@@ -171,14 +181,17 @@ A singleton shared by every Pomodoro widget:
 
 - Loads `GET /api/v1/focus` on the first mounted widget; exposes reactive `settings`, `run`, `projects`, `recentLabels`, `loadError`.
 - One `setTimeout` to `endsAt` calls `advance`; `visibilitychange` re-runs `advance` in case a timer was throttled. No per-second ticks.
-- Every state change is written with `PUT` and the current revision. While running, `seenAt` is refreshed every 30 s.
+- While running, `seenAt` is refreshed every 30 s. Every transition to `running` sets `seenAt = resumedAt`, so a stored running run always has `seenAt ≥ resumedAt`.
+- **One write chain.** Writes (state changes and heartbeats) are serialized: at most one `PUT` is in flight; the next one carries the latest local run and the revision the previous answer returned. Several changes made while a write is in flight are coalesced into one `PUT` with the latest run. Each session produced by the engine joins a list of unconfirmed sessions; a `PUT` carries the oldest one, and a session leaves the list only when a `PUT` carrying it succeeds.
+- A failed write (network, 5xx) retries after 2, 5 and 15 s, then every 60 s while the app runs.
+- On 409 the store re-reads `GET /api/v1/focus`, takes the server's settings and run, drops the local run change and keeps the unconfirmed sessions, which the next `PUT` sends again; `INSERT OR IGNORE` makes a session that was already stored harmless.
 - Presence: `useFocusPresence()` is called by each mounted widget. When the count reaches 0 while running, the store pauses with `pausedBy: 'hidden'`. When a widget mounts again in the same app session and the run is paused by `hidden`, it resumes. A run paused by `user`, or restored after a reload, waits for ▶.
 - Exposes the public status `{ phase: 'none' | 'focus' | 'break'; running: boolean; endsAt: number | null }` for `context.focus` and for the notification hold.
 
 ### Phase-end alerts (`apps/ui/app/focus/alerts.ts`)
 
 - **Sound** (when `settings.sound`): a two-tone chime synthesised with WebAudio, about 0.6 s; no audio file. The `AudioContext` is created on the first ▶ click, so autoplay rules do not block it.
-- **System notification**: in the desktop app (`'__TAURI_INTERNALS__' in window`) through `@tauri-apps/plugin-notification`; in the browser through `Notification`. Permission is requested on the first ▶ click. Texts: «Focus done — 5 min break», «Focus done — 15 min long break», «Break over — time to focus».
+- **System notification**: in the desktop app (`'__TAURI_INTERNALS__' in window`) through `@tauri-apps/plugin-notification`; in the browser through `Notification`. Permission is requested on the first ▶ click. Texts use the next phase's actual length: «Focus done — {n} min break», «Focus done — {n} min long break», «Break over — time to focus».
 - Without permission, the alert is an in-app toast.
 
 ### Holding notifications of other widgets (`apps/ui/app/toasts.ts`)
@@ -189,11 +202,11 @@ A singleton shared by every Pomodoro widget:
 
 ## Widget contract (SDK)
 
-- `WidgetContext.focus: { phase: 'none' | 'focus' | 'break'; running: boolean; endsAt: number | null }`, documented `@since sdk 7`. `focus` covers `focus`; `break` covers `short` and `long`; `none` covers `idle`.
+- `WidgetContext.focus: { phase: 'none' | 'focus' | 'break'; running: boolean; endsAt: number | null }`, documented `@since sdk 7`. `focus` is the focus phase while `running` or `paused`; `break` is a `short` or `long` phase in any status; `none` is a focus phase in `ready` (nothing started). `running` is `status === 'running'`; `endsAt` is set only then.
 - `SDK_LEVELS` gains 7 and `SDK_TARGET_LEVEL` becomes 7. Like `contentScale`, the field is sent to packages of every level and needs no permission.
 - `useWidgetContext` reads the store's public status and keeps `context.focus` reactive; the existing context sync delivers it to sandboxes and built-ins.
 - No gateway operation writes focus state. The built-in Pomodoro imports `focus/store` directly.
-- Docs: `packages/widget-sdk/docs/api.md` (context field, «Level 7»), `recipes.md` (defer sounds, animations and `notify` while `focus.phase === 'focus' && focus.running`), and one line in the create-widget template `AGENTS.md`. The dev shell's context has `focus: { phase: 'none', running: false, endsAt: null }`.
+- Docs: edit the sources `packages/widget-sdk/docs-src/api.md` (context field, «Level 7») and `docs-src/recipes.md` (defer sounds, animations and `notify` while `focus.phase === 'focus' && focus.running`), then regenerate `docs/` with the package's docs script; add one line to the create-widget template `AGENTS.md`. The dev shell's context has `focus: { phase: 'none', running: false, endsAt: null }`.
 
 ## Pomodoro widget
 
@@ -238,7 +251,9 @@ Bars are plain HTML/SVG; no chart library.
 
 ### Settings editor (`PomodoroSettings.vue`)
 
-Registered in `builtinSettingsEditors`. Fields for every `FocusSettings` value with the house `Ui*` controls, and the note «Shared by all Pomodoro widgets». It writes to the store, not to the instance config.
+Registered in `builtinSettingsEditors`. Fields for every `FocusSettings` value with the house `Ui*` controls, and the note «Shared by all Pomodoro widgets». It writes to the store, not to the instance config. A change applies from the next phase (see `engine.ts`).
+
+`WidgetSettings.vue` changes `hasWidgetBlock` so a built-in with its own editor shows the «Widget» block without a schema: `Boolean(props.editor || (props.schema && Object.keys(props.schema.properties).length > 0))`. The editor receives no schema in that case and must not need one.
 
 ### Assets
 
@@ -246,16 +261,16 @@ Registered in `builtinSettingsEditors`. Fields for every `FocusSettings` value w
 
 ## Desktop
 
-- `apps/desktop/src-tauri/Cargo.toml`: `tauri-plugin-notification = "2.7.0"`; `main.rs`: `.plugin(tauri_plugin_notification::init())`.
-- `apps/ui/package.json`: `@tauri-apps/plugin-notification` `2.7.0`.
+- `apps/desktop/src-tauri/Cargo.toml`: `tauri-plugin-notification = "=2.7.0"` (exact; a plain `"2.7.0"` would allow 2.8.0), with the matching `Cargo.lock` entry; `main.rs`: `.plugin(tauri_plugin_notification::init())`.
+- `apps/ui/package.json`: `"@tauri-apps/plugin-notification": "2.7.0"` (exact).
 - `capabilities/main.json`: add `notification:allow-notify`, `notification:allow-request-permission`, `notification:allow-is-permission-granted`; update the capability description.
 - Rust is in `~/.cargo/bin`, which is not on this shell's `PATH`; the build adds it.
 
 ## Error handling
 
 - `GET /focus` fails: the widget shows «Can't load focus» and «Retry»; the timer cannot start.
-- `PUT` fails (network, 5xx): the local run continues; the write retries after 2, 5 and 15 s; the first failure shows one toast «Focus progress not saved yet». A finished session stays queued until the server confirms it.
-- 409: the store reloads the run from the server, drops the local action and shows a toast.
+- `PUT` fails (network, 5xx): the local run continues; the write chain retries (see `store.ts`); the first failure shows one toast «Focus progress not saved yet». Unconfirmed sessions stay in the list until a `PUT` carrying them succeeds; they are lost only if the app closes before that.
+- 409: the store re-reads the server state, drops the local run change, keeps and re-sends unconfirmed sessions, and shows a toast.
 - No notification permission: in-app toast.
 - 400 from validation: the UI prevents invalid input; a 400 is shown next to the field.
 
@@ -264,7 +279,9 @@ Registered in `builtinSettingsEditors`. Fields for every `FocusSettings` value w
 Vitest, following the repo's conventions; each behaviour change starts with a failing test.
 
 - `packages/contracts`: settings bounds, run, session and project parsers.
-- `engine.ts`: every phase transition; long break on each `longBreakEvery`-th pomodoro; a skipped or reset focus records only after 1 minute; `hidden` and `user` pauses and resume; `restore` uses `endsAt − seenAt`; `dayKey` at local midnight.
+- `engine.ts`: the initial run and every phase transition; long break on each `longBreakEvery`-th pomodoro; skip goes to the natural next phase in `ready` without raising `streak`; a skipped or reset focus records only after 1 minute; `hidden` and `user` pauses and resume; a pause, skip or reset after `endsAt` first completes the phase exactly once at `endsAt`; changed settings leave the current phase's `durationMs` and apply to the next phase; `restore`: work → heartbeat → reload → resume → skip records the focus time up to the heartbeat plus the time after the resume; a reload right after `start` or `resume`, before any heartbeat, restores the full remaining time and no negative focus time; break → auto-started focus → completed session has `startedAt` set; the initial run is 1 500 000 ms with default settings; `dayKey` at local midnight.
+- `store.ts`: writes are serialized and coalesced; a session survives a failed `PUT` and a 409 and is re-sent; retries continue after the third failure.
+- `WidgetSettings.vue`: the Pomodoro, without a schema, shows its editor in the «Widget» block.
 - API: defaults on first read; revision conflict; session insert and run update in one transaction; the 366-day range limit; project create, rename and archive; the migration.
 - UI: the toast hold queue (limit 50, flush 5 + «+N»); store pause when presence drops to 0 (fake timers); `context.focus` in `useWidgetContext`.
 - SDK: level 7 accepted in manifests and written by `ld-widget build`.
