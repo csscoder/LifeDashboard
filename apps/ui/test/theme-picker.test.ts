@@ -5,7 +5,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { BUILTIN_PALETTES } from '../app/theme/palettes'
 import * as builtin from '../app/theme/builtin'
 import * as colorScheme from '../app/theme/color-scheme'
+import * as fonts from '../app/theme/fonts'
 import { compileSfc, mountComponent, type HostNode } from './helpers/sfc-renderer'
+import { UiSelect } from './helpers/ui-select-stub'
 
 const testWindow = vi.hoisted(() => {
   vi.stubGlobal('document', { createElement: () => ({}) })
@@ -17,7 +19,7 @@ const testWindow = vi.hoisted(() => {
 setMaxListeners(0, testWindow)
 const Radio = compileSfc(new URL('../app/ui/UiRadioGroup.vue', import.meta.url), { 'reka-ui': reka })
 const Picker = compileSfc(new URL('../app/theme/ThemePicker.vue', import.meta.url), {
-  'reka-ui': reka, '../ui/UiRadioGroup.vue': Radio, './palettes': { BUILTIN_PALETTES }, './builtin': builtin, './color-scheme': colorScheme,
+  'reka-ui': reka, '../ui/UiRadioGroup.vue': Radio, '../ui/UiSelect.vue': UiSelect, './fonts': fonts, './palettes': { BUILTIN_PALETTES }, './builtin': builtin, './color-scheme': colorScheme,
 })
 beforeEach(() => {
   vi.stubGlobal('window', testWindow)
@@ -103,4 +105,55 @@ it('shows the inherited palette while retaining inherited mode and style', async
     expect(radio.props['aria-checked']).toBe(true)
     expect(radio.props['data-disabled']).toBeDefined()
   }
+})
+
+const unbounded = fonts.BUILTIN_FONTS.find(font => font.slug === 'unbounded')!
+const textOf = (n: HostNode): string => n.text + n.children.map(textOf).join('')
+const itemText = (item: HostNode) => textOf(item.children[0]!)
+function fontSelect(ui: Awaited<ReturnType<typeof mount>>, label: string) {
+  const forId = ui.nodes().find(n => n.tag === 'label' && n.text === label)!.props.for
+  const trigger = ui.nodes().find(n => n.tag === 'SelectTrigger' && n.props.id === forId)!
+  const root = trigger.parent!
+  const items = root.children.flatMap(function walk(n): HostNode[] { return [n, ...n.children.flatMap(walk)] }).filter(n => n.tag === 'SelectItem')
+  return { root, items, choose: async (name: string) => { root.props['onUpdate:modelValue'](items.find(n => itemText(n) === name)!.props.value); await Vue.nextTick() }, shown: () => (items.find(n => n.props.value === root.props['model-value']) && itemText(items.find(n => n.props.value === root.props['model-value'])!)) }
+}
+it('emits the chosen heading font after the style key', async () => {
+  const ui = await mount({ modelValue: choice })
+  await fontSelect(ui, 'Heading font').choose('Unbounded')
+  const emitted = ui.events.at(-1)![1] as Record<string, string>
+  expect(emitted).toEqual({ ...choice, heading: 'unbounded' })
+  expect(Object.keys(emitted)).toEqual(['palette', 'mode', 'style', 'heading'])
+})
+it('removes the key for Theme default', async () => {
+  const ui = await mount({ modelValue: { ...choice, heading: 'unbounded' } })
+  await fontSelect(ui, 'Heading font').choose('Theme default')
+  expect(ui.events.at(-1)).toEqual(['update:modelValue', choice])
+})
+it('lists Theme default and the catalog in order in both selects', async () => {
+  const ui = await mount({ modelValue: choice })
+  for (const label of ['Heading font', 'Body font']) {
+    expect(fontSelect(ui, label).items.map(n => itemText(n))).toEqual(['Theme default', ...fonts.BUILTIN_FONTS.map(font => font.name)])
+  }
+})
+it.each([null, 'bare'])('disables the font selects for %s', async modelValue => {
+  const ui = await mount({ modelValue })
+  for (const label of ['Heading font', 'Body font']) expect(fontSelect(ui, label).root.props.disabled).toBeTruthy()
+})
+it('shows Theme default for an unknown slug and keeps it when another key changes', async () => {
+  const ui = await mount({ modelValue: { ...choice, heading: 'comic' } })
+  expect(fontSelect(ui, 'Heading font').shown()).toBe('Theme default')
+  await click(ui.nodes().find(n => n.props.role === 'radio' && n.props.value === 'solid')!)
+  expect(ui.events.at(-1)).toEqual(['update:modelValue', { ...choice, style: 'solid', heading: 'comic' }])
+})
+it('copies the inherited fonts when a palette is chosen from Inherit', async () => {
+  const ui = await mount({ inherit: true, inherited: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid', heading: 'lora' } })
+  await click(ui.button('Catppuccin'))
+  expect(ui.events.at(-1)).toEqual(['update:modelValue', { palette: 'builtin:catppuccin', mode: 'light', style: 'solid', heading: 'lora' }])
+})
+it('samples the heading font of the effective choice', async () => {
+  const known = await mount({ modelValue: { ...choice, heading: 'unbounded' } })
+  expect(known.nodes().find(n => n.text === 'Heading Заголовок')!.props.style).toEqual({ fontFamily: fonts.fontStack(unbounded) })
+  const none = await mount({ modelValue: choice })
+  expect(none.nodes().find(n => n.text === 'Heading Заголовок')!.props.style).toEqual({ fontFamily: 'system-ui, sans-serif' })
+  expect(none.nodes().find(n => n.text === 'Body text Текст 123')).toBeDefined()
 })

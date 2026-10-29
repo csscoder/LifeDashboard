@@ -4,7 +4,9 @@ import { afterEach, beforeEach, vi } from 'vitest'
 import * as builtin from '../../app/theme/builtin'
 import * as palettes from '../../app/theme/palettes'
 import * as colorScheme from '../../app/theme/color-scheme'
+import * as fonts from '../../app/theme/fonts'
 import { compileSfc, unmountComponents } from './sfc-renderer'
+import { UiSelect } from './ui-select-stub'
 
 const testWindow = vi.hoisted(() => {
   vi.stubGlobal('document', { createElement: () => ({}) })
@@ -22,6 +24,6 @@ beforeEach(() => {
 afterEach(() => { unmountComponents(); vi.unstubAllGlobals() })
 const Radio = compileSfc(new URL('../../app/ui/UiRadioGroup.vue', import.meta.url), { 'reka-ui': reka })
 export const ThemePicker = compileSfc(new URL('../../app/theme/ThemePicker.vue', import.meta.url), {
-  'reka-ui': reka, '../ui/UiRadioGroup.vue': Radio, './palettes': palettes, './builtin': builtin, './color-scheme': colorScheme,
+  'reka-ui': reka, '../ui/UiRadioGroup.vue': Radio, '../ui/UiSelect.vue': UiSelect, './fonts': fonts, './palettes': palettes, './builtin': builtin, './color-scheme': colorScheme,
 })
 export const themeModules = { '../theme/ThemePicker.vue': ThemePicker, '../theme/builtin': builtin, '../theme/palettes': palettes }

@@ -3,9 +3,11 @@ import { computed, useId } from 'vue'
 import { RadioGroupRoot, RadioGroupItem } from 'reka-ui'
 import type { ThemeChoice } from '@lifedashboard/contracts/theme'
 import UiRadioGroup from '../ui/UiRadioGroup.vue'
+import UiSelect from '../ui/UiSelect.vue'
 import { BUILTIN_PALETTES } from './palettes'
 import { DEFAULT_THEME, themeKey } from './builtin'
 import { useColorScheme } from './color-scheme'
+import { BUILTIN_FONTS, BUILTIN_FONT_SLUGS, fontVars, withFont } from './fonts'
 
 const props = defineProps<{ modelValue: ThemeChoice | 'bare' | null; inherit?: boolean; bare?: boolean; inherited?: ThemeChoice; unavailable?: boolean; disabled?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: ThemeChoice | 'bare' | null] }>()
@@ -18,6 +20,15 @@ const palette = computed(() => props.modelValue === 'bare' ? 'bare' : selected.v
 const dimensionsDisabled = computed(() => props.disabled || !selected.value)
 const modes = [{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'auto', label: 'Auto' }]
 const styles = [{ value: 'solid', label: 'Solid' }, { value: 'glass', label: 'Glass' }]
+const fontOptions = [{ value: '', label: 'Theme default' }, ...BUILTIN_FONTS.map(font => ({ value: font.slug, label: font.name }))]
+const fontRows = [{ key: 'heading', label: 'Heading font' }, { key: 'body', label: 'Body font' }] as const
+// An unknown stored slug shows as Theme default without being rewritten.
+const fontValue = (key: 'heading' | 'body') => { const slug = effective.value[key]; return slug && BUILTIN_FONT_SLUGS.has(slug) ? slug : '' }
+const sampleFamily = (variable: string) => fontVars(effective.value)[variable] ?? 'system-ui, sans-serif'
+function font(key: 'heading' | 'body', value: string) {
+  if (!selected.value || props.disabled) return
+  emit('update:modelValue', withFont(selected.value, key, value || null))
+}
 function choose(value: unknown) {
   if (props.disabled) return
   emit('update:modelValue', value === 'inherit' ? null : value === 'bare' ? 'bare' : { ...effective.value, palette: String(value) })
@@ -46,6 +57,14 @@ function dimension(key: 'mode' | 'style', value: string) {
     </fieldset>
     <fieldset><legend :id="`${id}-mode`">Mode</legend><UiRadioGroup :aria-labelledby="`${id}-mode`" :model-value="effective.mode" :options="modes" :disabled="dimensionsDisabled" @update:model-value="dimension('mode', $event)" /></fieldset>
     <fieldset><legend :id="`${id}-style`">Style</legend><UiRadioGroup :aria-labelledby="`${id}-style`" :model-value="effective.style" :options="styles" :disabled="dimensionsDisabled" @update:model-value="dimension('style', $event)" /></fieldset>
+    <div v-for="row in fontRows" :key="row.key" class="theme-picker__font">
+      <label :for="`${id}-${row.key}`">{{ row.label }}</label>
+      <UiSelect :id="`${id}-${row.key}`" :model-value="fontValue(row.key)" :options="fontOptions" :disabled="dimensionsDisabled" @update:model-value="font(row.key, $event)" />
+    </div>
+    <div class="theme-picker__font-sample" aria-hidden="true">
+      <p :style="{ fontFamily: sampleFamily('--ld-font-heading') }">Heading Заголовок</p>
+      <p :style="{ fontFamily: sampleFamily('--ld-font-body') }">Body text Текст 123</p>
+    </div>
   </div>
 </template>
 
@@ -63,6 +82,9 @@ function dimension(key: 'mode' | 'style', value: string) {
 .theme-picker__sample { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
 .theme-picker__line { color: var(--ld-text-primary); }
 .theme-picker__dot { width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--ld-accent); }
+.theme-picker__font { display: grid; gap: 0.375rem; }
+.theme-picker__font label { color: var(--ld-text-primary); }
+.theme-picker__font-sample p { margin: 0; color: var(--ld-text-primary); }
 .theme-picker__inherit { grid-column: 1 / -1; }
 .theme-picker__inherited-palette { margin-left: 0.5rem; color: var(--ld-text-secondary); font-size: 0.875rem; }
 .theme-picker__unavailable { margin: 0.375rem 0 0; color: var(--ld-text-secondary); font-size: 0.875rem; }
