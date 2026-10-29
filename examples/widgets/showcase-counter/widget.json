@@ -1,6 +1,6 @@
 {
   "id": "dev.lifedashboard.showcase.counter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "title": "Focus sessions",
   "author": "LifeDashboard",
   "entry": "index.js",

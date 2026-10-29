@@ -13,7 +13,7 @@ pnpm -C examples/widgets/showcase-counter typecheck
 pnpm -C examples/widgets/showcase-counter build
 ```
 
-Install the generated `dist/dev.lifedashboard.showcase.counter-1.0.0/` folder through LifeDashboard's widget package dialog. Source entry: [`src/index.vue`](src/index.vue); manifest and settings: [`widget.json`](widget.json).
+Install the generated `dist/dev.lifedashboard.showcase.counter-1.0.1/` folder through LifeDashboard's widget package dialog. Source entry: [`src/index.vue`](src/index.vue); manifest and settings: [`widget.json`](widget.json).
 
 Configure **Title** and **Session goal** (default 8) in the dashboard's widget settings. Use **Edit progress** to open the named workspace and save a nonnegative safe integer. The workspace displays the goal read-only, reloads conflicts for review and closes only after a confirmed save. The compact runtime remounts and reads persisted progress after every close. The count also changes through **Add session** and the minus button; it persists across reloads and has no calendar reset. Counts may exceed the goal and never go below zero.
 
