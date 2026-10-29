@@ -1,5 +1,6 @@
 import type { SpaceBoard, SaveBoardRequest, WidgetSource } from '@lifedashboard/contracts/board'
-import type { SpacePatch, SpaceSummary } from '@lifedashboard/contracts/space'
+import type { FocusProject, FocusPutRequest, FocusSession, FocusState } from '@lifedashboard/contracts/focus'
+import type { SpaceColor, SpacePatch, SpaceSummary } from '@lifedashboard/contracts/space'
 import type { WidgetSessionResponse } from '@lifedashboard/contracts/widget-gateway'
 import type { FolderFile, Grant, GrantMode, InstalledPackage, PackageInspection, UploadCreated, WidgetPermission } from '@lifedashboard/contracts/widget-package'
 
@@ -116,6 +117,13 @@ export const api = {
     apiRequest<null>('DELETE', `/widget-gateway/confirmations/${encodeURIComponent(id)}`, {}, API_TIMEOUT_MS, { 'x-widget-session': token }),
   setGrantMode: (id: string, permission: WidgetPermission, mode: GrantMode) =>
     apiRequest<Grant[]>('PUT', `/widget-packages/${encodeURIComponent(id)}/grants/${encodeURIComponent(permission)}`, { mode }),
+  focus: () => apiRequest<FocusState>('GET', '/focus'),
+  saveFocus: (body: FocusPutRequest) => apiRequest<{ revision: number }>('PUT', '/focus', body),
+  focusSessions: (from: string, to: string) =>
+    apiRequest<FocusSession[]>('GET', `/focus/sessions?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+  createFocusProject: (body: { name: string; color: SpaceColor }) => apiRequest<FocusProject>('POST', '/focus/projects', body),
+  updateFocusProject: (id: string, patch: { name?: string; color?: SpaceColor; archived?: boolean }) =>
+    apiRequest<FocusProject>('PATCH', `/focus/projects/${encodeURIComponent(id)}`, patch),
 }
 
 function errorField(payload: unknown, field: 'code' | 'message' | 'confirmationId'): string | undefined {
