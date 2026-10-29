@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { FieldRoot, FieldLabel } from 'reka-ui'
 import { api } from './api'
+import UiButton from './ui/UiButton.vue'
+import UiTextField from './ui/UiTextField.vue'
 
 const emit = defineEmits<{ paired: [] }>()
 
@@ -37,21 +40,21 @@ async function requestCode() {
 <template>
   <form class="pairing" @submit.prevent="submit">
     <h2 class="pairing__title">Connect to API</h2>
-    <label class="pairing__label">
-      Pairing code
-      <input
+    <FieldRoot class="pairing__label" required>
+      <FieldLabel>Pairing code</FieldLabel>
+      <UiTextField
         v-model="code"
         class="pairing__input"
         inputmode="numeric"
         autocomplete="one-time-code"
-        maxlength="12"
+        :maxlength="12"
         required
         autofocus
       />
-    </label>
+    </FieldRoot>
     <div class="pairing__actions">
-      <button type="submit" class="app__button" :disabled="busy">Pair</button>
-      <button type="button" class="app__button" @click="requestCode">New code</button>
+      <UiButton type="submit" :disabled="busy">Pair</UiButton>
+      <UiButton @click="requestCode">New code</UiButton>
     </div>
     <p class="pairing__message" role="status">{{ message }}</p>
   </form>
@@ -83,20 +86,8 @@ async function requestCode() {
 }
 
 .pairing__input {
-  height: var(--ld-control-height);
-  padding: 0 0.75rem;
-  border: var(--ld-border-width) solid var(--ld-border-default);
-  border-radius: var(--ld-radius-control);
-  background: var(--ld-surface-3);
-  color: var(--ld-text-primary);
-  font: inherit;
   font-size: 1.25rem;
   letter-spacing: 0.2em;
-}
-
-.pairing__input:focus-visible {
-  outline: 0.125rem solid var(--ld-focus-ring);
-  outline-offset: 0.125rem;
 }
 
 .pairing__actions {
