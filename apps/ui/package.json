@@ -15,6 +15,7 @@
     "@lifedashboard/contracts": "workspace:*",
     "@lifedashboard/widget-sdk": "workspace:*",
     "@rive-app/canvas": "2.44.1",
+    "@tauri-apps/plugin-notification": "2.7.0",
     "@tresjs/core": "5.9.3",
     "@unocss/nuxt": "66.10.5",
     "@vue-flow/core": "1.48.2",

@@ -6,6 +6,7 @@ import {
 import type { SpaceColor } from '@lifedashboard/contracts/space'
 import { api, type ApiResult } from '../api'
 import { holdToasts, showToast } from '../toasts'
+import { alerts } from './alerts'
 import * as engine from './engine'
 
 export type ProjectResult = { ok: true; project: FocusProject } | { ok: false; error: string }
@@ -361,8 +362,7 @@ export const focusStore = createFocusStore({
   api,
   now: () => Date.now(),
   newId: () => crypto.randomUUID(),
-  // Task 6 wires the phase-end alerts.
-  onPhaseEnd: () => {},
+  onPhaseEnd: (event) => { void alerts.phaseEnded(event, focusStore.state.settings.sound) },
   notice: focusNotice,
 })
 

@@ -65,6 +65,7 @@ impl Log {
 fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(Sidecar::default())
         .setup(|app| {
             if let Err(error) = start(app.handle()) {
