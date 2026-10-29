@@ -33,12 +33,16 @@ const todays = computed(() => todaySessions(sessions.value, today.value))
 
 const hue = (color: SpaceColor | null) => (color ? `oklch(0.7 0.15 ${SPACE_COLORS[color]})` : 'var(--ld-text-muted)')
 const clock = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-const projectName = (id: string | null) => state.projects.find((project) => project.id === id)?.name
+const projectOf = (id: string | null) => state.projects.find((project) => project.id === id)
 
+// Bumped by every load: an older answer is ignored.
+let request = 0
 async function load() {
+  const mine = ++request
   failed.value = false
   today.value = dayKey(Date.now())
   const result = await api.focusSessions(lastDays(today.value, MONTH)[0]!, today.value)
+  if (mine !== request) return
   if (result.ok) sessions.value = result.data
   else failed.value = true
 }
@@ -78,17 +82,24 @@ watch(
         <li v-if="!todays.length" class="focus-stats__muted">No sessions today</li>
         <li v-for="item in todays" :key="item.id">
           <span class="focus-stats__time">{{ clock(item.startedAt) }}–{{ clock(item.endedAt) }}</span>
-          <span>{{ item.label || projectName(item.projectId) || 'No task' }}</span>
-          <span class="focus-stats__muted">{{ Math.round(item.focusMs / 60_000) }} min{{ item.completed ? '' : ' · interrupted' }}</span>
+          <span>{{ item.label || 'No task' }}</span>
+          <span class="focus-stats__project-tag">
+            <i :style="{ background: hue(projectOf(item.projectId)?.color ?? null) }" />{{ projectOf(item.projectId)?.name ?? 'No project' }}
+          </span>
+          <span class="focus-stats__muted">{{ Math.round(item.focusMs / 60_000) }} min</span>
+          <span :aria-label="item.completed ? 'Completed' : 'Interrupted'" :title="item.completed ? 'Completed' : 'Interrupted'">{{ item.completed ? '✓' : '✗' }}</span>
         </li>
       </ul>
 
       <div v-else-if="tab === 'Week'">
         <p class="focus-stats__muted">{{ focusHours(weekSessions) }} h focused</p>
-        <div class="focus-stats__bars" role="img" :aria-label="`Pomodoros per day: ${bars.map((bar) => bar.pomodoros).join(', ')}`">
+        <div class="focus-stats__bars" role="img" :aria-label="`Pomodoros per day against a goal of ${state.settings.dailyGoal}: ${bars.map((bar) => bar.pomodoros).join(', ')}`">
           <div v-for="bar in bars" :key="bar.day" class="focus-stats__bar">
-            <span class="focus-stats__column" :class="{ 'focus-stats__column--goal': bar.pomodoros >= bar.goal }" :style="{ height: `${(bar.pomodoros / barMax) * 100}%` }" />
-            <span class="focus-stats__muted">{{ bar.pomodoros }}</span>
+            <span class="focus-stats__plot">
+              <span class="focus-stats__goal-line" :style="{ bottom: `${(bar.goal / barMax) * 100}%` }" />
+              <span class="focus-stats__column" :class="{ 'focus-stats__column--goal': bar.pomodoros >= bar.goal }" :style="{ height: `${(bar.pomodoros / barMax) * 100}%` }" />
+            </span>
+            <span class="focus-stats__muted">{{ bar.pomodoros }} / {{ bar.goal }}</span>
             <span class="focus-stats__muted">{{ bar.day.slice(5) }}</span>
           </div>
         </div>
@@ -156,8 +167,12 @@ watch(
 .focus-stats__list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
 .focus-stats__muted { color: var(--ld-text-muted); font-size: 0.8125rem; }
 .focus-stats__time { font-variant-numeric: tabular-nums; }
-.focus-stats__bars { display: flex; align-items: flex-end; gap: 0.5rem; height: 9rem; }
-.focus-stats__bar { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 0.125rem; }
+.focus-stats__bars { display: flex; align-items: flex-end; gap: 0.5rem; }
+.focus-stats__bar { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0.125rem; }
+.focus-stats__plot { position: relative; display: flex; align-items: flex-end; width: 100%; height: 7rem; }
+.focus-stats__goal-line { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--ld-text-muted); }
+.focus-stats__project-tag { display: inline-flex; align-items: center; gap: 0.375rem; color: var(--ld-text-secondary); font-size: 0.8125rem; }
+.focus-stats__project-tag i { width: 0.5rem; height: 0.5rem; border-radius: 50%; }
 .focus-stats__column { width: 100%; min-height: 1px; border-radius: 0.125rem; background: oklch(0.64 0.22 27); }
 .focus-stats__column--goal { background: oklch(0.82 0.15 85); }
 .focus-stats__share > :first-child { width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
