@@ -77,13 +77,13 @@ function fakeServer(seed: Partial<FocusState> = {}, sessions: FocusSessionInput[
 
 const cleanups: (() => void)[] = []
 
-function setup(seed?: Partial<FocusState>, sessions?: FocusSessionInput[]) {
+function setup(seed?: Partial<FocusState>, sessions?: FocusSessionInput[], now = () => Date.now()) {
   const { server, api } = fakeServer(seed, sessions)
   const notice = vi.fn()
   const onPhaseEnd = vi.fn()
   let next = 0
   const scope = effectScope()
-  const store = scope.run(() => createFocusStore({ api, now: () => Date.now(), newId: () => `s${++next}`, onPhaseEnd, notice }))!
+  const store = scope.run(() => createFocusStore({ api, now, newId: () => `s${++next}`, onPhaseEnd, notice }))!
   cleanups.push(() => {
     store.dispose()
     scope.stop()
@@ -285,6 +285,18 @@ describe('focus store', () => {
     expect(store.state.run.durationMs).toBe(FOCUS)
   })
 
+  it('saveSettings and setTask before load or after a failed load return an error', async () => {
+    const { store, server, api } = setup()
+    expect(store.saveSettings({ ...S, focusMin: 50 })).toBe("Focus settings aren't loaded")
+    expect(store.setTask('x', null)).toBe("Focus isn't loaded")
+    server.focusOutcomes.push('unavailable')
+    await store.load()
+    expect(store.state.loadError).toBe(true)
+    expect(store.saveSettings({ ...S, focusMin: 50 })).toBe("Focus settings aren't loaded")
+    expect(store.setTask('x', null)).toBe("Focus isn't loaded")
+    expect(api.saveFocus).not.toHaveBeenCalled()
+  })
+
   it('project errors are returned', async () => {
     const { store, api } = await loaded()
     api.createFocusProject.mockResolvedValueOnce({ ok: false, kind: 'invalid', code: 'VALIDATION_ERROR', message: 'name must be 1..40 characters' })
@@ -339,6 +351,19 @@ describe('focus store', () => {
     expect(store.state.run).toMatchObject({ phase: 'short', status: 'running' })
     expect(store.status.value).toEqual({ phase: 'break', running: true, endsAt: T0 + FOCUS + 300_000 })
     store.skip()
+    expect(onPhaseEnd).toHaveBeenCalledTimes(1)
+  })
+
+  it('a deadline timer that fires before the store clock reaches endsAt re-arms', async () => {
+    let lag = 0
+    const { store, onPhaseEnd } = setup({ run: paused(10_000) }, undefined, () => Date.now() - lag)
+    await store.load()
+    store.resume()
+    lag = 1
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(store.state.run.phase).toBe('focus')
+    await vi.advanceTimersByTimeAsync(5)
+    expect(store.state.run.phase).toBe('short')
     expect(onPhaseEnd).toHaveBeenCalledTimes(1)
   })
 

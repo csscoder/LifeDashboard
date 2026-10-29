@@ -135,6 +135,8 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
   function onDeadline() {
     deadline = undefined
     catchUp()
+    // A timer may fire before now() reaches endsAt: nothing advanced, so arm it again.
+    if (deadline === undefined && state.run.status === 'running') setRun(state.run)
     write()
   }
 
@@ -322,6 +324,7 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
     skip: () => act((run, now) => engine.skip(state.settings, run, now, deps.newId)),
     reset: () => act((run, now) => engine.reset(state.settings, run, now, deps.newId)),
     setTask(label, projectId) {
+      if (!state.loaded) return "Focus isn't loaded"
       const parsed = parseFocusRun({ ...state.run, label, projectId })
       if (!parsed.ok) return parsed.error
       // Ruling 12: the server rejects an unknown project, and a session carrying it could never be stored.
@@ -332,7 +335,7 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
     saveSettings(settings) {
       const parsed = parseFocusSettings(settings)
       if (!parsed.ok) return parsed.error
-      if (!state.loaded) return null
+      if (!state.loaded) return "Focus settings aren't loaded"
       // The current phase ends under the settings it began with.
       catchUp()
       state.settings = parsed.value
