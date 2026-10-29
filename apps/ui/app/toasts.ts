@@ -26,7 +26,7 @@ function display(message: Omit<Toast, 'id'>): void {
   }, TOAST_MS)
 }
 
-/** Shows a widget notification in web mode (the Tauri notification plugin replaces it at E7). While held, it is queued unless `bypassHold`. */
+/** Shows an in-app toast (widget notifications included; only the Pomodoro's own alerts use system notifications). While held, it is queued unless `bypassHold`. */
 export function showToast(message: Omit<Toast, 'id'>, options?: { bypassHold?: boolean }): void {
   if (!holding || options?.bypassHold) return display(message)
   held = [...held, message].slice(-MAX_HELD)

@@ -53,10 +53,11 @@ function toggle() {
   if (action !== 'pause') void alerts.prime()
 }
 
-// Only the focused tile itself: inner buttons already activate on Space.
+// Only the focused tile itself: inner buttons already activate on Space. A held key toggles once.
 function onKey(event: KeyboardEvent) {
   if (event.target !== event.currentTarget) return
   event.preventDefault()
+  if (event.repeat) return
   toggle()
 }
 </script>
