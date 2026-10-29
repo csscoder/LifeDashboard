@@ -7,6 +7,9 @@ import UiNumberField from '../../../ui/UiNumberField.vue'
 import UiSwitch from '../../../ui/UiSwitch.vue'
 
 // Focus settings are global: this editor writes to the focus store and ignores the instance config and schema.
+// Declared anyway (change is never emitted), so the panel's bindings never fall through to the root as a native change listener.
+defineProps<{ schema?: unknown; config?: Record<string, unknown> }>()
+defineEmits<{ change: [config: Record<string, unknown>] }>()
 const state = focusStore.state
 const error = ref<string | null>(null)
 const numbers = [
