@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { parse } from 'vue/compiler-sfc'
 import postcss, { type Rule } from 'postcss'
 import { expect, it } from 'vitest'
 import { compileSfc, mountComponent } from './helpers/sfc-renderer'
@@ -79,4 +80,23 @@ it('applies the last-child bottom margin reset after every element margin, inclu
   // would overwrite margin-bottom even on a final hr, so the reset must come last.
   expect(lastElementMargin).toBeGreaterThanOrEqual(0)
   expect(lastChildReset).toBeGreaterThan(lastElementMargin)
+})
+
+it('scales the widget body from the content scale variable', () => {
+  const frame = postcss.parse(readFileSync(new URL('../app/theme/styles/frame.css', import.meta.url), 'utf8'))
+  let fontSize: string | undefined
+  frame.walkRules(rule => {
+    if (rule.selectors.includes('.widget__body')) rule.walkDecls('font-size', decl => { fontSize = decl.value })
+  })
+  expect(fontSize).toBe('calc(var(--ld-font-scale) * var(--ld-content-scale, 1) * 1rem)')
+})
+it('sizes the placeholder text in em, not in rem-based utilities', () => {
+  const sfc = parse(readFileSync(new URL('../app/widgets/builtin/PlaceholderWidget.vue', import.meta.url), 'utf8'))
+  const { descriptor } = sfc
+  expect(descriptor.template!.content).not.toContain('text-2xl')
+  expect(descriptor.styles.some(style => style.scoped)).toBe(true)
+  const css = postcss.parse(descriptor.styles.map(style => style.content).join('\n'))
+  const declared: Record<string, string> = {}
+  css.walkDecls(decl => { declared[decl.prop] = decl.value })
+  expect(declared).toMatchObject({ 'font-size': '1.5em', 'line-height': 'calc(4 / 3)' })
 })

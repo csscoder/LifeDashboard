@@ -29,6 +29,7 @@ const props = defineProps<{
   foreign?: boolean
   fonts?: Record<string, string>
   shadow?: DropShadow | null
+  scale?: number | null
   widgetId?: string
   config?: Record<string, unknown>
   variant?: string | null
@@ -90,7 +91,7 @@ if (props.widgetId && props.source.kind === 'builtin') {
 </script>
 
 <template>
-  <WidgetFrame ref="frameBox" :theme-id="themeId" :skin="skin" :foreign="foreign" :fonts="fonts" :shadow="shadow">
+  <WidgetFrame ref="frameBox" :theme-id="themeId" :skin="skin" :foreign="foreign" :fonts="fonts" :shadow="shadow" :scale="scale">
     <div v-if="!widgetId" class="grid place-items-center h-full text-center text-base font-strong text-secondary">{{ title }}</div>
     <component :is="renderer" v-else-if="renderer" />
     <SandboxWidget v-else-if="info?.hash && source.kind === 'package'" :key="`${info.hash}:${widgetModals.runtimeVersion(widgetId)}`" :surface-id="runtimeId" :widget-id="widgetId" :hash="info.hash" :title="title" :package-id="source.packageId" :version="source.version" :context="context" />

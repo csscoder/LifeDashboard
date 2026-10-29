@@ -641,6 +641,7 @@ defineExpose({
             :foreign="look.foreign"
             :fonts="look.fonts"
             :shadow="instance.appearance?.shadow"
+            :scale="instance.appearance?.scale ?? null"
             :widget-id="instance.id"
             :config="instance.config"
           />

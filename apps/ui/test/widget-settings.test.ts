@@ -1,6 +1,6 @@
 import { DEFAULT_SHADOW } from '@lifedashboard/contracts/board'
 import { describe, expect, it } from 'vitest'
-import { panelPosition, withShadow, withStyle, withVariant } from '../app/board/widget-settings'
+import { panelPosition, withScale, withShadow, withStyle, withVariant } from '../app/board/widget-settings'
 
 const UNKNOWN = { palette: 'builtin:nord', mode: 'dark', style: 'solid' } as const
 
@@ -27,6 +27,20 @@ describe('withShadow', () => {
 
   it('starts from an inherited theme without an appearance', () => {
     expect(withShadow(undefined, DEFAULT_SHADOW)).toEqual({ theme: null, shadow: DEFAULT_SHADOW, variant: null, scale: null })
+  })
+})
+
+describe('withScale', () => {
+  it('stores 0 as null and keeps the other fields', () => {
+    const look = { theme: 'bare' as const, shadow: DEFAULT_SHADOW, variant: 'roman', scale: 10 }
+    expect(withScale(look, 0)).toStrictEqual({ ...look, scale: null })
+    expect(withScale(undefined, -20)).toStrictEqual({ theme: null, shadow: null, variant: null, scale: -20 })
+  })
+  it('keeps the scale when style, shadow or look change', () => {
+    const look = { theme: null, shadow: null, variant: null, scale: 30 }
+    expect(withStyle(look, 'bare').scale).toBe(30)
+    expect(withShadow(look, DEFAULT_SHADOW).scale).toBe(30)
+    expect(withVariant(look, 'roman').scale).toBe(30)
   })
 })
 

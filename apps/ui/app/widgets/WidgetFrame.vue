@@ -7,7 +7,7 @@ import { shadowCss } from '../theme/shadow'
 
 // A resolved theme id: the widget's own choice or the one it inherits. `skin` and `foreign` come from
 // resolveWidgetLook; without them the frame draws the theme's own skin (the build draft).
-const props = defineProps<{ themeId: string; skin?: FrameSkin; foreign?: boolean; shadow?: DropShadow | null; fonts?: Record<string, string> }>()
+const props = defineProps<{ themeId: string; skin?: FrameSkin; foreign?: boolean; shadow?: DropShadow | null; fonts?: Record<string, string>; scale?: number | null }>()
 
 const skin = computed(() => props.skin ?? themeMeta(props.themeId).skin)
 const classes = computed(() => [
@@ -16,6 +16,11 @@ const classes = computed(() => [
   `widget--skin-${skin.value}`,
   { 'widget--foreign': props.foreign },
 ])
+// The text size is a per-widget factor on the body; 0 and null mean the default, so no variable is set.
+const rootStyle = computed(() => {
+  const scale = props.scale ? { '--ld-content-scale': String(1 + props.scale / 100) } : undefined
+  return props.fonts || scale ? { ...props.fonts, ...scale } : undefined
+})
 // Inline style beats the skin's layered box-shadow. A bare widget gets drop-shadow, which follows its
 // content's alpha outline (the round clock dial); a card is a rectangle, and filter would break Glass blur.
 const wrapperStyle = computed(() => {
@@ -26,7 +31,7 @@ const wrapperStyle = computed(() => {
 </script>
 
 <template>
-  <div :class="classes" :style="fonts">
+  <div :class="classes" :style="rootStyle">
     <div class="widget__wrapper" :style="wrapperStyle">
       <div class="widget__box">
         <div class="widget__body ld-content">

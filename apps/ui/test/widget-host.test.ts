@@ -448,6 +448,23 @@ it('puts the theme font variables on the root widget element, not on the wrapper
   expect(wrapper.props.style).toBeUndefined()
 })
 
+it('sets the content scale factor on the root widget element, merged with the fonts', () => {
+  const Frame = compileSfc(new URL('../app/widgets/WidgetFrame.vue', import.meta.url), { '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow })
+  const fonts = { '--ld-font-body': "'Inter', system-ui, sans-serif" }
+  const scaled = mountComponent(Frame, { themeId: 'builtin:gruvbox-dark-solid', fonts, scale: 20 }, [])
+  const widget = scaled.nodes().find(el => String(el.props.class).startsWith('widget '))!
+  expect(widget.props.style).toEqual({ ...fonts, '--ld-content-scale': '1.2' })
+  for (const scale of [0, null, undefined]) {
+    const plain = mountComponent(Frame, { themeId: 'builtin:gruvbox-dark-solid', scale }, [])
+    const root = plain.nodes().find(el => String(el.props.class).startsWith('widget '))!
+    expect(root.props.style).toBeUndefined()
+  }
+  const noScale = mountComponent(Frame, { themeId: 'builtin:gruvbox-dark-solid', fonts, scale: 0 }, [])
+  const root = noScale.nodes().find(el => String(el.props.class).startsWith('widget '))!
+  expect(root.props.style).toEqual(fonts)
+  expect(root.props.style['--ld-content-scale']).toBeUndefined()
+})
+
 it('loads the sandbox document with the ?doc=2 cache buster', async () => {
   const f = await surfaceFixture()
   try {

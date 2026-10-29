@@ -81,7 +81,7 @@ describe.each(widgetFiles)('%s', (file) => {
       const root = postcss.parse(style.content)
       for (const node of root.nodes)
         if (node.type !== 'comment') expect(node.type === 'atrule' && node.name === 'layer' && node.params).toBe('ld.widget')
-      root.walkDecls((decl) => expect(decl.important).toBe(false))
+      root.walkDecls((decl) => expect(decl.important ?? false).toBe(false))
     }
   })
 })

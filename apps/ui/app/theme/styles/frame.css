@@ -52,7 +52,7 @@
     overflow-y: auto;
     container-type: size;
     padding: var(--ld-widget-padding);
-    font-size: calc(var(--ld-font-scale) * 1rem);
+    font-size: calc(var(--ld-font-scale) * var(--ld-content-scale, 1) * 1rem);
     scrollbar-color: var(--ld-border-strong) transparent;
   }
 
