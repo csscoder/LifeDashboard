@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue'
+import { computed, shallowRef, useTemplateRef, watch } from 'vue'
 import { useFieldBridge } from './field-bridge'
 import {
   ColorAreaArea, ColorAreaRoot, ColorAreaThumb, ColorFieldInput, ColorFieldRoot, ColorSliderRoot, ColorSliderThumb, ColorSliderTrack,
-  ColorSwatch, PopoverContent, PopoverRoot, PopoverTrigger, type Color,
+  ColorSwatch, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger, type Color,
 } from 'reka-ui'
 defineOptions({ inheritAttrs: false })
 // alpha (0..1) is optional and separate from the #rrggbb model; it adds the opacity slider.
@@ -22,6 +22,14 @@ function update(value: string | null) {
   const typed = rawText
   rawText = undefined
   if (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) && (typed === undefined || /^#?[0-9a-f]{6}$/i.test(typed.trim()))) emit('update:modelValue', value.toLowerCase())
+}
+
+// The picker opens as a child of the nearest popover panel (it must stay in that top layer), not inside the
+// panel's scroller, which would clip it; outside any popover it goes to the body.
+const root = useTemplateRef<HTMLElement>('root')
+const portalTarget = shallowRef<HTMLElement | string>('body')
+function onOpen(open: boolean) {
+  if (open) portalTarget.value = root.value?.closest<HTMLElement>('[popover]') ?? 'body'
 }
 
 // The picker keeps its own HSB colour: a hex round trip loses the hue of grey and black.
@@ -45,11 +53,12 @@ function pickAlpha(color: Color) {
 </script>
 
 <template>
-  <div class="ui-color">
-    <PopoverRoot>
+  <div ref="root" class="ui-color">
+    <PopoverRoot @update:open="onOpen">
       <PopoverTrigger class="ui-color__trigger" aria-label="Pick color" :disabled="disabled">
         <ColorSwatch class="ui-color__swatch" :color="swatch" />
       </PopoverTrigger>
+      <PopoverPortal :to="portalTarget">
       <PopoverContent class="ui-color__picker" side="bottom" align="start" :side-offset="4">
         <ColorAreaRoot class="ui-color__area" :model-value="pickerColor" color-space="hsb" x-channel="saturation" y-channel="brightness" @update:model-value="pick" @update:color="picked = $event" v-slot="{ style }">
           <ColorAreaArea class="ui-color__area-plane" :style="style"><ColorAreaThumb class="ui-color__thumb" /></ColorAreaArea>
@@ -63,6 +72,7 @@ function pickAlpha(color: Color) {
           <ColorSliderThumb class="ui-color__thumb" aria-label="Opacity" />
         </ColorSliderRoot>
       </PopoverContent>
+      </PopoverPortal>
     </PopoverRoot>
     <ColorFieldRoot :model-value="modelValue" :disabled="disabled" @update:model-value="update">
       <ColorFieldInput ref="control" v-bind="bindings()" class="ui-color-field" @input.capture="recordInput" @keydown.capture="recordStep" @wheel.capture="recordStep" />

@@ -10,7 +10,7 @@ const reka = Object.fromEntries([
   'SwitchRoot', 'SwitchThumb', 'SliderRoot', 'SliderTrack', 'SliderRange', 'SliderThumb',
   'RadioGroupRoot', 'RadioGroupItem', 'RadioGroupIndicator',
   'NumberFieldRoot', 'NumberFieldInput', 'NumberFieldIncrement', 'NumberFieldDecrement', 'ColorFieldRoot', 'ColorFieldInput', 'FieldControl',
-  'PopoverRoot', 'PopoverTrigger', 'PopoverContent', 'ColorSwatch',
+  'PopoverRoot', 'PopoverTrigger', 'PopoverPortal', 'PopoverContent', 'ColorSwatch',
   'ColorAreaRoot', 'ColorAreaArea', 'ColorAreaThumb', 'ColorSliderRoot', 'ColorSliderTrack', 'ColorSliderThumb',
 ].map(name => [name, part(name)]))
 Object.assign(reka, { Primitive: Vue.defineComponent({ props: ['as'], setup: (props, { slots }) => () => Vue.h(props.as, null, slots.default?.()) }) })

@@ -122,6 +122,7 @@ defineExpose({ open, close, isOpen })
     @toggle="onToggle"
     @focusout="onFocusOut"
   >
+    <div class="settings__scroll">
     <template v-if="versions.length > 0">
       <h2 class="settings__heading">Package</h2>
       <SettingsRow label="Version"><UiSelect v-model="selectedVersion" :options="versionOptions" /></SettingsRow>
@@ -176,6 +177,7 @@ defineExpose({ open, close, isOpen })
     </template>
     <Separator class="settings__separator" />
     <div class="settings__footer"><UiButton @click="emit('reset')">Reset to defaults</UiButton></div>
+    </div>
   </div>
 </template>
 
@@ -188,9 +190,6 @@ defineExpose({ open, close, isOpen })
   margin: 0;
   width: 21rem;
   max-width: calc(100vw - 1.5rem);
-  max-height: calc(100dvh - 2rem);
-  overflow-y: auto;
-  padding: 0.625rem 0.75rem;
   border: var(--ld-border-width) solid var(--ld-border-default);
   border-radius: var(--ld-radius-card);
   background: var(--ld-surface-2);
@@ -202,15 +201,24 @@ defineExpose({ open, close, isOpen })
   line-height: 1.25rem;
 }
 
-/* A flex column, not a grid: with the max-height above, WebKit (the desktop app) sizes the auto rows of a
+/* The panel itself does not scroll: a colour picker opens as its child, outside the scroller, so it is not
+   clipped by the panel edge (WebKit clips it) and can extend past the panel. */
+.settings:popover-open { display: block; overflow: visible; } /* the UA gives a popover overflow: auto */
+
+/* A flex column, not a grid: with the max-height, WebKit (the desktop app) sizes the auto rows of a
    scrolling grid too small and the rows overlap. Rows keep their content height. */
-.settings:popover-open {
+.settings__scroll {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  padding: 0.625rem 0.75rem;
+  border-radius: inherit;
 }
 
-.settings:popover-open > * { flex: none; }
+.settings__scroll > * { flex: none; }
 
 .settings__theme { grid-template-columns: minmax(0, 1fr); }
 .settings__heading { margin: 0; font: inherit; font-weight: 600; }
