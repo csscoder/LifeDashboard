@@ -48,7 +48,7 @@ The following describes the implementation in the repository as of **October 202
 | --- | --- |
 | Widget board | 24-column fluid grid; configurable number of rows; add, move, resize, and remove widgets; pointer and keyboard controls. |
 | Persistence | Boards and widget instances saved through the local Fastify API to SQLite, with revision-based conflict detection. |
-| Appearance | 11 palettes × light/dark modes × Solid/Glass styles (44 combinations); dashboard, space and screen defaults with inheritance; per-widget overrides, a frameless style, and custom shadows. |
+| Appearance | 11 palettes × light/dark modes × Solid/Glass styles (44 combinations); dashboard, space and screen defaults with inheritance; per-widget overrides, a frameless style, custom shadows, and heading and body fonts from 12 self-hosted families. |
 | Built-in widgets | Animated analog clock and a placeholder. The built-in library is still small. |
 | Installable widgets | Widget folders built by ld-widget build: code up to 10 MB, unlimited media, bundled sources; installed through the UI into the userwidgets library with permission review. |
 | Widget SDK | Initial `useWidget()` API, `ld-widget build` CLI, reactive widget context, persisted state, and host notifications. |

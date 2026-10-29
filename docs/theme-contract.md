@@ -104,6 +104,24 @@ The generator sets `font-ui` equal to `font-body` and `font-display` equal to `f
 | `glow` | colour | | `transparent` |
 | `edge-highlight` | number | 0–0.4 (alpha of a 1px line at the top edge) | `0` |
 
+## Fonts
+
+A theme choice may carry two optional keys, `heading` and `body`: slugs matching `^[a-z][a-z0-9-]{0,31}$`.
+An absent key means the theme's default font (`system-ui`); `null` is invalid. A valid slug the catalog
+does not know (a family removed later) is stored unchanged and renders the theme default.
+
+The catalog is `apps/ui/app/theme/fonts.ts`: 12 Google Fonts families, Latin and Cyrillic subsets, upright
+only. `pnpm -C apps/ui fetch:fonts` downloads the WOFF2 files and `OFL.txt` licences into
+`apps/ui/app/theme/fonts/` and generates `apps/ui/app/theme/styles/fonts.css`; all of it is committed, and
+normal builds never touch the network.
+
+The host applies a font as inline custom properties, not as a class: `heading` sets `--ld-font-heading` and
+`--ld-font-display`, `body` sets `--ld-font-body` and `--ld-font-ui`, each to `'<Name>', system-ui, <fallback>`.
+They sit on the `.space` root and on each widget frame root, and win over the theme rule on the same element.
+A widget with its own palette uses its own fonts only; one without inherits the board's. Sandboxed widgets
+receive the values through `context.theme.tokens`, and the SDK runtime loads the files from
+`/sandbox/runtime/fonts/`. Fonts never change the combination id.
+
 ## Contrast (WCAG 2)
 
 The validator composites in paint order (backdrop → surface → overlay → foreground) and checks

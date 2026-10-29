@@ -117,7 +117,7 @@ Text must keep readable contrast in every theme. Put `text-*` on `surface-*` tok
 
 ## Typography and content
 
-Use semantic elements: headings, paragraphs, lists, `small` and links are already styled with theme typography. Size content text and spacing in `em` or with `size-*` tokens. Use only `--ld-*` colours, choosing the role that matches the content:
+Use semantic elements: headings, paragraphs, lists, `small` and links are already styled with theme typography. Size content text and spacing in `em` or with `size-*` tokens. The user's heading and body fonts arrive through `--ld-font-heading` and `--ld-font-body`, so widgets never load fonts themselves. Use only `--ld-*` colours, choosing the role that matches the content:
 
 | Content | Token |
 | --- | --- |

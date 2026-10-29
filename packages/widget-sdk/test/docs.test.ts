@@ -176,3 +176,11 @@ describe('page content', () => {
     }
   })
 })
+
+describe('typography docs', () => {
+  it('tells widget authors that fonts follow the theme', async () => {
+    const design = await readFile(join(root, 'docs-src', 'design.md'), 'utf8')
+    expect(design).toContain('--ld-font-heading')
+    expect(design).toContain('never load fonts themselves')
+  })
+})
