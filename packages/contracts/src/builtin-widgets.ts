@@ -33,6 +33,13 @@ export const BUILTIN_WIDGETS: readonly BuiltinWidgetManifest[] = [
       },
     },
   },
+  // No settings schema: focus settings are global and live in the focus store.
+  {
+    type: 'pomodoro',
+    title: 'Pomodoro',
+    sizing: { default: { w: 6, h: 6 }, min: { w: 3, h: 3 }, max: { w: 12, h: 12 } },
+    permissions: [],
+  },
 ]
 
 // A Map (not an object) so types like "toString" never resolve to prototype members.

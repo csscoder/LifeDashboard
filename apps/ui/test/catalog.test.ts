@@ -95,6 +95,7 @@ describe('catalog', () => {
     expect(pickerEntries([clock])).toEqual([
       { key: 'builtin:placeholder', title: 'Placeholder', source: { kind: 'builtin', type: 'placeholder' } },
       { key: 'builtin:clock-analog-1', title: 'Clock: forest', source: { kind: 'builtin', type: 'clock-analog-1' } },
+      { key: 'builtin:pomodoro', title: 'Pomodoro', source: { kind: 'builtin', type: 'pomodoro' } },
       { key: 'package:dev.a.clock', title: 'Clock 2', source: { kind: 'package', packageId: 'dev.a.clock', version: '2.0.0' } },
     ])
   })

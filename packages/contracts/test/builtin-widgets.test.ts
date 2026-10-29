@@ -4,7 +4,7 @@ import { normalizeConfig, parseSettingsSchema } from '../src/widget-settings.ts'
 
 describe('builtin widgets', () => {
   it('describes the placeholder without permissions', () => {
-    expect(BUILTIN_WIDGETS.map((manifest) => manifest.type)).toEqual(['placeholder', 'clock-analog-1'])
+    expect(BUILTIN_WIDGETS.map((manifest) => manifest.type)).toEqual(['placeholder', 'clock-analog-1', 'pomodoro'])
     expect(findBuiltinWidget('placeholder')).toEqual({
       type: 'placeholder',
       title: 'Placeholder',
@@ -26,6 +26,15 @@ describe('builtin widgets', () => {
     const settings = findBuiltinWidget('clock-analog-1')!.settings!
     expect(parseSettingsSchema(settings, [])).toEqual({ ok: true, value: settings })
     expect(normalizeConfig(settings, {}, new Set())).toEqual({ systemTime: true, notation: 'UTC', zone: 'UTC' })
+  })
+
+  it('describes the Pomodoro as a square widget with global settings', () => {
+    expect(findBuiltinWidget('pomodoro')).toEqual({
+      type: 'pomodoro',
+      title: 'Pomodoro',
+      sizing: { default: { w: 6, h: 6 }, min: { w: 3, h: 3 }, max: { w: 12, h: 12 } },
+      permissions: [],
+    })
   })
 
   it('never resolves prototype members', () => {
