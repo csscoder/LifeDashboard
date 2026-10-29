@@ -43,6 +43,7 @@ const flags = useSecretFlags(() => props.widgetId)
 const context = useWidgetContext({
   size: () => props.size,
   variant: () => resolveVariant(info.value?.variants, props.variant),
+  contentScale: () => 1 + (props.scale ?? 0) / 100,
   themeId: () => props.themeId,
   foreign: () => props.foreign,
   fonts: () => JSON.stringify(props.fonts ?? {}),

@@ -41,8 +41,9 @@ async function runtime(mount?: unknown, modals?: Record<string, Component>) {
   const events = new EventTarget()
   const parent = { postMessage: vi.fn() }
   const style = () => ({ setProperty() {}, removeProperty() {} })
-  const html = { style: style() }
-  const body = { style: style(), classList: new Set<string>() }
+  const vars = new Map<string, string>()
+  const html = { style: { ...style(), setProperty: (name: string, value: string) => vars.set(name, value) } }
+  const body = { style: { ...style(), fontSize: '' }, classList: new Set<string>() }
   const head = { firstElementChild: undefined as { tagName: string; textContent?: string } | undefined, prepend(element: any) { this.firstElementChild = element } }
   const app = { style: style() }
   vi.stubGlobal('window', {})
@@ -59,11 +60,11 @@ async function runtime(mount?: unknown, modals?: Record<string, Component>) {
     source: parent, ports: [port2],
     data: { t: 'ld:init', context: {
       variant: '', size: { w: 2, h: 2 }, sizeClass: 'm', frame: 'framed', theme: { id: 'test', scheme: 'dark', tokens: {} },
-      rootFontSize: 16, config: {}, locale: 'en', visible: true,
+      rootFontSize: 16, contentScale: 1.5, config: {}, locale: 'en', visible: true,
     }, ...(mount === undefined ? {} : { mount }) },
   }))
   await new Promise((resolve) => setTimeout(resolve, 20))
-  return { events, messages, html, body, app, head }
+  return { events, messages, html, body, app, head, vars, port: port1 }
 }
 async function workspace() {
   const { defineComponent, h } = await import('vue')
@@ -132,4 +133,13 @@ it('prepends base content CSS and marks the body as content', async () => {
   expect(head.firstElementChild?.textContent).toMatch(/^@layer ld.base;/)
   expect(head.firstElementChild?.textContent).toContain(':where(.ld-content)')
   expect(body.classList.has('ld-content')).toBe(true)
+})
+
+it('scales body text through the content scale variable and follows context patches', async () => {
+  const { head, body, vars, port } = await runtime()
+  expect(head.firstElementChild?.textContent).toMatch(/@layer ld\.base\s*\{\s*body\.ld-content\s*\{\s*font-size: calc\(var\(--ld-font-scale, 1\) \* var\(--ld-content-scale, 1\) \* 1rem\)/)
+  expect(body.style.fontSize).toBe('')
+  expect(vars.get('--ld-content-scale')).toBe('1.5')
+  port.postMessage({ t: 'context', patch: { contentScale: 0.8 } })
+  await vi.waitFor(() => expect(vars.get('--ld-content-scale')).toBe('0.8'))
 })

@@ -71,7 +71,7 @@ it('builds production context and normalizes config without exposing secret valu
   expect(context([])).toEqual({
     variant: '', size: { w: 2, h: 3 }, sizeClass: 's', frame: 'frameless',
     theme: { id: theme.id, scheme: 'dark', tokens: theme.tokens },
-    config: { city: 'Perm', count: 3, apiKey: false }, locale: 'ru-RU', rootFontSize: 20, visible: true,
+    config: { city: 'Perm', count: 3, apiKey: false }, locale: 'ru-RU', rootFontSize: 20, contentScale: 1, visible: true,
   })
   expect(context(['apiKey']).config.apiKey).toBe(true)
   expect(context([]).config.apiKey).toBe(false)

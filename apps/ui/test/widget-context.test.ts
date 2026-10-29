@@ -43,6 +43,7 @@ function setup(foreign: boolean, config: () => Record<string, unknown> = () => (
       fonts: () => fonts.value,
       config,
       variant: () => variant.value,
+      contentScale: () => 1,
       frame: () => ({}) as Element,
       frameMode: () => frameMode.value,
     }),
@@ -51,6 +52,16 @@ function setup(foreign: boolean, config: () => Record<string, unknown> = () => (
 }
 
 describe('useWidgetContext', () => {
+  it('starts with the content scale factor and follows changes', async () => {
+    const factor = ref(1.2)
+    const scope = effectScope(); scopes.push(scope)
+    const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => 'builtin:lifedashboard-dark-glass', foreign: () => false, fonts: () => '{}', config: () => ({}), variant: () => '', contentScale: () => factor.value, frame: () => ({}) as Element, frameMode: () => 'framed' }))!
+    expect(context.contentScale).toBe(1.2)
+    factor.value = 0.5
+    await nextTick()
+    expect(context.contentScale).toBe(0.5)
+  })
+
   it('starts with the resolved variant and follows changes', async () => {
     const { variant, context } = setup(false)
     expect(context.variant).toBe('roman')
@@ -146,12 +157,12 @@ describe('normalized widget config', () => {
 it('copies theme, config, locale, secret flags and root font size to the modal and follows updates', async () => {
  const { createDashboardModals } = await import('../app/widgets/modals')
  const { reactive } = await import('vue')
- const c = reactive({ size: { w: 3, h: 4 }, sizeClass: 's', frame: 'framed', rootFontSize: 17,
+ const c = reactive({ size: { w: 3, h: 4 }, sizeClass: 's', frame: 'framed', rootFontSize: 17, contentScale: 1.3,
  theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: { '--ld-text-primary': '#123456' } }, config: { apiKey: { configured: true } }, locale: 'ru', visible: false })
  const m = createDashboardModals()
  m.registerCaller({ owner: { widgetId: 'w1', runtimeId: 'w1', packageId: 'dev.test', version: '1', hash: 'hash', title: 'Test' }, context: () => c as any, restart: async () => {} })
  await m.open('w1', { view: 'workspace' })
- expect(m.context()).toMatchObject({ size: { w: 3, h: 4 }, frame: 'frameless', rootFontSize: 17, locale: 'ru', config: { apiKey: { configured: true } }, theme: { tokens: { '--ld-text-primary': '#123456' } } })
+ expect(m.context()).toMatchObject({ size: { w: 3, h: 4 }, frame: 'frameless', rootFontSize: 17, contentScale: 1, locale: 'ru', config: { apiKey: { configured: true } }, theme: { tokens: { '--ld-text-primary': '#123456' } } })
  c.rootFontSize = 22; c.locale = 'en'; c.config.apiKey.configured = false; c.theme.tokens['--ld-text-primary'] = '#abcdef'
  expect(m.context()).toMatchObject({ rootFontSize: 22, locale: 'en', config: { apiKey: { configured: false } }, theme: { tokens: { '--ld-text-primary': '#abcdef' } } }); m.dispose()
 })
@@ -187,7 +198,7 @@ it('updates widget theme and tokens when an automatic theme follows matchMedia',
   const scheme = useColorScheme()
   const id = computed(() => resolveTheme([{ palette: 'builtin:gruvbox', mode: 'auto', style: 'glass' }], scheme.value))
   const scope = effectScope(); scopes.push(scope)
-  const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => id.value, foreign: () => false, fonts: () => '{}', config: () => ({}), variant: () => '', frame: () => ({}) as Element, frameMode: () => 'framed' }))!
+  const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => id.value, foreign: () => false, fonts: () => '{}', config: () => ({}), variant: () => '', contentScale: () => 1, frame: () => ({}) as Element, frameMode: () => 'framed' }))!
   expect(context.theme.id).toBe('builtin:gruvbox-dark-glass')
   surface = 'light surface'
   change({ matches: false })

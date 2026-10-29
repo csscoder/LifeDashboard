@@ -30,6 +30,7 @@ export function useWidgetContext(source: {
   // Serialized font variables of the frame; a font change alone re-reads the tokens.
   fonts: () => string
   variant: () => string
+  contentScale: () => number
   config: () => Record<string, unknown>
   frame: () => Element | null
   frameMode: () => WidgetContext['frame']
@@ -43,6 +44,7 @@ export function useWidgetContext(source: {
     rootFontSize: 16,
     config: source.config(),
     variant: source.variant(),
+    contentScale: source.contentScale(),
     locale: navigator.language,
     visible: document.visibilityState === 'visible' && typeof IntersectionObserver === 'undefined',
   })
@@ -80,6 +82,9 @@ export function useWidgetContext(source: {
   })
   watch(source.variant, (variant) => {
     context.variant = variant
+  })
+  watch(source.contentScale, (contentScale) => {
+    context.contentScale = contentScale
   })
   watch(source.frameMode, (frame) => {
     context.frame = frame

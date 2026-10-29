@@ -88,7 +88,7 @@ export function createDashboardModals() {
       const entry = owner && callers.get(owner.widgetId)
       if (!entry || entry.owner.runtimeId !== owner.runtimeId) return null
       const effective = entry.context()
-      return { ...effective, frame: 'frameless', visible: documentVisible.value }
+      return { ...effective, frame: 'frameless', contentScale: 1, visible: documentVisible.value }
     },
     async open(surfaceId: string, input: unknown) {
       const caller = [...callers.values()].find(entry => entry.owner.runtimeId === surfaceId)

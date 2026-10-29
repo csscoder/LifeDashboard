@@ -316,6 +316,10 @@ export interface WidgetContext {
   // px of the dashboard's html font-size, so `rem` in a frame matches the board (§7.4).
   rootFontSize: number
   /**
+   * The user's text size for this widget as a factor, 0.5–1.5. @since sdk 6
+   */
+  contentScale: number
+  /**
    * Values of the manifest settings, with defaults used for missing or invalid non-secret values;
    * an empty object when the manifest declares no settings. Each secret setting is only a boolean:
    * true when the user has set it, false otherwise, never the secret value.
@@ -340,9 +344,9 @@ export const WIDGET_ERROR_CODES = [
 export type WidgetErrorCode = (typeof WIDGET_ERROR_CODES)[number]
 
 export const SDK_VERSION = 1
-export const SDK_LEVELS = [1, 2, 3, 4, 5] as const
+export const SDK_LEVELS = [1, 2, 3, 4, 5, 6] as const
 export type SdkLevel = (typeof SDK_LEVELS)[number]
-export const SDK_TARGET_LEVEL: SdkLevel = 5
+export const SDK_TARGET_LEVEL: SdkLevel = 6
 
 export interface InitMessage {
   t: 'ld:init'

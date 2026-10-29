@@ -60,7 +60,7 @@ export function shellContext(
     size, sizeClass: sizeClass(size), frame: state.frame,
     theme: { id: theme.id, scheme: theme.mode, tokens: theme.tokens },
     config: normalizeConfig(settings, rawConfig, secretsSet),
-    locale: env.locale, rootFontSize: env.rootFontSize, visible: true,
+    locale: env.locale, rootFontSize: env.rootFontSize, contentScale: 1, visible: true,
   }
 }
 

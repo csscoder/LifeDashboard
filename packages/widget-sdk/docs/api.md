@@ -97,7 +97,7 @@ Errors are `WidgetError` objects with a `code`. See [errors.md](errors.md).
 
 ## sdk levels
 
-`ld-widget check` and `build` write the `sdk` level into the built manifest. It is the target level of this SDK, 5. Do not set `sdk` in `widget.json`. The dashboard supports the levels 1, 2, 3, 4, 5, so folders built with older SDKs keep working.
+`ld-widget check` and `build` write the `sdk` level into the built manifest. It is the target level of this SDK, 6. Do not set `sdk` in `widget.json`. The dashboard supports the levels 1, 2, 3, 4, 5, 6, so folders built with older SDKs keep working.
 
 - Level 1: `context`, `state`, `notify` and `call`.
 - Level 2: the settings schema (`settings`), typed HTTP (`http.get`, `http.send`) and `context.frame`.

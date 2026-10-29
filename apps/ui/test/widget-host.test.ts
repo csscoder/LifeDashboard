@@ -65,7 +65,7 @@ it('pauses an offscreen widget and a hidden tab, resumes only when both are visi
   let context!: gateway.WidgetContext
   const mounted = mount({ setup() {
     context = useWidgetContext({ size: () => ({ w: 3, h: 3 }), themeId: () => 'builtin:gruvbox-light-solid', foreign: () => false, fonts: () => '{}',
-      config: () => ({}), variant: () => '', frame: () => frame, frameMode: () => 'framed' })
+      config: () => ({}), variant: () => '', contentScale: () => 1, frame: () => frame, frameMode: () => 'framed' })
     return () => Vue.h('div')
   } })
   await Vue.nextTick()
@@ -111,7 +111,7 @@ it('renders and copies an installed widget exception with its exact package vers
     if (!(id in modules)) throw new Error(`Unexpected import ${id}`)
     return modules[id]
   }, exports)
-  const context: gateway.WidgetContext = { variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16,
+  const context: gateway.WidgetContext = { variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, contentScale: 1,
     theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: true }
   const host = mount({ render: () => Vue.h(exports.default!, { widgetId: 'widget', hash: 'hash', title: 'Probe', packageId: 'dev.test.probe', version: '1.2.3', context }) })
   await Vue.nextTick(); await Vue.nextTick(); hello()
@@ -163,7 +163,7 @@ async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean
   }
   const exports: { default?: Vue.Component } = {}
   new Function('require', 'exports', code)((id: string) => { if (!(id in modules)) throw new Error(`Unexpected import ${id}`); return modules[id] }, exports)
-  const context = Vue.reactive<gateway.WidgetContext>({ variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: false })
+  const context = Vue.reactive<gateway.WidgetContext>({ variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, contentScale: 1, theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: false })
   if (!hosts) controller.registerCaller({ owner: { widgetId: 'widget', runtimeId: 'widget', hash: 'hash', title: 'Probe', packageId: 'dev.test', version: '1' }, context: () => context, restart: async () => {} })
   let Host: Vue.Component | undefined
   if (hosts) {
@@ -361,7 +361,7 @@ it('ends a late-created session after SandboxWidget unmount without attaching a 
  '../confirmations': await import('../app/confirmations'), '../toasts': { showToast() {} }, './modals': { widgetModals: controller }, './broker': { ...broker, listenForHello } }
  const exports: { default?: Vue.Component } = {}
  new Function('require', 'exports', code)((id: string) => { if (!(id in modules)) throw new Error(`Unexpected import ${id}`); return modules[id] }, exports)
- const context: gateway.WidgetContext = { variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: true }
+ const context: gateway.WidgetContext = { variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, contentScale: 1, theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: true }
  const mounted = mount({ render: () => Vue.h(exports.default!, { widgetId: 'late', hash: 'hash', title: 'Probe', packageId: 'dev.test', version: '1', context }) })
  mounted.app.unmount(); resolveSession({ ok: true, data: { widgetSession: 'late-secret', grants: [] } })
  await vi.waitFor(() => expect(ended).toEqual(['late-secret']))
@@ -417,6 +417,15 @@ it('keeps error retry inert through the real dialog and adapter while a modal ca
  complete({ ok: true, data: { revision: 1 } })
  await vi.waitFor(() => { expect(f.controller.activeModal.value).toBeNull(); expect(f.ended).toEqual(['host-secret-1']) })
  } finally { complete?.({ ok: true, data: { revision: 1 } }); f.cleanup() }
+})
+
+it('passes the host scale to the sandbox as the content scale factor', async () => {
+ const f = await surfaceFixture(true)
+ try {
+ expect(f.frames[0]!.contentWindow.postMessage.mock.calls[0]![0].context.contentScale).toBe(1)
+ f.hostProps.scale = 30
+ await vi.waitFor(() => expect(f.messages[0]).toContainEqual({ t: 'context', patch: expect.objectContaining({ contentScale: 1.3 }) }))
+ } finally { f.cleanup() }
 })
 
 it('drops the look when the version has no variants and defaults an unavailable look', async () => {

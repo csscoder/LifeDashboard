@@ -22,7 +22,9 @@ function followContext(context: WidgetContext): void {
   // A variable, not `new URL(..., import.meta.url)` inline: Vite would treat that as an asset reference.
   const runtimeUrl = import.meta.url
   const fontsUrl = String(new URL('fonts/', runtimeUrl))
-  style.textContent = '@layer ld.base;\n' + contentCss + fontsCss.replaceAll('url(../fonts/', `url(${fontsUrl}`)
+  // The user's text scale is a root variable; body text size reads it here, never as an inline font-size.
+  const contentScaleCss = '@layer ld.base { body.ld-content { font-size: calc(var(--ld-font-scale, 1) * var(--ld-content-scale, 1) * 1rem) } }'
+  style.textContent = '@layer ld.base;\n' + contentCss + contentScaleCss + fontsCss.replaceAll('url(../fonts/', `url(${fontsUrl}`)
   document.head.prepend(style)
   document.body.classList.add('ld-content')
   const root = document.documentElement
@@ -32,6 +34,7 @@ function followContext(context: WidgetContext): void {
     applied = applyTokens(root.style, applied, context.theme.tokens)
     root.style.colorScheme = context.theme.scheme
     root.style.fontSize = `${context.rootFontSize}px`
+    root.style.setProperty('--ld-content-scale', String(context.contentScale))
   })
 }
 
