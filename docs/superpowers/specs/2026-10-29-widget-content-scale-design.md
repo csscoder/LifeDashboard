@@ -1,6 +1,6 @@
 # Widget content scale
 
-Status: design approved in chat on 2026-10-29; written spec awaiting user review.
+Status: design approved in chat on 2026-10-29; Codex review approved (2 rounds); written spec awaiting user review.
 
 Sub-project 3 of 3 of the appearance rework. Sub-project 1 (palettes × modes × styles, content typography) is merged: `docs/superpowers/specs/2026-10-28-themes-v2-palettes-design.md`. Sub-project 2 (theme fonts) is implemented on `feat/theme-fonts`: `docs/superpowers/specs/2026-10-29-theme-fonts-design.md`. This branch, `feat/widget-content-scale`, starts from `feat/theme-fonts` because it changes the same `WidgetFrame`, `WidgetHost` and `useWidgetContext` code.
 
@@ -20,6 +20,8 @@ Sub-project 3 of 3 of the appearance rework. Sub-project 1 (palettes × modes ×
 - `WidgetContext` (`packages/contracts/src/widget-gateway.ts`) has `rootFontSize`. `SDK_LEVELS` is `[1, 2, 3, 4, 5]`, `SDK_TARGET_LEVEL` is 5. New context fields are documented as `Since sdk N`.
 - `SandboxWidget.vue` sends the whole context to the frame whenever its JSON changes. `widgetModals.context()` gives a modal the caller's context with `frame: 'frameless'`.
 - The built-in clock sizes its face in `cq*` units, so the setting barely changes it.
+- `PlaceholderWidget.vue` uses the Uno utility `text-2xl`, which `apps/ui/uno.config.ts` defines in `rem` (`1.5rem` / `2rem` line height), so it ignores the parent font size.
+- The settings panel's `Reset to defaults` asks «Style, shadow, look and widget options return to their defaults…» (`WidgetBoard.vue`) and `resetWidget` removes the whole appearance (`edit-session.ts`).
 
 ## Decisions
 
@@ -27,6 +29,7 @@ Sub-project 3 of 3 of the appearance rework. Sub-project 1 (palettes × modes ×
 - Stored value: an integer offset in percent, `scale` in `[−50, 50]`; factor = `1 + scale / 100`.
 - Delivery to the sandbox: a new public field `WidgetContext.contentScale`. Passing the factor as a theme token mixes a widget setting into the theme contract; multiplying `rootFontSize` breaks `rem` matching the board.
 - The runtime scales `body` for every sandbox widget, whatever its manifest `sdk`. The field itself is `Since sdk 6`, for widgets that need the factor as a number (canvas).
+- Widget CSS keeps priority over the scale: the sandbox applies the factor through a `ld.base` layer rule, never an inline style. A widget that sets its own `body` font size opts out unless it multiplies by `var(--ld-content-scale)`.
 - A widget modal always uses factor 1: the setting fits content to the widget rectangle, and a modal has its own size.
 
 ## Contract
@@ -59,12 +62,16 @@ export const SCALE_LIMITS = [-50, 50] as const
 - `WidgetHost.vue`: prop `scale?: number | null`; passes it to `WidgetFrame` and the context source.
 - `WidgetFrame.vue`: prop `scale?: number | null`. The root `.widget` gets inline `--ld-content-scale: <factor>` when `scale` is a non-zero number, merged with the font variables already set there.
 - `frame.css`: `.widget__body { font-size: calc(var(--ld-font-scale) * var(--ld-content-scale, 1) * 1rem) }`.
+- `PlaceholderWidget.vue`: replace `text-2xl` with a scoped `font-size: 1.5em; line-height: calc(4 / 3)` (unitless, so it follows the element's own size), the same 24px / 32px at factor 1. Built-in widget content must not use the `rem`-based Uno `text-*` utilities.
 - `useWidgetContext` source gains `contentScale: () => number`; the context starts with it and a watch updates `context.contentScale`. The tokens do not depend on it, so the post-flush token watch does not change.
 - `widgetModals.context()` returns `{ ...effective, frame: 'frameless', contentScale: 1, visible }`.
 
 ## Sandbox
 
-- `sandbox.ts`, in the existing `watchEffect`: `document.body.style.fontSize = \`calc(var(--ld-font-scale, 1) * ${context.contentScale}rem)\``. The inline style overrides `content.css`'s `var(--ld-size-body)` on `body`; the sandbox now follows `font-scale` the same way the host does.
+- `sandbox.ts`:
+  - the injected style gets, after `content.css`, `@layer ld.base { body.ld-content { font-size: calc(var(--ld-font-scale, 1) * var(--ld-content-scale, 1) * 1rem) } }`. Its specificity beats `content.css`'s `:where(.ld-content)` rule; unlayered widget CSS still wins over it;
+  - the existing `watchEffect` sets `--ld-content-scale` on the frame root to `String(context.contentScale)`.
+- At factor 1 and `font-scale` 1 the `body` size equals today's `1em` of the root, so existing widgets render unchanged. The sandbox now follows `font-scale` the same way the host does.
 - `shellContext` (`packages/widget-sdk/src/dev/shell-state.ts`) sets `contentScale: 1`.
 - No change to the API, the CSP or the sandbox document.
 
@@ -81,7 +88,8 @@ In the Appearance block of `apps/ui/app/board/WidgetSettings.vue`, after the sha
 
 - Shown for every widget, framed or bare.
 - Edits follow the existing appearance path: the screen draft, Done/Cancel and save.
-- Reset means typing 0; there is no separate reset button.
+- There is no separate reset control: typing 0 resets the scale, and the existing `Reset to defaults` resets it with the rest of the appearance.
+- The reset confirmation becomes «Style, shadow, look, text size and widget options return to their defaults. API keys stay set; use Clear to remove them.»
 
 ## Error handling
 
@@ -92,8 +100,10 @@ In the Appearance block of `apps/ui/app/board/WidgetSettings.vue`, after the sha
 
 Edit `packages/widget-sdk/docs-src/` and regenerate with `pnpm -C packages/widget-sdk run docs`.
 
-- `api.md`: a `contentScale` row: "the user's text size for this widget, 0.5–1.5; the runtime already applies it to `body`. Since sdk 6".
-- `design.md`, section «em, rem and rootFontSize»: the user scales widget content from 50 % to 150 %; only `em` and `size-*` sizes follow it, `rem` does not; read `contentScale` only when a px number is needed.
+- `api.md`:
+  - a `contentScale` row: "the user's text size for this widget, 0.5–1.5; the runtime already applies it to `body`. Since sdk 6";
+  - «sdk levels» gets «Level 6: `context.contentScale`. The runtime scales `body` for packages of every level.»
+- `design.md`, section «em, rem and rootFontSize»: the user scales widget content from 50 % to 150 %; only `em` and `size-*` sizes follow it, `rem` does not. A widget that sets its own `body` font size multiplies it by `var(--ld-content-scale)` to follow the setting. Read `contentScale` only when a px number is needed.
 - `index.md` and `packages/create-widget/skill/lifedashboard-widget/SKILL.md`, if their summaries name `rootFontSize`: add `contentScale`.
 - `README.md`: one line on the per-widget text size.
 
@@ -103,10 +113,10 @@ TDD, Vitest.
 
 - `packages/contracts`:
   - `parseScreenBoard` accepts `scale` −50 and 50;
-  - stores 0 as no key;
   - rejects 51, −51, 1.5 and `'10'`;
-  - a widget without the key parses with no `scale`;
-  - `normalizeAppearance` key order;
+  - `{ theme: 'bare', shadow: null, variant: null }` without `scale`, and the same with `scale: 0`, parse to `{ theme: 'bare', shadow: null, variant: null, scale: null }`;
+  - an appearance whose four fields are `null` or `0` (and `{ theme: null, shadow: null, variant: null }`) parses to an instance without `appearance`;
+  - `normalizeAppearance` key order `theme, shadow, variant, scale`;
   - `SDK_LEVELS` includes 6 and the target is 6.
 - `apps/api`:
   - a board with `scale` survives a save and load;
@@ -117,14 +127,17 @@ TDD, Vitest.
   - `frame.css` contains the formula;
   - `useWidgetContext` updates `contentScale`;
   - `widgetModals.context()` gives 1;
-  - `WidgetSettings` emits `scale`.
+  - `WidgetSettings` emits `scale`;
+  - `PlaceholderWidget` text is sized in `em`;
+  - the reset confirmation names the text size, and `resetWidget` drops a `scale`.
 - `packages/widget-sdk`:
-  - the sandbox `body` font size follows `contentScale` changes;
+  - the sandbox root `--ld-content-scale` follows `contentScale` changes, and the injected style holds the `body.ld-content` rule inside `@layer ld.base` (jsdom does not resolve cascade layers, so the cascade itself is checked manually);
   - the shell context has 1;
   - the docs test passes after regeneration.
 - Manual, Orca browser on an isolated dev instance:
-  - a built-in widget and a sandbox widget at −50, 0 and +50;
+  - the placeholder widget and a sandbox widget at −50, 0 and +50: the computed text size changes;
   - a change applies live without reloading the iframe;
+  - a sandbox widget whose own CSS sets `body { font-size: 0.75em }` keeps 12px at a 16px root and factor 1;
   - the modal stays at 1.
 
 ## Out of scope
