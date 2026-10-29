@@ -58,6 +58,11 @@ describe('parseScreenBoard', () => {
     expect(parseScreenBoard({ ...valid, theme })).toEqual({ ok: true, value: { id: SCREEN, rows: 10, theme, instances: valid.instances, layout: valid.layout } })
   })
 
+  it('keeps font slugs in a screen theme', () => {
+    const theme = { palette: 'builtin:gruvbox', mode: 'dark', style: 'solid', heading: 'lora' }
+    expect(parseScreenBoard({ ...valid, theme })).toEqual({ ok: true, value: { id: SCREEN, rows: 10, theme, instances: valid.instances, layout: valid.layout } })
+  })
+
   it('omits a null screen theme for inheritance', () => {
     expect(parseScreenBoard({ ...valid, theme: null })).toEqual({ ok: true, value: valid })
   })
@@ -220,6 +225,11 @@ describe('widget appearance', () => {
   ])('rejects %s', (_name, appearance) => {
     const result = parseScreenBoard(withLook(appearance))
     expect(result).toEqual({ ok: false, error: 'instances[0]: invalid widget appearance' })
+  })
+
+  it('rejects an invalid font slug in an instance appearance', () => {
+    const theme = { palette: 'builtin:gruvbox', mode: 'dark', style: 'solid', body: 'Inter' }
+    expect(parseScreenBoard(withLook({ theme, shadow: null }))).toEqual({ ok: false, error: 'instances[0]: invalid widget appearance' })
   })
 })
 

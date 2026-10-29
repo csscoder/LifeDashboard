@@ -24,6 +24,11 @@ describe('parseSpacePatch', () => {
     expect(parseSpacePatch({ themeId: 'builtin:paper' })).toEqual({ ok: true, value: { theme: { palette: 'builtin:lifedashboard', mode: 'light', style: 'solid' } } })
   })
 
+  it('rejects a null font slug in a space theme', () => {
+    const theme = { palette: 'builtin:gruvbox', mode: 'dark', style: 'solid', heading: null }
+    expect(parseSpacePatch({ theme })).toEqual({ ok: false, error: 'invalid space theme' })
+  })
+
   it.each(['bare', 'paper', 7, {}])('rejects invalid space theme %j', (theme) => {
     expect(parseSpacePatch({ theme })).toEqual({ ok: false, error: 'invalid space theme' })
   })

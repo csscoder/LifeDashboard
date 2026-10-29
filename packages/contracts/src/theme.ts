@@ -6,14 +6,20 @@ export interface ThemeChoice {
   palette: string
   mode: ThemeMode
   style: ThemeStyle
+  heading?: string
+  body?: string
 }
 export const THEME_MODES: readonly ThemeMode[] = ['light', 'dark', 'auto']
 export const THEME_STYLES: readonly ThemeStyle[] = ['solid', 'glass']
 
+const SLUG = /^[a-z][a-z0-9-]{0,31}$/
+const THEME_KEYS = ['palette', 'mode', 'style', 'heading', 'body']
+
 export function isThemeChoice(value: unknown): value is ThemeChoice {
-  return isRecord(value) && Object.keys(value).length === 3 &&
-    typeof value.palette === 'string' && /^builtin:[a-z][a-z0-9-]{0,31}$/.test(value.palette) &&
-    THEME_MODES.includes(value.mode as ThemeMode) && THEME_STYLES.includes(value.style as ThemeStyle)
+  return isRecord(value) && Object.keys(value).every((key) => THEME_KEYS.includes(key)) &&
+    typeof value.palette === 'string' && value.palette.startsWith('builtin:') && SLUG.test(value.palette.slice(8)) &&
+    THEME_MODES.includes(value.mode as ThemeMode) && THEME_STYLES.includes(value.style as ThemeStyle) &&
+    (['heading', 'body'] as const).every((key) => !Object.hasOwn(value, key) || (typeof value[key] === 'string' && SLUG.test(value[key])))
 }
 
 export function legacyTheme(themeId: unknown): ThemeChoice | 'bare' | null {

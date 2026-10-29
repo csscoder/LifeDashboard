@@ -26,3 +26,16 @@ it.each(['a', 'a1-', 'a'.repeat(32)])('accepts palette slug %s within the bounda
 it.each(['', '1', '-foo', 'a'.repeat(33)])('rejects palette slug %s outside the boundaries', (slug) => {
   expect(isThemeChoice({ ...gruvbox, palette: `builtin:${slug}` })).toBe(false)
 })
+const fontBase = { palette: 'builtin:gruvbox', mode: 'dark', style: 'solid' }
+it('accepts optional heading and body slugs', () => {
+  expect(isThemeChoice({ ...fontBase, heading: 'unbounded', body: 'inter' })).toBe(true)
+  expect(isThemeChoice({ ...fontBase, body: 'golos-text' })).toBe(true)
+  expect(isThemeChoice(fontBase)).toBe(true)
+})
+it.each([null, 'Inter', 'inter ', '', 7, 'a'.repeat(33)])('rejects font value %j', (value) => {
+  expect(isThemeChoice({ ...fontBase, heading: value })).toBe(false)
+  expect(isThemeChoice({ ...fontBase, body: value })).toBe(false)
+})
+it('rejects keys other than the five', () => {
+  expect(isThemeChoice({ ...fontBase, mono: 'inter' })).toBe(false)
+})
