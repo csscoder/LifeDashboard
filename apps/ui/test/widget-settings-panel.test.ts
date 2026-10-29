@@ -127,6 +127,12 @@ describe('widget settings panel', () => {
     expect(ui.events).toEqual([['config', { zone: 'UTC' }]])
   })
 
+  it('shows the widget’s own editor without a schema', () => {
+    const ui = mount(Editor, { schema: undefined })
+    expect(ui.nodes().some((el) => el.tag === 'own-editor')).toBe(true)
+    expect(ui.text()).toContain('Widget')
+  })
+
   it('picks a palette or no frame while keeping the shadow', async () => {
     const ui = mount(undefined, { appearance: { theme: null, shadow: board.DEFAULT_SHADOW, variant: null, scale: null }, inherited: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' } })
     await Vue.nextTick()

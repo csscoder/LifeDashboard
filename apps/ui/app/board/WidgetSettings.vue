@@ -57,8 +57,8 @@ const offsets = [
   { key: 'y', label: 'Y', limits: SHADOW_LIMITS.y },
   { key: 'blur', label: 'Blur', limits: SHADOW_LIMITS.blur },
 ] as const
-// A built-in editor needs its schema; the generic form needs at least one setting.
-const hasWidgetBlock = computed(() => Boolean(props.schema && (props.editor || Object.keys(props.schema.properties).length > 0)))
+// A built-in editor needs no schema; the generic form needs at least one setting.
+const hasWidgetBlock = computed(() => Boolean(props.editor || (props.schema && Object.keys(props.schema.properties).length > 0)))
 const versionOptions = computed(() => props.versions.map((item) => ({ value: item, label: item })))
 
 function isOpen(): boolean {
