@@ -37,7 +37,7 @@
 
 **Files:**
 - Modify: `packages/contracts/src/board.ts`, `apps/api/src/spaces.ts`
-- Test: `packages/contracts/test/board.test.ts` (`describe('widget appearance')`), `apps/api/test/spaces.test.ts`
+- Test: `packages/contracts/test/board.test.ts` (`describe('widget appearance')`), `apps/api/test/spaces.test.ts`; existing expectations of a three-field appearance in `apps/ui/test/widget-settings.test.ts`, `widget-settings-panel.test.ts`, `edit-session.test.ts`, `theme-resolve.test.ts` and any other file `pnpm typecheck` or `pnpm -C apps/ui test` flags
 
 **Interfaces:**
 - Produces: `WidgetAppearance { theme; shadow; variant; scale: number | null }`; `export const SCALE_LIMITS = [-50, 50] as const`; `normalizeAppearance` returns `undefined` when all four fields are `null` and maps `scale: 0` to `null`.
@@ -70,8 +70,8 @@ In `spaces.test.ts`, next to `reads an appearance row without a theme with varia
 - a stored row `JSON.stringify({ theme: 'bare', shadow: null, variant: null })` loads as `{ theme: 'bare', shadow: null, variant: null, scale: null }`.
 
 - [ ] **Step 2: Run** `pnpm -C packages/contracts test` and `pnpm -C apps/api test`. Expected: FAIL in the new cases.
-- [ ] **Step 3: Implement.** In `board.ts`: the `scale` field and `SCALE_LIMITS`; `parseAppearance` reads `raw.scale ?? null` and rejects anything that is not an integer within the limits; `normalizeAppearance` adds `scale` last. In `spaces.ts`, the row read adds `scale: parsed.scale ?? null` beside `variant`. Fix other compile errors from the new required field (`edit-session.ts` `addInstance` literal, `widget-settings.ts` helpers) with `scale: null` only; Task 2 gives the helpers their behaviour.
-- [ ] **Step 4: Run** `pnpm -C packages/contracts test`, `pnpm -C apps/api test`, `pnpm typecheck`. Expected: PASS.
+- [ ] **Step 3: Implement.** In `board.ts`: the `scale` field and `SCALE_LIMITS`; `parseAppearance` reads `raw.scale ?? null` and rejects anything that is not an integer within the limits; `normalizeAppearance` adds `scale` last. In `spaces.ts`, the row read adds `scale: parsed.scale ?? null` beside `variant`. Fix other compile errors from the new required field (`edit-session.ts` `addInstance` literal, `widget-settings.ts` helpers) with `scale: null` only; Task 2 gives the helpers their behaviour. Update the UI test fixtures and expectations listed under Files mechanically with `scale: null`; no other UI behaviour changes here.
+- [ ] **Step 4: Run** `pnpm -C packages/contracts test`, `pnpm -C apps/api test`, `pnpm -C apps/ui test`, `pnpm typecheck`. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(contracts): per-widget content scale in widget appearance`
 
 ---
@@ -131,7 +131,7 @@ describe('withScale', () => {
 
 **Files:**
 - Modify: `packages/contracts/src/widget-gateway.ts`, `apps/ui/app/widgets/context.ts`, `apps/ui/app/widgets/WidgetHost.vue`, `apps/ui/app/widgets/modals.ts`, `packages/widget-sdk/src/sandbox.ts`, `packages/widget-sdk/src/dev/shell-state.ts`
-- Test: `apps/ui/test/widget-context.test.ts`, `apps/ui/test/widget-host.test.ts`, `packages/widget-sdk/test/sandbox-root.test.ts`, `packages/widget-sdk/test/shell-state.test.ts`, `packages/widget-sdk/test/build.test.ts`; every `WidgetContext` literal that typecheck flags (`packages/contracts/test/widget-modal.test.ts`, `packages/widget-sdk/test/widget.test.ts`, `apps/ui/test/widget-modal-controller.test.ts`, …) gets `contentScale: 1`
+- Test: `apps/ui/test/widget-context.test.ts`, `apps/ui/test/widget-host.test.ts`, `packages/widget-sdk/test/sandbox-root.test.ts`, `packages/widget-sdk/test/shell-state.test.ts`, `packages/widget-sdk/test/build.test.ts`, `packages/contracts/test/widget-package.test.ts`; regenerated `packages/widget-sdk/docs/*`; every `WidgetContext` literal that typecheck flags (`packages/contracts/test/widget-modal.test.ts`, `packages/widget-sdk/test/widget.test.ts`, `apps/ui/test/widget-modal-controller.test.ts`, …) gets `contentScale: 1`
 
 **Interfaces:**
 - Consumes: `WidgetHost` prop `scale` (Task 2).
@@ -143,6 +143,7 @@ describe('withScale', () => {
   - `sandbox-root.test.ts`: the runtime context fixture gets `contentScale: 1.5`; the root style has `--ld-content-scale` `1.5` and follows a context patch to `0.8`; the prepended style text matches `/@layer ld\.base\s*\{\s*body\.ld-content\s*\{\s*font-size: calc\(var\(--ld-font-scale, 1\) \* var\(--ld-content-scale, 1\) \* 1rem\)/`; `body.style.fontSize` stays `''`.
   - `shell-state.test.ts`: `shellContext(...)` returns `contentScale: 1`.
   - `build.test.ts`: the built manifest has `sdk: 6`.
+  - `widget-package.test.ts`: a manifest with `sdk: 6` parses; `rejects a newer sdk level with an update hint` and `checks sdk before unknown fields` use `sdk: 7` and expect `manifest.sdk 7 needs a newer LifeDashboard (this one supports 1–6)`.
 - [ ] **Step 2: Run** `pnpm -C apps/ui test` and `pnpm -C packages/widget-sdk test`. Expected: FAIL in the new cases.
 - [ ] **Step 3: Implement.**
   - `widget-gateway.ts`: the field with JSDoc `The user's text size for this widget as a factor, 0.5–1.5. @since sdk 6`; the SDK levels.
@@ -151,8 +152,9 @@ describe('withScale', () => {
   - `modals.ts` `context()`: `{ ...effective, frame: 'frameless', contentScale: 1, visible: … }`.
   - `sandbox.ts`: append the Global Constraints sandbox rule after `contentCss` in the injected style; in the existing `watchEffect`, `root.style.setProperty('--ld-content-scale', String(context.contentScale))`.
   - `shell-state.ts`: `contentScale: 1`.
+  - Run `pnpm -C packages/widget-sdk run docs`: the generated pages embed `SDK_TARGET_LEVEL` and `SDK_LEVELS`, and `docs.test.ts` requires `docs/` to match a fresh generation. Commit the regenerated pages.
 - [ ] **Step 4: Run** `pnpm -C packages/contracts test`, `pnpm -C apps/ui test`, `pnpm -C packages/widget-sdk test`, `pnpm typecheck`. Expected: PASS.
-- [ ] **Step 5: Commit** `feat(widget-sdk): content scale in the widget context and sandbox runtime`
+- [ ] **Step 5: Commit** `feat(widget-sdk): content scale in the widget context and sandbox runtime`, including the regenerated `packages/widget-sdk/docs/*`.
 
 ---
 
@@ -202,10 +204,11 @@ expect(docs.get('design.md')).toContain('150 %')
 
 - [ ] **Step 1:** Run `pnpm typecheck`, `pnpm test`, `pnpm build` at the repository root. Expected: exit 0 each. Record test counts.
 - [ ] **Step 2:** In the Orca browser (`orca-cli`) on an isolated dev instance with a scratch database:
-  - the placeholder widget and `examples/widgets/showcase-clock` (sandbox) at −50, 0 and +50: the computed text size changes (24px → 12px / 36px for the placeholder at a 16px root);
-  - changing the scale of an open sandbox widget applies live, without an iframe reload;
+  - build a temporary local sandbox widget (not committed) with a `<p>` sized by inheritance and a `<h2>`; the example widgets size their text in `rem`/`px` and cannot show the scale;
+  - at a 16px root, scale −50, 0 and +50: the placeholder text is 12 / 24 / 36px, the temporary widget's `<p>` is 8 / 16 / 24px and its `<h2>` follows `--ld-size-h2` the same way;
+  - changing the scale of the open temporary widget applies live, without an iframe reload;
   - a widget modal of a scaled widget stays at factor 1;
-  - a sandbox widget whose own CSS sets `body { font-size: 0.75em }` (a temporary local test widget, not committed) keeps 12px at a 16px root and factor 1;
+  - add `body { font-size: 0.75em }` to the temporary widget: its `<p>` is 12px at factor 1 and stays 12px at +50;
   - `Reset to defaults` returns the field to 0;
   - reload the page: the scale persists.
 - [ ] **Step 3:** Report results, deviations and anything unverified.
