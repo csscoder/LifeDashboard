@@ -15,6 +15,7 @@
 - Size content text and spacing in `em`, or use the `size-*` tokens, so content follows its inherited typography. Use `rem` only for frame-independent values.
 - `context.rootFontSize` is the dashboard's root font size in px. Use it only when a value must be a px number, such as a canvas size.
 - The user scales widget content from 50 % to 150 %. Only `em` and `size-*` follow this scale; `rem` does not. A widget that sets its own `body` font size multiplies it by `var(--ld-content-scale)` to follow the setting. Read `context.contentScale` only when a px number is needed.
+- Size every length inside the widget in `em`: text, padding, gaps, icons, control heights and widths. The `widget-padding`, `gap`, `control-height` and `radius-*` tokens are in `rem`, so they do not follow the scale; write the same values in `em`. An `em` length resolves against the element's own `font-size`, so put the text size on an inner element when the element itself also needs `em` lengths. Multiply container units by the factor: `font-size: calc(5cqw * var(--ld-content-scale, 1))`.
 
 ## Theme tokens
 
