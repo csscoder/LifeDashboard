@@ -38,6 +38,16 @@ describe('theme generation', () => {
     }
   })
 
+  it.each(BUILTIN_PALETTES.flatMap((p) => (['dark', 'light'] as const).map((scheme) => [`${p.slug} ${scheme}`, p, scheme] as const)))(
+    '%s keeps primary, secondary and muted text ordered and distinct', (_, palette, scheme) => {
+      const tokens = buildTokens(palette, scheme, 'solid')
+      const [primary, secondary, muted] = ['primary', 'secondary', 'muted'].map((name) => parseColor(tokens[`--ld-text-${name}`]!)!.l)
+      // Each level moves towards the surface: darker in dark mode, lighter in light mode.
+      const towardsSurface = scheme === 'dark' ? -1 : 1
+      expect((secondary! - primary!) * towardsSurface).toBeGreaterThanOrEqual(0.02)
+      expect((muted! - secondary!) * towardsSurface).toBeGreaterThanOrEqual(0.02)
+    })
+
   it('keeps generated.css in sync', () => {
     expect(readFileSync(new URL('../app/theme/styles/themes/generated.css', import.meta.url), 'utf8')).toBe(generateThemesCss())
   })

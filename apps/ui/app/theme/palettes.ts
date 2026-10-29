@@ -56,7 +56,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     dark: {
       bg: '#181825',
       surface: ['#1e1e2e', '#313244', '#45475a'],
-      text: ['oklch(0.9587 0.0426 272.28)', '#bac2de', 'oklch(0.821 0.0396 273.93)', '#6c7086'], // tuned for contrast: upstream ['#cdd6f4', '#bac2de', '#a6adc8', '#6c7086']
+      text: ['oklch(0.9587 0.0426 272.28)', 'oklch(0.8899 0.0403 272.86)', 'oklch(0.821 0.0396 273.93)', '#6c7086'], // secondary midway between primary and muted; tuned for contrast: upstream ['#cdd6f4', '#bac2de', '#a6adc8', '#6c7086']
       border: '#585b70',
       accent: '#cba6f7',
       success: '#a6e3a1',
@@ -67,7 +67,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     light: {
       bg: '#e6e9ef',
       surface: ['#eff1f5', '#ccd0da', '#bcc0cc'],
-      text: ['oklch(0.3755 0.043 279.33)', 'oklch(0.422 0.0385 279.3)', 'oklch(0.4271 0.0343 279.08)', '#9ca0b0'], // tuned for contrast: upstream ['#4c4f69', '#5c5f77', '#6c6f85', '#9ca0b0']
+      text: ['oklch(0.3755 0.043 279.33)', 'oklch(0.4013 0.0385 279.3)', 'oklch(0.4271 0.0343 279.08)', '#9ca0b0'], // secondary midway between primary and muted; tuned for contrast: upstream ['#4c4f69', '#5c5f77', '#6c6f85', '#9ca0b0']
       border: '#acb0be',
       accent: 'oklch(0.4947 0.2503 297.02)', // tuned for contrast: upstream '#8839ef'
       success: 'oklch(0.495 0.1772 140.44)', // tuned for contrast: upstream '#40a02b'
@@ -83,7 +83,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     dark: {
       bg: '#1d2021',
       surface: ['#282828', '#3c3836', '#504945'],
-      text: ['oklch(0.9441 0.0566 89.24)', '#d5c4a1', 'oklch(0.8064 0.041 82.28)', '#a89984'], // tuned for contrast: upstream ['#ebdbb2', '#d5c4a1', '#bdae93', '#a89984']
+      text: ['oklch(0.9441 0.0566 89.24)', 'oklch(0.8753 0.0507 85.12)', 'oklch(0.8064 0.041 82.28)', '#a89984'], // secondary midway between primary and muted; tuned for contrast: upstream ['#ebdbb2', '#d5c4a1', '#bdae93', '#a89984']
       border: '#665c54',
       accent: '#fe8019',
       success: '#b8bb26',
@@ -110,7 +110,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     dark: {
       bg: '#010409',
       surface: ['#0d1117', '#161b22', '#161b22'],
-      text: ['oklch(0.9525 0.0111 243.66)', 'oklch(0.8137 0.0191 256.32)', 'oklch(0.8129 0.0196 256.33)', '#6e7681'], // tuned for contrast: upstream ['#e6edf3', '#7d8590', '#6e7681', '#6e7681']
+      text: ['oklch(0.9525 0.0111 243.66)', 'oklch(0.8827 0.0191 256.32)', 'oklch(0.8129 0.0196 256.33)', '#6e7681'], // secondary midway between primary and muted; tuned for contrast: upstream ['#e6edf3', '#7d8590', '#6e7681', '#6e7681']
       border: '#30363d',
       accent: 'oklch(0.6282 0.1935 258.33)', // tuned for contrast: upstream '#2f81f7'
       success: '#3fb950',
@@ -121,7 +121,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     light: {
       bg: '#f6f8fa',
       surface: ['#ffffff', '#f6f8fa', '#ffffff'],
-      text: ['#1f2328', '#656d76', 'oklch(0.5351 0.0189 250.97)', '#6e7781'], // tuned for contrast: upstream ['#1f2328', '#656d76', '#6e7781', '#6e7781']
+      text: ['#1f2328', 'oklch(0.3947 0.0172 251.29)', 'oklch(0.5351 0.0189 250.97)', '#6e7781'], // secondary midway between primary and muted; tuned for contrast: upstream ['#1f2328', '#656d76', '#6e7781', '#6e7781']
       border: '#d0d7de',
       accent: 'oklch(0.4999 0.1906 257.48)', // tuned for contrast: upstream '#0969da'
       success: '#1a7f37',
@@ -137,7 +137,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     dark: {
       bg: '#002b36',
       surface: ['#073642', 'oklch(0.3392 0.0518 219.65)', 'oklch(0.3692 0.0518 219.65)'], // derived: base02, then L +0.03 and +0.06
-      text: ['oklch(0.9579 0.0159 196.79)', 'oklch(0.8237 0.0197 205.26)', 'oklch(0.823 0.0283 219.14)', '#657b83'], // tuned for contrast: upstream ['#93a1a1', '#839496', '#586e75', '#657b83']
+      text: ['oklch(0.9579 0.0159 196.79)', 'oklch(0.8904 0.0197 205.26)', 'oklch(0.823 0.0283 219.14)', '#657b83'], // secondary midway between primary and muted; tuned for contrast: upstream ['#93a1a1', '#839496', '#586e75', '#657b83']
       border: '#586e75',
       accent: 'oklch(0.6949 0.1394 244.93)', // tuned for contrast: upstream '#268bd2'
       success: '#859900',
@@ -148,7 +148,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     light: {
       bg: '#eee8d5',
       surface: ['#fdf6e3', 'oklch(0.9435 0.0261 90.1)', 'oklch(0.9135 0.0261 90.1)'], // derived: base3, then L −0.03 and −0.06
-      text: ['oklch(0.433 0.0283 219.14)', 'oklch(0.4982 0.0285 221.9)', 'oklch(0.4979 0.0159 196.79)', '#93a1a1'], // tuned for contrast: upstream ['#586e75', '#657b83', '#93a1a1', '#93a1a1']
+      text: ['oklch(0.433 0.0283 219.14)', 'oklch(0.4655 0.0285 221.9)', 'oklch(0.4979 0.0159 196.79)', '#93a1a1'], // secondary midway between primary and muted; tuned for contrast: upstream ['#586e75', '#657b83', '#93a1a1', '#93a1a1']
       border: '#93a1a1',
       accent: 'oklch(0.4649 0.1394 244.93)', // tuned for contrast: upstream '#268bd2'
       success: 'oklch(0.5044 0.1508 118.6)', // tuned for contrast: upstream '#859900'
@@ -164,7 +164,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     dark: {
       bg: '#16161e',
       surface: ['#1a1b26', '#1e202e', '#2b2f41'], // mapped: editor.selectionBackground composited over editor.background
-      text: ['oklch(0.9666 0.0537 275.49)', 'oklch(0.8176 0.0609 273.09)', 'oklch(0.8255 0.0682 274.37)', '#414868'], // mapped: secondary = Markdown Text; dark comment = Terminal Black
+      text: ['oklch(0.9666 0.0537 275.49)', 'oklch(0.8961 0.0609 273.09)', 'oklch(0.8255 0.0682 274.37)', '#414868'], // secondary midway between primary and muted; mapped: secondary = Markdown Text; dark comment = Terminal Black
       // tuned for contrast: upstream ['#a9b1d6', '#9aa5ce', '#565f89', '#414868']
       border: '#101014', // mapped: editorGroup.border
       accent: '#7aa2f7',
@@ -193,7 +193,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     dark: {
       bg: '#191724',
       surface: ['#1f1d2e', '#26233a', '#403d52'],
-      text: ['oklch(0.9588 0.0299 289.97)', 'oklch(0.8239 0.0444 291.23)', 'oklch(0.8183 0.0435 291.41)', '#6e6a86'], // tuned for contrast: upstream ['#e0def4', '#908caa', '#6e6a86', '#6e6a86']
+      text: ['oklch(0.9588 0.0299 289.97)', 'oklch(0.8885 0.0444 291.23)', 'oklch(0.8183 0.0435 291.41)', '#6e6a86'], // secondary midway between primary and muted; tuned for contrast: upstream ['#e0def4', '#908caa', '#6e6a86', '#6e6a86']
       border: '#524f67',
       accent: '#c4a7e7',
       success: 'oklch(0.5977 0.0793 227.72)', // tuned for contrast: upstream '#31748f'
@@ -204,7 +204,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     light: {
       bg: '#faf4ed',
       surface: ['#fffaf3', '#f2e9e1', '#dfdad9'],
-      text: ['#464261', 'oklch(0.4868 0.0458 291)', 'oklch(0.4834 0.0268 298.37)', '#9893a5'], // tuned for contrast: upstream ['#464261', '#797593', '#9893a5', '#9893a5']
+      text: ['#464261', 'oklch(0.4399 0.0458 291)', 'oklch(0.4834 0.0268 298.37)', '#9893a5'], // secondary midway between primary and muted; tuned for contrast: upstream ['#464261', '#797593', '#9893a5', '#9893a5']
       border: '#cecacd',
       accent: 'oklch(0.4971 0.0738 305.7)', // tuned for contrast: upstream '#907aa9'
       success: '#286983',
@@ -220,7 +220,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     dark: {
       bg: '#232a2e',
       surface: ['#2d353b', '#343f44', '#3d484d'],
-      text: ['oklch(0.9699 0.0405 86.05)', 'oklch(0.8226 0.0186 153.43)', 'oklch(0.8267 0.02 155.58)', '#7a8478'], // tuned for contrast: upstream ['#d3c6aa', '#9da9a0', '#859289', '#7a8478']
+      text: ['oklch(0.9699 0.0405 86.05)', 'oklch(0.8983 0.0186 153.43)', 'oklch(0.8267 0.02 155.58)', '#7a8478'], // secondary midway between primary and muted; tuned for contrast: upstream ['#d3c6aa', '#9da9a0', '#859289', '#7a8478']
       border: '#4f585e',
       accent: '#a7c080',
       success: '#83c092',
@@ -231,7 +231,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     light: {
       bg: '#efebd4',
       surface: ['#fdf6e3', '#f4f0d9', '#efebd4'],
-      text: ['oklch(0.4354 0.0212 232.87)', 'oklch(0.5198 0.0292 143.51)', 'oklch(0.5188 0.0243 141.21)', '#a6b0a0'], // tuned for contrast: upstream ['#5c6a72', '#829181', '#939f91', '#a6b0a0']
+      text: ['oklch(0.4354 0.0212 232.87)', 'oklch(0.4771 0.0292 143.51)', 'oklch(0.5188 0.0243 141.21)', '#a6b0a0'], // secondary midway between primary and muted; tuned for contrast: upstream ['#5c6a72', '#829181', '#939f91', '#a6b0a0']
       border: '#e0dcc7',
       accent: 'oklch(0.4597 0.156 118.23)', // tuned for contrast: upstream '#8da101'
       success: 'oklch(0.5035 0.1208 163.88)', // tuned for contrast: upstream '#35a77c'
@@ -247,7 +247,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     dark: {
       bg: 'oklch(0.2625 0.0157 264.3)', // derived: syntax-bg L −0.03
       surface: ['#282c34', 'oklch(0.3325 0.0157 264.3)', 'oklch(0.3725 0.0157 264.3)'], // derived: syntax-bg, L +0.04, L +0.08
-      text: ['oklch(0.9621 0.0202 262.99)', 'oklch(0.819 0.0226 264.4)', 'oklch(0.8183 0.0225 262.91)', '#5c6370'], // tuned for contrast: upstream ['#abb2bf', '#828997', '#5c6370', '#5c6370']
+      text: ['oklch(0.9621 0.0202 262.99)', 'oklch(0.8902 0.0226 264.4)', 'oklch(0.8183 0.0225 262.91)', '#5c6370'], // secondary midway between primary and muted; tuned for contrast: upstream ['#abb2bf', '#828997', '#5c6370', '#5c6370']
       border: '#636d83',
       accent: '#61afef',
       success: '#98c379',
@@ -258,7 +258,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     light: {
       bg: 'oklch(0.9551 0 0)', // derived: syntax-bg L −0.03
       surface: ['#fafafa', 'oklch(1 0 0)', 'oklch(1 0 0)'], // derived: syntax-bg, L +0.04, L +0.08 (clamped to 1)
-      text: ['#383a42', '#696c77', 'oklch(0.53 0.0087 278.58)', '#a0a1a7'], // tuned for contrast: upstream ['#383a42', '#696c77', '#a0a1a7', '#a0a1a7']
+      text: ['#383a42', 'oklch(0.4398 0.0175 273.63)', 'oklch(0.53 0.0087 278.58)', '#a0a1a7'], // secondary midway between primary and muted; tuned for contrast: upstream ['#383a42', '#696c77', '#a0a1a7', '#a0a1a7']
       border: '#9d9d9f',
       accent: 'oklch(0.4917 0.193 263.25)', // tuned for contrast: upstream '#4078f2'
       success: 'oklch(0.5181 0.1419 143.46)', // tuned for contrast: upstream '#50a14f'
@@ -274,7 +274,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     dark: {
       bg: '#1a1a22',
       surface: ['#1f1f28', '#2a2a37', '#363646'],
-      text: ['oklch(0.9555 0.0391 99.09)', 'oklch(0.8131 0.0608 99.15)', 'oklch(0.817 0.0122 100.99)', '#717c7c'], // tuned for contrast: upstream ['#dcd7ba', '#c8c093', '#727169', '#717c7c']
+      text: ['oklch(0.9555 0.0391 99.09)', 'oklch(0.8862 0.0608 99.15)', 'oklch(0.817 0.0122 100.99)', '#717c7c'], // secondary midway between primary and muted; tuned for contrast: upstream ['#dcd7ba', '#c8c093', '#727169', '#717c7c']
       border: '#54546d',
       accent: 'oklch(0.668 0.087 301.7)', // tuned for contrast: upstream '#957fb8'
       success: '#98bb6c',
@@ -285,7 +285,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     light: {
       bg: '#e5ddb0',
       surface: ['#f2ecbc', '#e7dba0', '#e4d794'],
-      text: ['oklch(0.4219 0.0259 285.32)', '#43436c', 'oklch(0.4782 0.0133 101.61)', '#716e61'], // tuned for contrast: upstream ['#545464', '#43436c', '#8a8980', '#716e61']
+      text: ['oklch(0.4219 0.0259 285.32)', 'oklch(0.4501 0.0684 282.89)', 'oklch(0.4782 0.0133 101.61)', '#716e61'], // secondary midway between primary and muted; tuned for contrast: upstream ['#545464', '#43436c', '#8a8980', '#716e61']
       border: '#e4d794',
       accent: 'oklch(0.4434 0.0901 301.41)', // tuned for contrast: upstream '#624c83'
       success: 'oklch(0.4851 0.0889 128.26)', // tuned for contrast: upstream '#6f894e'
@@ -301,7 +301,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     dark: {
       bg: '#0b0e14',
       surface: ['#0d1017', '#0f131a', '#11151c'],
-      text: ['oklch(0.958 0.01 93.6)', 'oklch(0.8207 0.0189 266.12)', 'oklch(0.8212 0.017 245.15)', '#acb6bf'], // mapped: syntax.comment opaque base colour (source alpha 0.55)
+      text: ['oklch(0.958 0.01 93.6)', 'oklch(0.8896 0.0189 266.12)', 'oklch(0.8212 0.017 245.15)', '#acb6bf'], // secondary midway between primary and muted; mapped: syntax.comment opaque base colour (source alpha 0.55)
       // tuned for contrast: upstream ['#bfbdb6', '#565b66', '#acb6bf', '#acb6bf']
       border: '#11151c',
       accent: '#e6b450',
@@ -313,7 +313,7 @@ export const BUILTIN_PALETTES: readonly Palette[] = [
     light: {
       bg: '#f8f9fa',
       surface: ['#fcfcfc', '#f3f4f5', '#e7eaed'], // mapped: ui.line composited over ui.bg
-      text: ['oklch(0.4299 0.0102 248.04)', 'oklch(0.5135 0.0144 251.62)', 'oklch(0.522 0.0084 260.73)', '#787b80'], // mapped: syntax.comment opaque base colour (source alpha 0.6)
+      text: ['oklch(0.4299 0.0102 248.04)', 'oklch(0.4759 0.0144 251.62)', 'oklch(0.522 0.0084 260.73)', '#787b80'], // secondary midway between primary and muted; mapped: syntax.comment opaque base colour (source alpha 0.6)
       // tuned for contrast: upstream ['#5c6166', '#8a9199', '#787b80', '#787b80']
       border: '#e7eaed', // mapped: ui.line composited over ui.bg
       accent: 'oklch(0.5032 0.1587 69.81)', // tuned for contrast: upstream '#ffaa33'
