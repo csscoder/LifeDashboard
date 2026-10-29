@@ -1,11 +1,11 @@
-import { computed, onMounted, onUnmounted, shallowReactive, type ComputedRef } from 'vue'
+import { computed, onMounted, onUnmounted, shallowReactive, watch, type ComputedRef } from 'vue'
 import {
   DEFAULT_FOCUS_SETTINGS, initialRun, parseFocusRun, parseFocusSettings, parseProjectCreate, parseProjectPatch,
   type FocusPhase, type FocusProject, type FocusPutRequest, type FocusRun, type FocusSessionInput, type FocusSettings, type FocusState,
 } from '@lifedashboard/contracts/focus'
 import type { SpaceColor } from '@lifedashboard/contracts/space'
 import { api, type ApiResult } from '../api'
-import { showToast } from '../toasts'
+import { holdToasts, showToast } from '../toasts'
 import * as engine from './engine'
 
 export type ProjectResult = { ok: true; project: FocusProject } | { ok: false; error: string }
@@ -307,9 +307,13 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
     return { ok: true, project }
   }
 
+  const status = computed(() => engine.publicStatus(state.run))
+  // Not immediate: creating the store must not touch the hold.
+  watch(status, ({ phase, running }) => holdToasts(phase === 'focus' && running), { flush: 'sync' })
+
   return {
     state,
-    status: computed(() => engine.publicStatus(state.run)),
+    status,
     load,
     start: () => act((run, now) => engine.start(state.settings, run, now, deps.newId)),
     pause: () => act((run, now) => engine.pause(state.settings, run, now, 'user', deps.newId)),
@@ -348,13 +352,18 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
   }
 }
 
+/** Save, conflict and rejection notices: never held back by a running focus. */
+export function focusNotice(text: string): void {
+  showToast({ source: 'Pomodoro', title: text, body: '' }, { bypassHold: true })
+}
+
 export const focusStore = createFocusStore({
   api,
   now: () => Date.now(),
   newId: () => crypto.randomUUID(),
   // Task 6 wires the phase-end alerts.
   onPhaseEnd: () => {},
-  notice: (text) => showToast({ source: 'Pomodoro', title: text, body: '' }),
+  notice: focusNotice,
 })
 
 /** Each mounted Pomodoro widget counts as one view; the last one leaving pauses a running timer. */

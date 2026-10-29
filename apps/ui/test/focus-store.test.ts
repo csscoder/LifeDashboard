@@ -5,7 +5,8 @@ import {
 } from '@lifedashboard/contracts/focus'
 import type { SpaceColor } from '@lifedashboard/contracts/space'
 import type { ApiResult } from '../app/api'
-import { createFocusStore } from '../app/focus/store'
+import { createFocusStore, focusNotice } from '../app/focus/store'
+import { holdToasts, toasts } from '../app/toasts'
 
 const S = DEFAULT_FOCUS_SETTINGS
 const FOCUS = 1_500_000
@@ -411,5 +412,18 @@ describe('focus store', () => {
     expect(onPhaseEnd).toHaveBeenCalledTimes(1)
     store.dispose()
     expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+describe('focus notices', () => {
+  it('store notices bypass the toast hold', () => {
+    holdToasts(true)
+    try {
+      focusNotice('Focus progress not saved yet')
+      expect(toasts.value.map((t) => t.title)).toEqual(['Focus progress not saved yet'])
+    } finally {
+      holdToasts(false)
+      toasts.value = []
+    }
   })
 })
