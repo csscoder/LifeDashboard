@@ -11,4 +11,5 @@ export const builtinWidgetRenderers: ReadonlyMap<string, Component> = new Map<st
 // Built-ins with their own settings form; the panel shows the generic schema form for the rest.
 export const builtinSettingsEditors: ReadonlyMap<string, Component> = new Map<string, Component>([
   ['clock-analog-1', defineAsyncComponent(() => import('./builtin/clocks/analog_1/ClockAnalog1Settings.vue'))],
+  ['pomodoro', defineAsyncComponent(() => import('./builtin/pomodoro/PomodoroSettings.vue'))],
 ])
