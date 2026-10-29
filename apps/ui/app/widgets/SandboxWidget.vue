@@ -156,7 +156,7 @@ onUnmounted(() => { unmounted = true; unregisterSurface?.(); teardown() })
       class="sandbox__frame"
       :class="{ 'sandbox__frame--waiting': state !== 'ready' }"
       sandbox="allow-scripts"
-      :src="`/sandbox/packages/${hash}/`"
+      :src="`/sandbox/packages/${hash}/?doc=2`"
       :title="title"
       :style="{ colorScheme: context.theme.scheme }"
       @load="onLoad"

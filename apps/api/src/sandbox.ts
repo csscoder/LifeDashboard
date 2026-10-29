@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { DatabaseSync } from 'node:sqlite'
 import type { FastifyInstance } from 'fastify'
 import { sandboxDocument } from '@lifedashboard/contracts/sandbox-document'
@@ -15,6 +16,8 @@ const require = createRequire(import.meta.url)
 const HASH = /^[0-9a-f]{64}$/
 const IMMUTABLE = 'public, max-age=31536000, immutable'
 const JS = 'text/javascript; charset=utf-8'
+const FONT_FILE = /^[a-z0-9-]+\.woff2$/
+const SOURCE_FONTS = fileURLToPath(new URL('../../ui/app/theme/fonts/', import.meta.url))
 
 // Resolved per request: in development `vite build --watch` rewrites sdk.js while the API runs.
 const RUNTIME_FILES = new Map<string, () => string>([
@@ -87,6 +90,19 @@ export function registerSandbox(app: FastifyInstance, { db, config }: SandboxDep
     return reply.header('cache-control', 'no-cache').type(JS).send(body)
   })
 
+  // Fonts of the theme catalog; the URL is stable while `fetch:fonts` may replace a file, so it revalidates.
+  app.get<{ Params: { file: string } }>('/sandbox/runtime/fonts/:file', async (request, reply) => {
+    if (!FONT_FILE.test(request.params.file)) throw new ApiError('NOT_FOUND', 'Font not found')
+    const file = join(config.runtimeDir === undefined ? SOURCE_FONTS : join(config.runtimeDir, 'fonts'), request.params.file)
+    let body: Buffer
+    try {
+      body = await readFile(file)
+    } catch {
+      throw new ApiError('NOT_FOUND', 'Font not found')
+    }
+    return reply.header('cache-control', 'no-cache').type('font/woff2').send(body)
+  })
+
   app.get<{ Params: { hash: string } }>('/sandbox/packages/:hash/', async (request, reply) => {
     const { manifest } = findVersion(request.params.hash)
     const base = `${request.protocol}://${request.headers.host}`
@@ -96,7 +112,8 @@ export function registerSandbox(app: FastifyInstance, { db, config }: SandboxDep
       packageDir,
       entry: `${packageDir}${manifest.entry}`,
     }, manifest.styles)
-    return reply.header('cache-control', IMMUTABLE).header('content-security-policy', csp).type('text/html; charset=utf-8').send(html)
+    // Generated and cheap; the CSP changes with the runtime, so a cached copy must not outlive it.
+    return reply.header('cache-control', 'no-cache').header('content-security-policy', csp).type('text/html; charset=utf-8').send(html)
   })
 
   // Spec «Sandbox serving»: root code and assets/** from the version folder; never source/** or widget.json.

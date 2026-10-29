@@ -447,3 +447,12 @@ it('puts the theme font variables on the root widget element, not on the wrapper
   expect(widget.props.style).toEqual(fonts)
   expect(wrapper.props.style).toBeUndefined()
 })
+
+it('loads the sandbox document with the ?doc=2 cache buster', async () => {
+  const f = await surfaceFixture()
+  try {
+    const sources = f.mounted.nodes().filter(el => el.tag === 'iframe').map(el => el.props.src)
+    expect(sources.length).toBeGreaterThan(0)
+    for (const src of sources) expect(src).toBe('/sandbox/packages/hash/?doc=2')
+  } finally { f.cleanup() }
+})

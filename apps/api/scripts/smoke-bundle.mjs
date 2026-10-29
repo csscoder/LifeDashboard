@@ -1,6 +1,6 @@
 // Starts the bundled API the way the desktop app does and probes it (spec 2026-10-11 «Testing»).
 import { spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -48,10 +48,18 @@ function waitForReady() {
 let failed = false
 try {
   await waitForReady()
-  for (const path of ['/health', '/', '/sandbox/runtime/sdk.js']) {
+  for (const path of ['/health', '/', '/sandbox/runtime/sdk.js', '/sandbox/runtime/fonts/inter-latin.woff2']) {
     const response = await fetch(`${ORIGIN}${path}`)
     console.log(`${response.status} ${path}`)
     if (response.status !== 200) failed = true
+  }
+  // Every font and licence of the catalog must ship in the bundle.
+  const fontsSource = new URL('../../ui/app/theme/fonts/', import.meta.url)
+  for (const file of readdirSync(fontsSource)) {
+    if (!existsSync(join(bundle, 'runtime', 'fonts', file))) {
+      console.error(`missing runtime/fonts/${file}`)
+      failed = true
+    }
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error))

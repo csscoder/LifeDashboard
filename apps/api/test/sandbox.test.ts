@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -83,7 +83,7 @@ describe('GET /sandbox/packages/:hash/', () => {
     )
     expect(response.headers['access-control-allow-origin']).toBe('*')
     expect(response.headers['x-content-type-options']).toBe('nosniff')
-    expect(response.headers['cache-control']).toBe(IMMUTABLE)
+    expect(response.headers['cache-control']).toBe('no-cache')
   })
 
   it('contains no instance or user data', async () => {
@@ -244,5 +244,36 @@ describe('GET /sandbox/runtime/:file with runtimeDir', () => {
       await desktop.close()
       rmSync(runtimeDir, { recursive: true, force: true })
     }
+  })
+})
+
+describe('GET /sandbox/runtime/fonts/:file', () => {
+  const fontsDir = new URL('../../ui/app/theme/fonts/', import.meta.url)
+
+  it('serves a catalog font as woff2 with CORS and revalidation', async () => {
+    const response = await call(t.app, { url: '/sandbox/runtime/fonts/inter-latin.woff2', origin: 'null' })
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['content-type']).toBe('font/woff2')
+    expect(response.headers['cache-control']).toBe('no-cache')
+    expect(response.headers['access-control-allow-origin']).toBe('*')
+    expect(response.rawPayload.equals(readFileSync(new URL('inter-latin.woff2', fontsDir)))).toBe(true)
+  })
+
+  it('serves from runtimeDir/fonts when configured', async () => {
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'ld-runtime-'))
+    mkdirSync(join(runtimeDir, 'fonts'))
+    writeFileSync(join(runtimeDir, 'fonts', 'x-latin.woff2'), 'from runtime dir')
+    const desktop = await testApp(undefined, { runtimeDir })
+    try {
+      const response = await call(desktop.app, { url: '/sandbox/runtime/fonts/x-latin.woff2', origin: 'null' })
+      expect([response.statusCode, response.body]).toEqual([200, 'from runtime dir'])
+    } finally {
+      await desktop.close()
+      rmSync(runtimeDir, { recursive: true, force: true })
+    }
+  })
+
+  it.each(['..%2Fsandbox.ts', 'Inter-latin.woff2', 'inter.ttf', 'missing-latin.woff2'])('answers 404 for %s', async (file) => {
+    expect((await call(t.app, { url: `/sandbox/runtime/fonts/${file}`, origin: 'null' })).statusCode).toBe(404)
   })
 })
