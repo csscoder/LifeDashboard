@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-window",
+  "description": "Lets the dashboard page drag the window by its title strip (macOS overlay title bar). Nothing else.",
+  "windows": ["main"],
+  "remote": { "urls": ["http://127.0.0.1:3101/*"] },
+  "permissions": ["core:window:allow-start-dragging", "core:window:allow-internal-toggle-maximize"]
+}

@@ -261,6 +261,8 @@ onMounted(check)
   <div :class="rootClass" :style="fontVars(boardTheme)">
     <div class="space__backdrop" />
     <PixiBackground v-if="state === 'ready'" :background="boardRef?.background ?? null" @error="backgroundNotice = $event" />
+    <!-- Desktop app only (see .app__titlebar): the strip under the macOS traffic lights; it drags the window. -->
+    <div class="app__titlebar" data-tauri-drag-region />
     <div class="app">
       <header class="app__header">
         <div class="app__start">
@@ -394,6 +396,29 @@ html {
   display: grid;
   grid-template-rows: 3.5rem minmax(0, 1fr) 3.5rem;
   height: 100dvh;
+}
+
+/* The desktop app (Tauri, macOS) draws the page under an overlay title bar: reserve the 28px strip where the
+   traffic lights sit, so they never cover the header, and let the strip drag the window. */
+.app__titlebar {
+  display: none;
+}
+
+html[data-desktop] {
+  --desktop-titlebar: 28px;
+}
+
+html[data-desktop] .app {
+  box-sizing: border-box;
+  padding-top: var(--desktop-titlebar);
+}
+
+html[data-desktop] .app__titlebar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 3;
+  display: block;
+  height: var(--desktop-titlebar);
 }
 
 .app__header {
