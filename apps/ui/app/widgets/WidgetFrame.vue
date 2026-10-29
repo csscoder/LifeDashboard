@@ -4,6 +4,7 @@ import type { DropShadow } from '@lifedashboard/contracts/board'
 import { themeMeta } from '../theme/builtin'
 import { themeClass, type FrameSkin } from '../theme/resolve'
 import { shadowCss } from '../theme/shadow'
+import { scaleFactor } from '../board/widget-settings'
 
 // A resolved theme id: the widget's own choice or the one it inherits. `skin` and `foreign` come from
 // resolveWidgetLook; without them the frame draws the theme's own skin (the build draft).
@@ -18,7 +19,7 @@ const classes = computed(() => [
 ])
 // The text size is a per-widget factor on the body; 0 and null mean the default, so no variable is set.
 const rootStyle = computed(() => {
-  const scale = props.scale ? { '--ld-content-scale': String(1 + props.scale / 100) } : undefined
+  const scale = props.scale ? { '--ld-content-scale': String(scaleFactor(props.scale)) } : undefined
   return props.fonts || scale ? { ...props.fonts, ...scale } : undefined
 })
 // Inline style beats the skin's layered box-shadow. A bare widget gets drop-shadow, which follows its

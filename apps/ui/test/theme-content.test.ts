@@ -6,6 +6,7 @@ import { compileSfc, mountComponent } from './helpers/sfc-renderer'
 import * as builtin from '../app/theme/builtin'
 import * as resolve from '../app/theme/resolve'
 import * as shadow from '../app/theme/shadow'
+import * as boardSettings from '../app/board/widget-settings'
 
 const contentUrl = new URL('../app/theme/styles/content.css', import.meta.url)
 function content() {
@@ -53,7 +54,7 @@ it('loads content styles in the base layer before frame styles', () => {
 })
 it('opts the mounted widget body into semantic content styling', () => {
   const component = compileSfc(new URL('../app/widgets/WidgetFrame.vue', import.meta.url), {
-    '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow,
+    '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow, '../board/widget-settings': boardSettings,
   })
   const mounted = mountComponent(component, { themeId: 'builtin:gruvbox-light-solid' }, [])
   const body = mounted.nodes().find(node => String(node.props.class).split(' ').includes('widget__body'))

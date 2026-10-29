@@ -1,6 +1,6 @@
 import { DEFAULT_SHADOW } from '@lifedashboard/contracts/board'
 import { describe, expect, it } from 'vitest'
-import { panelPosition, withScale, withShadow, withStyle, withVariant } from '../app/board/widget-settings'
+import { panelPosition, scaleFactor, withScale, withShadow, withStyle, withVariant } from '../app/board/widget-settings'
 
 const UNKNOWN = { palette: 'builtin:nord', mode: 'dark', style: 'solid' } as const
 
@@ -41,6 +41,19 @@ describe('withScale', () => {
     expect(withStyle(look, 'bare').scale).toBe(30)
     expect(withShadow(look, DEFAULT_SHADOW).scale).toBe(30)
     expect(withVariant(look, 'roman').scale).toBe(30)
+  })
+})
+
+describe('scaleFactor', () => {
+  it('returns the exact factor without float noise', () => {
+    expect(scaleFactor(-43)).toBe(0.57)
+    expect(scaleFactor(-7)).toBe(0.93)
+    expect(scaleFactor(50)).toBe(1.5)
+  })
+  it('treats null, undefined and 0 as the default factor 1', () => {
+    expect(scaleFactor(null)).toBe(1)
+    expect(scaleFactor(undefined)).toBe(1)
+    expect(scaleFactor(0)).toBe(1)
   })
 })
 

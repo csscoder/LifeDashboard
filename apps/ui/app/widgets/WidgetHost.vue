@@ -4,6 +4,7 @@ import type { DropShadow, WidgetSource } from '@lifedashboard/contracts/board'
 import type { Size } from '@lifedashboard/contracts/grid'
 import { resolveVariant } from '@lifedashboard/contracts/widget-variants'
 import { normalizeConfig } from '@lifedashboard/contracts/widget-settings'
+import { scaleFactor } from '../board/widget-settings'
 import { provideInProcessWidget } from '@lifedashboard/widget-sdk'
 import { api } from '../api'
 import { cancelConfirmations, requestConfirmation } from '../confirmations'
@@ -43,7 +44,7 @@ const flags = useSecretFlags(() => props.widgetId)
 const context = useWidgetContext({
   size: () => props.size,
   variant: () => resolveVariant(info.value?.variants, props.variant),
-  contentScale: () => 1 + (props.scale ?? 0) / 100,
+  contentScale: () => scaleFactor(props.scale),
   themeId: () => props.themeId,
   foreign: () => props.foreign,
   fonts: () => JSON.stringify(props.fonts ?? {}),

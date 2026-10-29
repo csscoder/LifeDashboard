@@ -21,6 +21,11 @@ export function withScale(appearance: WidgetAppearance | undefined, scale: numbe
   return { theme: appearance?.theme ?? null, shadow: appearance?.shadow ?? null, variant: appearance?.variant ?? null, scale: scale || null }
 }
 
+/** The text size factor of a stored percent offset (null: 1); divides last so the result has no float noise. */
+export function scaleFactor(scale: number | null | undefined): number {
+  return (100 + (scale ?? 0)) / 100
+}
+
 /**
  * Top-left of a fixed panel beside the widget: to its right, else to its left, `margin` inside the viewport.
  * CSS anchor positioning is not in every browser (spec «Decisions»).

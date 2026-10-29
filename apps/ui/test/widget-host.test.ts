@@ -8,6 +8,7 @@ import * as variants from '@lifedashboard/contracts/widget-variants'
 import * as builtin from '../app/theme/builtin'
 import * as resolve from '../app/theme/resolve'
 import * as shadow from '../app/theme/shadow'
+import * as boardSettings from '../app/board/widget-settings'
 import { compileSfc, mountComponent } from './helpers/sfc-renderer'
 import { useWidgetContext } from '../app/widgets/context'
 
@@ -130,7 +131,7 @@ it('renders and copies an installed widget exception with its exact package vers
 })
 
 // Compile the real host; replace only HTTP and the browser window handshake registration.
-async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean; dialog?: boolean; variants?: variants.WidgetVariants; onController?: (controller: ReturnType<typeof import('../app/widgets/modals').createDashboardModals>) => void } = {}) {
+async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean; dialog?: boolean; realFrame?: boolean; variants?: variants.WidgetVariants; onController?: (controller: ReturnType<typeof import('../app/widgets/modals').createDashboardModals>) => void } = {}) {
   const broker = await import('../app/widgets/broker')
   const { createDashboardModals } = await import('../app/widgets/modals')
   const controller = createDashboardModals()
@@ -181,7 +182,10 @@ async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean
       './context': { useWidgetContext }, './registry': { builtinWidgetRenderers: new Map() },
       './secret-flags': { useSecretFlags: () => Vue.ref(new Set()) },
       './SandboxWidget.vue': { ...exports, __esModule: true },
-      './WidgetFrame.vue': { __esModule: true, default: Vue.defineComponent({ setup(_props, { slots }) { return () => Vue.h('section', slots.default?.()) } }) },
+      '../board/widget-settings': boardSettings,
+      './WidgetFrame.vue': options.realFrame
+        ? { __esModule: true, default: compileSfc(new URL('../app/widgets/WidgetFrame.vue', import.meta.url), { '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow, '../board/widget-settings': boardSettings }) }
+        : { __esModule: true, default: Vue.defineComponent({ setup(_props, { slots }) { return () => Vue.h('section', slots.default?.()) } }) },
     } as Record<string, unknown>
     new Function('require', 'exports', hostCode)((id: string) => { if (!(id in hostModules)) throw new Error(`Unexpected import ${id}`); return hostModules[id] }, hostExports)
     Host = hostExports.default
@@ -428,6 +432,18 @@ it('passes the host scale to the sandbox as the content scale factor', async () 
  } finally { f.cleanup() }
 })
 
+it('forwards the host scale through WidgetHost to the root element of a real WidgetFrame', async () => {
+ const f = await surfaceFixture(true, { realFrame: true })
+ try {
+ f.hostProps.scale = 20
+ await vi.waitFor(() => {
+ const roots = f.mounted.nodes().filter(el => String(el.props.class).startsWith('widget '))
+ expect(roots).toHaveLength(2)
+ for (const root of roots) expect(root.props.style).toEqual({ '--ld-content-scale': '1.2' })
+ })
+ } finally { f.cleanup() }
+})
+
 it('drops the look when the version has no variants and defaults an unavailable look', async () => {
  const plain = await surfaceFixture(true)
  try {
@@ -448,7 +464,7 @@ it('drops the look when the version has no variants and defaults an unavailable 
 })
 
 it('puts the theme font variables on the root widget element, not on the wrapper', () => {
-  const Frame = compileSfc(new URL('../app/widgets/WidgetFrame.vue', import.meta.url), { '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow })
+  const Frame = compileSfc(new URL('../app/widgets/WidgetFrame.vue', import.meta.url), { '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow, '../board/widget-settings': boardSettings })
   const fonts = { '--ld-font-body': "'Inter', system-ui, sans-serif" }
   const ui = mountComponent(Frame, { themeId: 'builtin:gruvbox-dark-solid', fonts }, [])
   const widget = ui.nodes().find(el => String(el.props.class).startsWith('widget '))!
@@ -458,7 +474,7 @@ it('puts the theme font variables on the root widget element, not on the wrapper
 })
 
 it('sets the content scale factor on the root widget element, merged with the fonts', () => {
-  const Frame = compileSfc(new URL('../app/widgets/WidgetFrame.vue', import.meta.url), { '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow })
+  const Frame = compileSfc(new URL('../app/widgets/WidgetFrame.vue', import.meta.url), { '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow, '../board/widget-settings': boardSettings })
   const fonts = { '--ld-font-body': "'Inter', system-ui, sans-serif" }
   const scaled = mountComponent(Frame, { themeId: 'builtin:gruvbox-dark-solid', fonts, scale: 20 }, [])
   const widget = scaled.nodes().find(el => String(el.props.class).startsWith('widget '))!

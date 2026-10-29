@@ -79,7 +79,7 @@ The initial SDK lives at [`packages/widget-sdk`](packages/widget-sdk). It curren
 | API | Purpose |
 | --- | --- |
 | `useWidget()` | Access the host-provided widget API from a Vue component. |
-| `widget.context` | Reactive size, `sizeClass`, `frame` (framed or frameless), theme, `rootFontSize`, config, locale, and visibility. |
+| `widget.context` | Reactive `variant`, size, `sizeClass`, `frame` (framed or frameless), theme, `rootFontSize`, `contentScale`, config, locale, and visibility. |
 | `widget.state.get<T>()` | Read instance-specific persisted state and its revision. |
 | `widget.state.set(data, expectedRevision)` | Save state with optimistic concurrency control. |
 | `widget.notify({ title, body })` | Request a notification displayed by LifeDashboard. |
