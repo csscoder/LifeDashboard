@@ -18,6 +18,7 @@ import { askDelete } from './spaces/confirm-delete'
 import ConfirmDelete from './spaces/ConfirmDelete.vue'
 import { screenSuffix } from './spaces/nav'
 import { loadLastOpen, resolveLastOpen, saveLastOpen, type LastOpen } from './spaces/last-open'
+import UiNumberField from './ui/UiNumberField.vue'
 import ScreenDots from './spaces/ScreenDots.vue'
 import { canRemoveScreen, LAST_SPACE_HINT, runCreateSpace, runDeleteSpace, runEditSpace } from './spaces/space-flow'
 import SpaceSwitcher from './spaces/SpaceSwitcher.vue'
@@ -67,11 +68,6 @@ function pickWidget(key: string) {
   if (!entry) return
   draftSource.value = entry.source
   mode.value = 'build'
-}
-
-// An empty or out-of-range value leaves the working copy unchanged; :invalid marks the field.
-function setRows(event: Event) {
-  boardRef.value?.setRows((event.target as HTMLInputElement).valueAsNumber)
 }
 
 const screenCount = computed(() => boardRef.value?.screens.length ?? 0)
@@ -334,8 +330,11 @@ onMounted(check)
         <div v-if="mode !== 'view'" class="app__edit-controls" role="group" aria-label="Board editing">
           <label v-if="mode === 'edit'" class="app__theme">
             Rows
-            <input class="app__select app__rows" type="number" required :min="ROWS.min" :max="ROWS.max" step="1"
-              :value="boardRef?.rows" :disabled="boardRef?.saving" @input="setRows" />
+            <!-- UiNumberField drops an empty or out-of-range value, so the working copy never holds one. -->
+            <span class="app__rows">
+              <UiNumberField integer stepper :min="ROWS.min" :max="ROWS.max" :model-value="boardRef?.rows ?? ROWS.min"
+                :disabled="boardRef?.saving" @update:model-value="boardRef?.setRows($event)" />
+            </span>
           </label>
           <button type="button" class="app__button app__button--primary" :disabled="boardRef?.saving" @click="boardRef?.confirm()">Done</button>
           <button type="button" class="app__button" :disabled="boardRef?.saving" @click="boardRef?.cancel()">Cancel</button>
@@ -490,27 +489,8 @@ html {
   font-size: 0.875rem;
 }
 
-.app__select {
-  height: var(--ld-control-height);
-  padding: 0 0.375rem;
-  border: var(--ld-border-width) solid var(--ld-border-default);
-  border-radius: var(--ld-radius-control);
-  background: var(--ld-surface-3);
-  color: var(--ld-text-primary);
-  font: inherit;
-}
-
-.app__select:focus-visible {
-  outline: 0.125rem solid var(--ld-focus-ring);
-  outline-offset: 0.125rem;
-}
-
 .app__rows {
-  width: 3.5rem;
-}
-
-.app__rows:invalid {
-  outline: 0.125rem solid var(--ld-danger);
+  width: 8.5rem;
 }
 
 .app__main {

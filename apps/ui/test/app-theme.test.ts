@@ -53,7 +53,7 @@ const App = compileSfc(new URL('../app/app.vue', import.meta.url), {
   './widgets/modals': { widgetModals: { activeModal: Vue.ref(null), error: Vue.ref(null), retryVersion: Vue.ref(0), context: () => null, cancelAll() {}, dispose() {} } },
   './theme/appearance': appearance, './theme/builtin': builtin, './theme/palettes': palettes,
   './theme/resolve': resolve, './theme/color-scheme': schemeModule, './theme/fonts': fonts,
-  ...Object.fromEntries(['widgets/WidgetModal', 'widgets/SandboxWidget', 'background/PixiBackground', 'PairingForm', 'ConfirmDialog', 'spaces/ConfirmDelete', 'spaces/ScreenDots', 'spaces/SpaceTitle', 'widgets/PackagesDialog'].map(path => [`./${path}.vue`, Empty])),
+  ...Object.fromEntries(['widgets/WidgetModal', 'widgets/SandboxWidget', 'background/PixiBackground', 'PairingForm', 'ConfirmDialog', 'spaces/ConfirmDelete', 'ui/UiNumberField', 'spaces/ScreenDots', 'spaces/SpaceTitle', 'widgets/PackagesDialog'].map(path => [`./${path}.vue`, Empty])),
 })
 beforeEach(() => {
   stored = new Map()
