@@ -1,6 +1,6 @@
 # Theme fonts: self-hosted heading and body families
 
-Status: design approved in chat on 2026-10-29; written spec awaiting review.
+Status: design approved in chat on 2026-10-29; Codex review approved (2 rounds); written spec awaiting user review.
 
 Sub-project 2 of 3 of the appearance rework. Sub-project 1 (palettes × modes × styles, content typography) is merged: `docs/superpowers/specs/2026-10-28-themes-v2-palettes-design.md`. Sub-project 3 adds a per-widget content scale and gets its own spec.
 
@@ -85,8 +85,9 @@ interface ThemeChoice {
 
 - `resolveTheme` picks the effective choice as today. A pure helper `fontVars(choice: ThemeChoice | null): Record<string, string>` maps a known `heading` to `--ld-font-heading` and `--ld-font-display`, and a known `body` to `--ld-font-body` and `--ld-font-ui`, each with `fontStack()`. Unknown or absent keys produce no entry.
 - `app.vue` binds `fontVars(<effective board choice>)` as the inline `style` of the `.space` root.
-- `resolveWidgetLook` also returns the widget's font variables: from the widget's own choice when it has a known palette, otherwise from the board's effective choice. Bare widgets use the board's. `WidgetFrame` merges them into its existing inline style. A frame needs its own variables because its `widget--theme-<key>` rule resets the font tokens to `system-ui`.
-- Inline custom properties win over the theme class on the same element, so no layer or class is added. `readThemeTokens()` reads computed values, so `context.theme.tokens` carries the chosen stacks into the sandbox unchanged.
+- `resolveWidgetLook` also returns the widget's font variables: from the widget's own choice when it has a known palette, otherwise from the board's effective choice. Bare widgets use the board's. `WidgetFrame` binds them as the inline `style` of its root `.widget` element, the element that carries the theme class and that `readThemeTokens()` reads; the existing `wrapperStyle` on `.widget__wrapper` stays for the shadow. A frame needs its own variables because its `widget--theme-<key>` rule resets the font tokens to `system-ui`.
+- Inline custom properties win over the theme class on the same element, so no layer or class is added. `readThemeTokens()` reads computed values, so `context.theme.tokens` carries the chosen stacks into the sandbox.
+- `useWidgetContext` re-reads tokens today only when `themeId` or `foreign` changes. Its source gains `fonts: () => string` (the serialized font variables), and the post-flush watch covers `[themeId, foreign, fonts]`, so changing or resetting only a font updates an open sandbox widget.
 - Fonts do not change the combination id or `foreign`.
 
 ## Files and serving
@@ -108,10 +109,11 @@ The script runs only when the catalog changes; its output is committed. Normal b
 
 ### Sandbox
 
-- API: `GET /sandbox/runtime/fonts/:file` accepts only `^[a-z0-9-]+\.woff2$` and serves `font/woff2` with `cache-control: public, max-age=31536000, immutable`. It reads from `$LIFEDASHBOARD_RUNTIME_DIR/fonts/` when set, otherwise from `apps/ui/app/theme/fonts/`. Other names and missing files give 404. The existing `/sandbox/*` hook adds `Access-Control-Allow-Origin: *` and the host and origin checks.
-- `copy-runtime.mjs` copies `apps/ui/app/theme/fonts/*.woff2` to `dist-bundle/runtime/fonts/`; `smoke-bundle.mjs` also requests one font.
+- API: `GET /sandbox/runtime/fonts/:file` accepts only `^[a-z0-9-]+\.woff2$` and serves `font/woff2` with `cache-control: no-cache`: the URL is stable while the fetch script may replace a file, so the browser revalidates. It reads from `$LIFEDASHBOARD_RUNTIME_DIR/fonts/` when set, otherwise from `apps/ui/app/theme/fonts/`. Other names and missing files give 404. The existing `/sandbox/*` hook adds `Access-Control-Allow-Origin: *` and the host and origin checks.
+- `copy-runtime.mjs` copies `apps/ui/app/theme/fonts/*.woff2` and `*.OFL.txt` to `dist-bundle/runtime/fonts/`, so the desktop app, which bundles `dist-bundle`, ships every licence with the fonts; `smoke-bundle.mjs` also requests one font.
 - Runtime: `sandbox.ts` imports `fonts.css?raw`, replaces `url(../fonts/` with the absolute `new URL('fonts/', import.meta.url)` and appends it to the existing injected `<style>`.
 - CSP: `font-src ${packageDir} ${runtime}fonts/ data:`.
+- Document cache: the sandbox document (`/sandbox/packages/:hash/`) is served today with a one-year `immutable` cache, so a browser would keep a cached document with the old CSP. The document response switches to `cache-control: no-cache` (it is generated and cheap), and `SandboxWidget.vue` loads it as `/sandbox/packages/<hash>/?doc=2` once, so documents cached before this change are never reused. Package files keep the immutable cache.
 
 Expected size: 24 WOFF2 files, estimated at 1–1.5 MB in total; the plan records the measured size.
 
@@ -149,7 +151,9 @@ Below the Style group, `ThemePicker.vue` gets two `UiSelect` rows, `Heading font
 - `apps/ui/test/theme-resolve.test.ts`: a widget with its own palette and no fonts does not inherit the board fonts; an inheriting and a bare widget get the board fonts.
 - `apps/ui/test/theme-picker.test.ts`: selecting a family emits the slug with the key order above; `Theme default` removes it; rows are disabled for Inherit and No frame; unknown slug shows `Theme default`.
 - `apps/ui/test/app-theme.test.ts`: the `.space` root gets the inline font variables of the effective choice.
-- `apps/api/test/sandbox.test.ts`: the font route serves `font/woff2` with `access-control-allow-origin: *`, and returns 404 for `..%2F`, `x.ttf` and a missing file. `apps/api` bundle smoke requests one font.
+- `apps/ui/test/widget-context.test.ts`: changing only the heading font, and then resetting it to the theme default, sends new `context.theme.tokens` with the same `id`.
+- `apps/ui/test/widget-host.test.ts` (or the `WidgetFrame` test): the root `.widget` element carries the font variables and the computed tokens read from it contain them.
+- `apps/api/test/sandbox.test.ts`: the font route serves `font/woff2` with `access-control-allow-origin: *`, with `cache-control: no-cache`, and returns 404 for `..%2F`, `x.ttf` and a missing file; the sandbox document is served with `cache-control: no-cache`. `apps/api` bundle smoke requests one font, and `copy-runtime` output contains every `<slug>.OFL.txt`.
 - `packages/contracts/test/sandbox-document.test.ts`: `font-src` contains `${runtime}fonts/`.
 - `packages/widget-sdk/test/sandbox-root.test.ts`: the injected `<style>` contains `@font-face` with an absolute `…/sandbox/runtime/fonts/` URL.
 - Manual, in the Orca browser: a heading and body pair on a space, a different pair on a widget, Cyrillic and Latin text in a built-in and a sandbox widget, and the desktop bundle smoke.
