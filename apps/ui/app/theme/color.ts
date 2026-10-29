@@ -76,7 +76,6 @@ export function contrastRatio(a: Rgba, b: Rgba): number {
   return (high + 0.05) / (low + 0.05)
 }
 
-
 /** Six-digit sRGB hex → OKLCH (Björn Ottosson's OKLab matrices). */
 export function hexToOklch(hex: string): Oklch {
   if (!/^#[0-9a-f]{6}$/i.test(hex)) throw new Error('Expected a #rrggbb colour')
