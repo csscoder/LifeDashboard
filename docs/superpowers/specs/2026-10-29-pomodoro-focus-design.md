@@ -1,6 +1,6 @@
 # Pomodoro widget and dashboard focus status
 
-Status: design approved in chat on 2026-10-29 (5 sections); Codex review approved (3 rounds); written spec awaiting user review.
+Status: design approved in chat on 2026-10-29 (5 sections); Codex review approved (3 rounds); user-approved amendment of the 409 rule after the plan review (2026-10-29).
 
 Branch: `feat/pomodoro-focus`, from `main` at `387fd98`.
 
@@ -184,7 +184,11 @@ A singleton shared by every Pomodoro widget:
 - While running, `seenAt` is refreshed every 30 s. Every transition to `running` sets `seenAt = resumedAt`, so a stored running run always has `seenAt ≥ resumedAt`.
 - **One write chain.** Writes (state changes and heartbeats) are serialized: at most one `PUT` is in flight; the next one carries the latest local run and the revision the previous answer returned. Several changes made while a write is in flight are coalesced into one `PUT` with the latest run. Each session produced by the engine joins a list of unconfirmed sessions; a `PUT` carries the oldest one, and a session leaves the list only when a `PUT` carrying it succeeds.
 - A failed write (network, 5xx) retries after 2, 5 and 15 s, then every 60 s while the app runs.
-- On 409 the store re-reads `GET /api/v1/focus`, takes the server's settings and run, drops the local run change and keeps the unconfirmed sessions, which the next `PUT` sends again; `INSERT OR IGNORE` makes a session that was already stored harmless.
+- A write whose outcome is unknown (network error or timeout) is re-sent **unchanged** (same body, same `expectedRevision`) until its outcome is known; local changes made meanwhile wait and are sent after it. On 409 the store re-reads `GET /api/v1/focus`:
+  - if the server run equals the run of that pending write (both normalized by `parseFocusRun`), the write had landed without an answer: the store takes the server revision, treats the write as confirmed and continues with the waiting changes;
+  - otherwise it is a real conflict (another tab): the store takes the server's settings and run, drops the local run change and keeps the unconfirmed sessions, which the next `PUT` sends again;
+  - if the re-read fails, nothing is adopted: the local state and the pending write stay, and the attempt counts as a failed retry.
+  - `INSERT OR IGNORE` makes a session that was already stored harmless in every case.
 - Presence: `useFocusPresence()` is called by each mounted widget. When the count reaches 0 while running, the store pauses with `pausedBy: 'hidden'`. When a widget mounts again in the same app session and the run is paused by `hidden`, it resumes. A run paused by `user`, or restored after a reload, waits for ▶.
 - Exposes the public status `{ phase: 'none' | 'focus' | 'break'; running: boolean; endsAt: number | null }` for `context.focus` and for the notification hold.
 
@@ -270,7 +274,7 @@ Registered in `builtinSettingsEditors`. Fields for every `FocusSettings` value w
 
 - `GET /focus` fails: the widget shows «Can't load focus» and «Retry»; the timer cannot start.
 - `PUT` fails (network, 5xx): the local run continues; the write chain retries (see `store.ts`); the first failure shows one toast «Focus progress not saved yet». Unconfirmed sessions stay in the list until a `PUT` carrying them succeeds; they are lost only if the app closes before that.
-- 409: the store re-reads the server state, drops the local run change, keeps and re-sends unconfirmed sessions, and shows a toast.
+- 409 from our own landed write (see `store.ts`): no toast, the local run is kept. A real 409: the store re-reads the server state, drops the local run change, keeps and re-sends unconfirmed sessions, and shows a toast.
 - No notification permission: in-app toast.
 - 400 from validation: the UI prevents invalid input; a 400 is shown next to the field.
 

@@ -30,7 +30,7 @@
 ## Review Focus
 
 1. A phase deadline passes while the window is in the background and the user then presses pause/skip/reset: the phase must be completed once at `endsAt`, never recorded as interrupted (Task 3 test `action after deadline completes the phase once`).
-2. The API is down for a while during a completed pomodoro: the session must survive retries and a 409 and be stored exactly once (Task 4 tests `session survives failure and conflict`, Task 2 test `repeated session id is ignored`).
+2. The API is down for a while during a completed pomodoro: the session must survive retries and a 409 and be stored exactly once (Task 4 tests `session survives failure and conflict`, `own landed write is not a conflict`; Task 2 test `repeated session id is ignored`).
 3. The user opens another screen mid-focus and comes back: pause on 0 widgets, resume on return; a manual pause is never auto-resumed (Task 4 test `presence pauses and resumes only hidden pauses`).
 4. The user edits durations while a focus runs: the running phase keeps its length, the next phase uses the new one (Task 3 test `settings change applies to the next phase`).
 5. Day boundary: a pomodoro finished at 00:05 counts toward the new day's goal (Task 3 test `dayKey uses local date of endedAt`, Task 11 test `today uses local day keys`).
@@ -99,6 +99,7 @@ git commit -m "feat(contracts): focus settings, run, session and project contrac
 - Create: `apps/api/src/focus.ts`
 - Modify: `apps/api/src/app.ts` (call `registerFocus(app, { db, now })`)
 - Test: `apps/api/test/focus.test.ts` (use `testApp`, `pair`, `call` from `./helpers.ts` as `spaces.test.ts` does)
+- Modify: `apps/api/test/db.test.ts` (the full table list gains `focus`, `focus_projects`, `focus_sessions`)
 
 **Interfaces:**
 - Consumes: Task 1 parsers, `DEFAULT_FOCUS_SETTINGS`, `initialRun`, `FocusState`.
@@ -112,6 +113,7 @@ git commit -m "feat(contracts): focus settings, run, session and project contrac
 - [ ] **Step 1: Write the failing tests**:
   - `first read creates defaults`: GET returns `settings` equal to `DEFAULT_FOCUS_SETTINGS`, `run` equal to `initialRun(DEFAULT_FOCUS_SETTINGS)`, `revision: 1`, `projects: []`, `recentLabels: []`.
   - `put stores run and session in one write`: PUT with `expectedRevision: 1` and a session returns `{ revision: 2 }`; GET shows the new run; GET sessions for that `day` returns the session.
+  - `failed write changes nothing`: create `CREATE TRIGGER fail_focus BEFORE UPDATE ON focus BEGIN SELECT RAISE(ABORT, 'forced'); END;` on the test database, then PUT a new run with settings and a session → status 500; GET shows the previous settings, run and revision, and GET sessions returns no row for that session.
   - `stale revision is 409`: a second PUT with `expectedRevision: 1` → 409 with code `REVISION_CONFLICT`, run unchanged.
   - `repeated session id is ignored`: two successful PUTs carrying the same session `id` leave one row.
   - `unknown project is 400`: run with `projectId` that does not exist → 400.
@@ -120,11 +122,15 @@ git commit -m "feat(contracts): focus settings, run, session and project contrac
   - `recentLabels`: 12 sessions with labels `l1`…`l12` (some repeated) → 10 most recent distinct non-empty labels, newest first.
   - `projects`: POST `{ name: ' Work ', color: 'blue' }` returns `name: 'Work'`, `archivedAt: null`; PATCH `{ archived: true }` sets `archivedAt`; PATCH unknown id → 404; archived projects still appear in GET `projects` with `archivedAt` set.
   - `requires a session`: GET without the pairing cookie → 401.
+  - `db.test.ts`: the expected table list includes the three focus tables; the assertion `expect(userVersion(db)).toBe(14)` (line 378) becomes `toBe(MIGRATIONS.length)` unless that test pins a specific migration, in which case open the database with migrations up to that one; the existing migration tests still pass.
 
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pnpm -C apps/api exec vitest run test/focus.test.ts`
 Expected: FAIL, routes return 404.
+
+Run: `pnpm -C apps/api exec vitest run test/db.test.ts`
+Expected: FAIL, the table list lacks the focus tables.
 
 - [ ] **Step 3: Implement** the migration and `apps/api/src/focus.ts`
 
@@ -138,7 +144,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/api/src/migrations.ts apps/api/src/focus.ts apps/api/src/app.ts apps/api/test/focus.test.ts
+git add apps/api/src/migrations.ts apps/api/src/focus.ts apps/api/src/app.ts apps/api/test/focus.test.ts apps/api/test/db.test.ts
 git commit -m "feat(api): focus settings, run, sessions and projects storage"
 ```
 
@@ -215,23 +221,35 @@ git commit -m "feat(ui): pure pomodoro focus engine"
 - Consumes: Task 3 engine, Task 1 types, `api`.
 - Produces:
   - `api.focus(): Promise<ApiResult<FocusState>>`, `api.saveFocus(body: FocusPutRequest): Promise<ApiResult<{ revision: number }>>`, `api.focusSessions(from: string, to: string): Promise<ApiResult<FocusSession[]>>`, `api.createFocusProject(body: { name: string; color: SpaceColor }): Promise<ApiResult<FocusProject>>`, `api.updateFocusProject(id: string, patch: { name?: string; color?: SpaceColor; archived?: boolean }): Promise<ApiResult<FocusProject>>`
-  - `createFocusStore(deps: { api: Pick<typeof api, 'focus' | 'saveFocus' | 'focusSessions' | 'createFocusProject' | 'updateFocusProject'>; now: () => number; newId: () => string; onPhaseEnd(event: { from: FocusPhase; to: FocusPhase; nextMinutes: number }): void; onSaveFailed(): void; onConflict(): void })` returning `FocusStore`
-  - `interface FocusStore { state: { loaded: boolean; loadError: boolean; settings: FocusSettings; run: FocusRun; projects: FocusProject[]; recentLabels: string[]; todayCount: number }; status: ComputedRef<ReturnType<typeof publicStatus>>; load(): Promise<void>; start(): void; pause(): void; resume(): void; skip(): void; reset(): void; setTask(label: string | null, projectId: string | null): void; saveSettings(settings: FocusSettings): void; createProject(name: string, color: SpaceColor): Promise<FocusProject | null>; updateProject(id: string, patch: { name?: string; color?: SpaceColor; archived?: boolean }): Promise<boolean>; enter(): () => void; dispose(): void }`
-  - `focusStore: FocusStore` — the app singleton built with the real `api`, `Date.now`, `crypto.randomUUID`; `onSaveFailed` shows the toast `Focus progress not saved yet`, `onConflict` shows `Focus changed in another tab; reloaded` (both `source: 'Pomodoro'`); `onPhaseEnd` is a no-op until Task 6 wires the alerts.
-  - `todayCount`: completed pomodoros of the local day; `load` fills it from `focusSessions(today, today)`; each completed session adds 1 when its `day` is today, otherwise sets it to 1.
+  - `createFocusStore(deps: { api: Pick<typeof api, 'focus' | 'saveFocus' | 'focusSessions' | 'createFocusProject' | 'updateFocusProject'>; now: () => number; newId: () => string; onPhaseEnd(event: { from: FocusPhase; to: FocusPhase; nextMinutes: number }): void; notice(text: string): void })` returning `FocusStore`
+  - `interface FocusStore { state: { loaded: boolean; loadError: boolean; settings: FocusSettings; run: FocusRun; projects: FocusProject[]; recentLabels: string[]; today: { day: string; count: number; focusMs: number } }; status: ComputedRef<ReturnType<typeof publicStatus>>; load(): Promise<void>; start(): void; pause(): void; resume(): void; skip(): void; reset(): void; setTask(label: string | null, projectId: string | null): string | null; saveSettings(settings: FocusSettings): string | null; createProject(name: string, color: SpaceColor): Promise<ProjectResult>; updateProject(id: string, patch: { name?: string; color?: SpaceColor; archived?: boolean }): Promise<ProjectResult>; enter(): () => void; dispose(): void }`
+  - `type ProjectResult = { ok: true; project: FocusProject } | { ok: false; error: string }`
+  - `setTask` and `saveSettings` validate with the Task 1 parsers before changing anything and return the parser's error text, or `null` when applied. Project methods validate the same way and return the API's `message` for an `invalid` answer.
+  - `focusStore: FocusStore` — the app singleton built with the real `api`, `Date.now`, `crypto.randomUUID` and `notice` = `showToast({ source: 'Pomodoro', title: text, body: '' })` (Task 5 adds `bypassHold`); `onPhaseEnd` is a no-op until Task 6 wires the alerts.
+  - Notices: `Focus progress not saved yet` (first failure of a write chain run), `Focus changed in another tab; reloaded` (real conflict), `Focus change rejected: {message}` (a 400 from `saveFocus`).
+  - `today`: `day` is `dayKey(now)`; `count` is completed sessions and `focusMs` the sum of `focusMs` of all sessions with that `day`. `load` fills it from `focusSessions(day, day)`. A new session is added only when `session.day === today.day`. A private `rollToday(now)` resets it to `{ day: dayKey(now), count: 0, focusMs: 0 }` only when `dayKey(now) !== today.day` (idempotent). It runs before any session is added, on `visibilitychange`, and from a `setTimeout` to the next local midnight (re-armed after each call).
   - `useFocusPresence(): void` — calls `focusStore.enter()` in `onMounted` and its returned leave function in `onUnmounted`; the first `enter` triggers `load()` when not loaded.
 
-Behaviour (spec «store.ts»): one `setTimeout` to `endsAt`; `visibilitychange` re-runs `advance`; heartbeat every 30 000 ms while running; `enter`/leave count — leave to 0 while running → `pause(..., 'hidden')`; enter with run paused by `hidden` → `resume`; after `load` a running run goes through `restore`. Write chain: at most one `saveFocus` in flight; coalesce; unconfirmed sessions list, oldest carried first; retries after 2 000, 5 000, 15 000 ms, then every 60 000 ms; on `conflict` call `api.focus()`, adopt its settings/run/revision, keep unconfirmed sessions and call `onConflict`.
+Behaviour (spec «store.ts»): one `setTimeout` to `endsAt`; `visibilitychange` re-runs `advance`; heartbeat every 30 000 ms while running; `enter`/leave count — leave to 0 while running → `pause(..., 'hidden')`; enter with run paused by `hidden` → `resume`; after `load` a running run goes through `restore`, and a stored run paused by `hidden` becomes paused by `user` (a hidden pause resumes only within the app session that made it). When a session is confirmed, its non-empty label moves to the front of `recentLabels` (distinct, at most 10). Write chain: at most one `saveFocus` in flight; unconfirmed sessions list, oldest carried first. The `pending` write (body + `expectedRevision`) is fixed once sent: after `unavailable` the identical `pending` is re-sent after 2 000, 5 000, 15 000 ms, then every 60 000 ms; changes made meanwhile are coalesced into the next write, built only after `pending` resolves. On `conflict` call `api.focus()`: if it fails, keep everything and count a failed retry; if its `run` deep-equals `pending.run` (compare `parseFocusRun` outputs), `pending` had landed: take the server `revision`, mark `pending` and its session confirmed, continue; otherwise adopt the server settings/run/revision, keep unconfirmed sessions and `notice` the conflict. An `invalid` answer is not retried: drop the change, reload with `api.focus()`, keep unconfirmed sessions, `notice` the rejection.
 
 - [ ] **Step 1: Write the failing tests** (Vitest fake timers, a fake `api` recording calls, `effectScope`):
   - `load restores a running run as paused`: fake `focus()` returns a running run → `state.run.status === 'paused'`, `pausedBy: 'user'`.
   - `writes are serialized and coalesced`: `start`, `pause`, `resume` while the first save is pending → exactly 2 `saveFocus` calls; the second carries the last run and `expectedRevision` from the first answer.
-  - `session survives failure and conflict`: phase completes; first save `unavailable`, retry `conflict`, then `ok` → the same session id sent on every attempt; `onSaveFailed` called once; `onConflict` called once; unconfirmed list empty at the end.
+  - `session survives failure and conflict`: phase completes; first save `unavailable`, retry `conflict` with a server run from another tab, then `ok` → the same session id sent on every attempt; `notice('Focus progress not saved yet')` once; `notice('Focus changed in another tab; reloaded')` once; unconfirmed list empty at the end.
+  - `own landed write is not a conflict`: heartbeat save resolves `unavailable` (the fake server stored it); the focus then completes locally; the store re-sends the identical heartbeat, gets `conflict`, `focus()` returns the heartbeat run → heartbeat confirmed; then the completion is sent with the server revision → the fake server ends with exactly one session, the local `short` run is kept, no conflict notice.
+  - `lost answers twice still store one session`: heartbeat stored without answer; local completion; the re-sent heartbeat's 409 answer is lost (`unavailable`), the next re-send gets `conflict` and `focus()` returns the heartbeat run → one session, local transition kept.
+  - `failed re-read after conflict keeps local state`: `conflict`, then `focus()` `unavailable`, then on the next retry `conflict` + `focus()` ok → no state adopted before the successful read; unconfirmed sessions intact.
+  - `writes wait behind a pending write`: while `pending` is unresolved, `pause` and `resume` produce no new `saveFocus` call until `pending` resolves; then one coalesced write follows.
+  - `rejected write reloads`: `saveFocus` answers `invalid` → no retry, `focus()` called, `notice('Focus change rejected: …')`.
+  - `setTask validates`: a label with `\u202e` returns an error string and leaves `state.run.label` unchanged; a 121-character label returns an error.
+  - `project errors are returned`: `createFocusProject` answers `invalid` with message `name must be 1..40 characters` → `{ ok: false, error: 'name must be 1..40 characters' }`.
+  - `stored hidden pause waits for start`: `focus()` returns a run paused by `hidden` → after `load` it is paused by `user`; `enter` does not resume it.
   - `retries continue after the third failure`: 4 failures then success → the 5th attempt happens 60 000 ms after the 4th.
   - `presence pauses and resumes only hidden pauses`: running; leave last view → `paused`/`hidden`; enter → `running`. Paused by `user`, leave and enter → stays `paused`.
   - `deadline timer fires advance`: running focus; advance timers by `durationMs` → `onPhaseEnd({ from: 'focus', to: 'short', nextMinutes: 5 })`, run `short`.
   - `heartbeat updates seenAt`: running; advance 30 000 ms → a save with `seenAt` = now.
-  - `todayCount follows completed sessions`: load with 2 completed sessions today → 2; one more completed focus → 3; a completion whose `day` is tomorrow → 1.
+  - `recent labels update after a confirmed session`: a session with label `Write plan` is confirmed by `saveFocus` → `state.recentLabels[0] === 'Write plan'` without another `focus()` call; the list stays distinct, drops empty labels and keeps at most 10.
+  - `today follows the local day`: load with 2 completed sessions and one interrupted (600 000 ms) today → `count: 2`, `focusMs` = 3 600 000; one more completed focus → `count: 3`; advancing fake time past local midnight with no new session → `{ count: 0, focusMs: 0 }` and the new `day`; a late session whose `day` is yesterday leaves `today` unchanged; with the midnight timer not run (clock set past midnight without running timers), a phase completing at 00:05 counts in the new day: `{ day: <new day>, count: 1 }`.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -259,10 +277,10 @@ git commit -m "feat(ui): focus store with presence and a serialized write chain"
 **Files:**
 - Modify: `apps/ui/app/toasts.ts`
 - Modify: `apps/ui/app/focus/store.ts` (watch `status` and call `holdToasts`)
-- Test: `apps/ui/test/toasts.test.ts`
+- Test: `apps/ui/test/toasts.test.ts`, `apps/ui/test/focus-store.test.ts`
 
 **Interfaces:**
-- Produces: `holdToasts(hold: boolean): void`; `showToast(message: Omit<Toast, 'id'>, options?: { bypassHold?: boolean }): void` (existing callers unchanged).
+- Produces: `holdToasts(hold: boolean): void`; `showToast(message: Omit<Toast, 'id'>, options?: { bypassHold?: boolean }): void` (existing callers unchanged). The `focusStore` singleton's `notice` passes `{ bypassHold: true }`, so save, conflict and rejection notices are never held.
 - The store calls `holdToasts(status.phase === 'focus' && status.running)` whenever `status` changes.
 
 - [ ] **Step 1: Write the failing tests**:
@@ -270,13 +288,14 @@ git commit -m "feat(ui): focus store with presence and a serialized write chain"
   - `bypass is shown while held`: `showToast(msg, { bypassHold: true })` → shown.
   - `flush shows five and a summary`: hold, 8 toasts, `holdToasts(false)` → 6 toasts; the last has `title: '+3 notifications while you focused'`.
   - `queue keeps the newest fifty`: hold, 60 toasts, release → the first 5 shown are numbers 11–15 and the summary says `+45`.
+  - `store notices bypass the hold` (in `focus-store.test.ts`, using the exported `focusNotice(text)` helper the singleton passes as `notice`): with `holdToasts(true)`, `focusNotice('Focus progress not saved yet')` is shown at once.
 
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pnpm -C apps/ui exec vitest run test/toasts.test.ts`
 Expected: FAIL (`holdToasts` is not exported).
 
-- [ ] **Step 3: Implement** the queue in `toasts.ts`; summary toast `source: 'LifeDashboard'`, `body: ''`. Wire the store watch.
+- [ ] **Step 3: Implement** the queue in `toasts.ts`; summary toast `source: 'LifeDashboard'`, `body: ''`. Wire the store watch; export `focusNotice(text: string): void` from `store.ts` and use it as the singleton's `notice`.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -286,7 +305,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/ui/app/toasts.ts apps/ui/app/focus/store.ts apps/ui/test/toasts.test.ts
+git add apps/ui/app/toasts.ts apps/ui/app/focus/store.ts apps/ui/test/toasts.test.ts apps/ui/test/focus-store.test.ts
 git commit -m "feat(ui): hold widget toasts while a focus interval runs"
 ```
 
@@ -362,8 +381,10 @@ Mirror commit `a39c0c2` (sdk 6, `contentScale`): the same files change for the s
 
 - [ ] **Step 2: Run to verify they fail**
 
-Run: `pnpm -C apps/ui exec vitest run test/widget-context.test.ts && pnpm -C packages/contracts exec vitest run test/widget-package.test.ts && pnpm -C packages/widget-sdk exec vitest run test/build.test.ts`
-Expected: FAIL on the new assertions.
+Run each separately and record each result:
+- `pnpm -C apps/ui exec vitest run test/widget-context.test.ts` — FAIL on `context.focus`.
+- `pnpm -C packages/contracts exec vitest run test/widget-package.test.ts` — FAIL on `sdk: 7`.
+- `pnpm -C packages/widget-sdk exec vitest run test/build.test.ts` — FAIL, built `sdk` is 6.
 
 - [ ] **Step 3: Implement** the contract, host wiring, dev shell, docs sources and template line; regenerate docs.
 
@@ -432,11 +453,14 @@ git commit -m "fix(ui): show a built-in settings editor without a schema"
   - `ringTone(run: FocusRun, doneToday: number, goal: number): 'focus' | 'break' | 'goal'`
   - `goalDots(doneToday: number, goal: number): { done: number; current: boolean; total: number } | { text: string }` — text `'5 / 16'` when `goal > 12`.
   - `isCompact(size: { w: number; h: number }): boolean` — `w < 5 || h < 5`.
-- `Pomodoro.vue` reads the completed count from `focusStore.state.todayCount`.
+  - `toggleAction(run: FocusRun): 'start' | 'pause' | 'resume'` — `ready` → `start`, `running` → `pause`, `paused` → `resume`.
+  - `formatTotal(ms: number): string` — `'3 h 20 min'`, `'45 min'`.
+- `Pomodoro.vue` reads `focusStore.state.today.count` for the dots and `today.focusMs` (via `formatTotal`) for the goal-met line. One `toggle()` handles ▶, the tomato click and Space: it awaits `alerts.prime()` (Task 6) when the action is `start` or `resume`, then calls the store action from `toggleAction`.
 
 - [ ] **Step 1: Make the asset** (tool run in the scratchpad, nothing added to the repo besides the image):
 
 ```bash
+mkdir -p apps/ui/app/widgets/builtin/pomodoro
 uvx --with pillow python - "/Users/csscoder/Downloads/Glossy Tomato Icon.png" apps/ui/app/widgets/builtin/pomodoro/tomato.webp <<'EOF'
 import sys
 from PIL import Image
@@ -470,17 +494,18 @@ ls -l apps/ui/app/widgets/builtin/pomodoro/tomato.webp
 Expected: the file exists and is at most 122 880 bytes; if larger, lower `quality` in steps of 4. Open it in Orca's browser on a dark page and confirm no stray red pixels around the tomato.
 
 - [ ] **Step 2: Write the failing tests**:
-  - `pomodoro-view.test.ts`: `formatClock(1_500_000) === '25:00'`, `formatClock(59_001) === '01:00'`, `formatClock(0) === '00:00'`; `ringProgress` for a running run half way is `0.5`, for paused uses `remainingMs`; `ringTone` returns `'goal'` when `doneToday >= goal` and the phase is not focus-running, `'break'` for short/long, else `'focus'`; `goalDots(4, 8)` → `{ done: 4, current: true, total: 8 }`, `goalDots(5, 16)` → `{ text: '5 / 16' }`; `isCompact({ w: 4, h: 6 }) === true`, `isCompact({ w: 6, h: 6 }) === false`.
+  - `pomodoro-view.test.ts`: `formatClock(1_500_000) === '25:00'`, `formatClock(59_001) === '01:00'`, `formatClock(0) === '00:00'`; `ringProgress` for a running run half way is `0.5`, for paused uses `remainingMs`; `ringTone` returns `'goal'` when `doneToday >= goal` and the phase is not focus-running, `'break'` for short/long, else `'focus'`; `goalDots(4, 8)` → `{ done: 4, current: true, total: 8 }`, `goalDots(5, 16)` → `{ text: '5 / 16' }`; `isCompact({ w: 4, h: 6 }) === true`, `isCompact({ w: 6, h: 6 }) === false`; `toggleAction` for ready/running/paused → `start`/`pause`/`resume`; `formatTotal(12_000_000) === '3 h 20 min'`, `formatTotal(2_700_000) === '45 min'`.
   - `builtin-widgets.test.ts`: `findBuiltinWidget('pomodoro')` has `title: 'Pomodoro'`, `permissions: []`, sizing default 6×6, min 3×3, max 12×12, no `settings`.
 
 - [ ] **Step 3: Run to verify they fail**
 
-Run: `pnpm -C apps/ui exec vitest run test/pomodoro-view.test.ts && pnpm -C packages/contracts exec vitest run test/builtin-widgets.test.ts`
-Expected: FAIL.
+Run each separately:
+- `pnpm -C apps/ui exec vitest run test/pomodoro-view.test.ts` — FAIL, module not found.
+- `pnpm -C packages/contracts exec vitest run test/builtin-widgets.test.ts` — FAIL, no `pomodoro` manifest.
 
 - [ ] **Step 4: Implement** `view.ts`, the manifest, the registry entry and `Pomodoro.vue`
 
-Tile per the spec «Tile»: SVG ring (`pathLength="100"`, tones red `focus`, green `break`, gold `goal`), digits with `role="timer"`, goal dots, label line with project colour; hover/focus-within controls ⏸/▶ ⏭ ↺ with `aria-label`s `Pause`, `Start`, `Skip`, `Reset`; click on the tomato or Space toggles; ▶ calls `alerts.prime()` first; paused ring blinks unless `prefers-reduced-motion`; compact layout from `isCompact`; `requestAnimationFrame` only while `context.visible` and running; load error shows `Can't load focus` and a `Retry` button calling `focusStore.load()`. Call `useFocusPresence()` in setup. Size the face in `cq*` units like `ClockAnalog1.vue`.
+Tile per the spec «Tile»: SVG ring (`pathLength="100"`, tones red `focus`, green `break`, gold `goal`), digits with `role="timer"`, goal dots, label line with project colour; hover/focus-within controls ⏸/▶ ⏭ ↺ with `aria-label`s `Pause`, `Start`, `Skip`, `Reset`; ▶, the tomato click and Space all call the one `toggle()`; paused ring blinks unless `prefers-reduced-motion`; compact layout from `isCompact`; `requestAnimationFrame` only while `context.visible` and running; load error shows `Can't load focus` and a `Retry` button calling `focusStore.load()`. Call `useFocusPresence()` in setup. Size the face in `cq*` units like `ClockAnalog1.vue`.
 
 - [ ] **Step 5: Run to verify they pass**
 
@@ -513,6 +538,8 @@ git commit -m "feat(ui): built-in Pomodoro widget with a ring around the tomato"
   - `new project`: name `'LifeDashboard'` with the default colour `nextColor(used)` → `createProject('LifeDashboard', color)` then `setTask(label, newId)`.
   - `clear`: `Clear` → `setTask(null, null)`.
   - `limits`: the input has `maxlength="120"`; the project name input `maxlength="40"`; an empty project name disables `Add`.
+  - `shows a rejected label`: the fake `setTask` returns `'label must not contain control or hidden characters'` → that text is rendered under the label input and the picker stays open.
+  - `shows a project error`: the fake `createProject` resolves `{ ok: false, error: 'name must be 1..40 characters' }` → the text is rendered under the project name input; `setTask` is not called.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -593,6 +620,7 @@ git commit -m "feat(ui): Pomodoro statistics and projects dialog"
 - [ ] **Step 1: Write the failing tests**:
   - `fields and bounds`: number fields `Focus, min` (1–120), `Short break, min` (1–60), `Long break, min` (1–60), `Long break after` (2–12), `Daily goal` (1–24); switches `Auto-start breaks`, `Auto-start focus`, `Sound`; the note `Shared by all Pomodoro widgets`.
   - `a change saves settings`: changing `Daily goal` to 10 → `saveSettings({ ...current, dailyGoal: 10 })`; no `change` event emitted.
+  - `shows a settings error`: the fake `saveSettings` returns an error string → it is rendered under the form.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -624,10 +652,10 @@ git commit -m "feat(ui): shared Pomodoro settings editor"
 Run: `pnpm typecheck && pnpm test && pnpm build`
 Expected: all exit 0.
 
-- [ ] **Step 2: Browser acceptance** (`pnpm dev`, Orca's built-in browser on `http://127.0.0.1:3000`; set focus 1, short 1, long 1, long after 2, goal 3)
+- [ ] **Step 2: Browser acceptance** (`pnpm dev`, Orca's built-in browser on `http://127.0.0.1:3000`; set focus 1, short 1, long 1, long after 2, goal 3; then press ⏭ on the ready 25-min focus and ⏭ on the ready break, so the measured cycle starts with a 1-min focus — settings never change the current phase)
 
 Record pass/fail for each:
-1. Add Pomodoro; ▶ grants notification permission; ring red, digits count down.
+1. Add Pomodoro; ▶ grants notification permission; ring red, digits count down. Repeat on a fresh browser profile starting with a tomato click, and once with Space: each first start asks for notification permission.
 2. Focus ends: browser notification `Focus done — 1 min break`, chime, green ring, session in `Today`.
 3. Another widget's `notify` during focus (`examples/widgets/hello` installed) is held and appears after the focus ends.
 4. Switch to another screen mid-focus, wait 20 s, return: time did not advance and the timer resumes.
