@@ -20,7 +20,7 @@ const html = `<!doctype html>
 <body><div id="app"></div></body>
 </html>
 `
-const csp = "default-src 'none'; script-src http://h/sandbox/runtime/ http://h/sandbox/packages/abc/ 'sha256-ice1cs9G942k8TUfj+6l7CDSYNfW9HyhqDzofADgZIM=' 'wasm-unsafe-eval'; style-src http://h/sandbox/packages/abc/ 'unsafe-inline'; img-src http://h/sandbox/packages/abc/ data: blob:; media-src http://h/sandbox/packages/abc/ blob:; font-src http://h/sandbox/packages/abc/ data:; connect-src http://h/sandbox/packages/abc/ data: blob:; worker-src blob:; frame-src 'none'; object-src 'none'; base-uri http://h/sandbox/packages/abc/; form-action 'none'"
+const csp = "default-src 'none'; script-src http://h/sandbox/runtime/ http://h/sandbox/packages/abc/ 'sha256-ice1cs9G942k8TUfj+6l7CDSYNfW9HyhqDzofADgZIM=' 'wasm-unsafe-eval'; style-src http://h/sandbox/packages/abc/ 'unsafe-inline'; img-src http://h/sandbox/packages/abc/ data: blob:; media-src http://h/sandbox/packages/abc/ blob:; font-src http://h/sandbox/packages/abc/ http://h/sandbox/runtime/fonts/ data:; connect-src http://h/sandbox/packages/abc/ data: blob:; worker-src blob:; frame-src 'none'; object-src 'none'; base-uri http://h/sandbox/packages/abc/; form-action 'none'"
 
 describe('sandboxDocument', () => {
   it('preserves the production HTML and CSP byte for byte', async () => {

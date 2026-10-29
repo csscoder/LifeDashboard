@@ -49,7 +49,7 @@ export async function sandboxDocument(
     `style-src ${packageDir} 'unsafe-inline'`,
     `img-src ${packageDir} data: blob:`,
     `media-src ${packageDir} blob:`,
-    `font-src ${packageDir} data:`,
+    `font-src ${packageDir} ${runtime}fonts/ data:`,
     `connect-src ${packageDir} data: blob:${(extras.connectSrc ?? []).map((src) => ` ${src}`).join('')}`,
     'worker-src blob:',
     "frame-src 'none'",

@@ -74,6 +74,14 @@ it('gives html, body and #app the full frame height before the widget loads', as
   expect([html.style, body.style, app.style].map(style => (style as any).height)).toEqual(['100%', '100%', '100%'])
   expect((body.style as any).margin).toBe('0')
 })
+it('injects absolute @font-face rules for the catalog before the widget loads', async () => {
+  const { head } = await runtime()
+  const css = head.firstElementChild!.textContent!
+  expect(css).toContain('@font-face')
+  expect(css).toContain("font-family: 'Inter'")
+  expect(css).toMatch(/url\([a-z]+:\/\/[^)]*\/fonts\/inter-latin\.woff2\)/)
+  expect(css).not.toContain('url(../fonts/')
+})
 it('mounts the selected modal view with its props', async () => {
   await runtime({ view: 'workspace', props: { label: 'Editor' } }, { workspace: await workspace() })
   expect(state.text).toBe('modal:Editor')

@@ -72,7 +72,7 @@ describe('GET /sandbox/packages/:hash/', () => {
         `style-src ${pkgDir} 'unsafe-inline'`,
         `img-src ${pkgDir} data: blob:`,
         `media-src ${pkgDir} blob:`,
-        `font-src ${pkgDir} data:`,
+        `font-src ${pkgDir} ${BASE}/sandbox/runtime/fonts/ data:`,
         `connect-src ${pkgDir} data: blob:`,
         'worker-src blob:',
         "frame-src 'none'",

@@ -5,6 +5,7 @@ import { createWidgetModal } from './modal.ts'
 import { createPortClient } from './port-client.ts'
 import { applyTokens } from './theme.ts'
 import contentCss from '../../../apps/ui/app/theme/styles/content.css?raw'
+import fontsCss from '../../../apps/ui/app/theme/styles/fonts.css?raw'
 import { createWidget, WIDGET_KEY } from './widget.ts'
 
 // Widget code imports '@lifedashboard/widget-sdk', which the import map resolves to this module.
@@ -18,7 +19,10 @@ function report(port: MessagePort, error: unknown): void {
 // Theme and scale come from the host: the frame inherits nothing from the dashboard (spec «Theme and size»).
 function followContext(context: WidgetContext): void {
   const style = document.createElement('style')
-  style.textContent = '@layer ld.base;\n' + contentCss
+  // A variable, not `new URL(..., import.meta.url)` inline: Vite would treat that as an asset reference.
+  const runtimeUrl = import.meta.url
+  const fontsUrl = String(new URL('fonts/', runtimeUrl))
+  style.textContent = '@layer ld.base;\n' + contentCss + fontsCss.replaceAll('url(../fonts/', `url(${fontsUrl}`)
   document.head.prepend(style)
   document.body.classList.add('ld-content')
   const root = document.documentElement

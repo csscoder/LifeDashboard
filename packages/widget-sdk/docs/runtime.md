@@ -23,7 +23,7 @@ script-src <runtime>/ <widget>/ 'sha256-<import map hash>' 'wasm-unsafe-eval'
 style-src <widget>/ 'unsafe-inline'
 img-src <widget>/ data: blob:
 media-src <widget>/ blob:
-font-src <widget>/ data:
+font-src <widget>/ <runtime>/fonts/ data:
 connect-src <widget>/ data: blob:
 worker-src blob:
 frame-src 'none'
