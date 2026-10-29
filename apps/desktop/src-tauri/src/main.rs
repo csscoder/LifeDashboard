@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use tauri::{AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, RunEvent, TitleBarStyle, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 const PORT: u16 = 3101;
@@ -183,6 +183,11 @@ fn open_window(app: &AppHandle, origin: &str) -> Result<(), Box<dyn std::error::
         .title("LifeDashboard")
         .inner_size(1440.0, 900.0)
         .min_inner_size(1280.0, 720.0)
+        // The page draws under the title bar; the traffic lights stay on top of it. The page reserves a
+        // strip for them and drags the window by it (ui: html[data-desktop], .app__titlebar).
+        .title_bar_style(TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .initialization_script("document.documentElement.setAttribute('data-desktop', 'macos')")
         // HTML5 folder drops must reach PackagesDialog.vue, not Tauri's file-drop handler.
         .disable_drag_drop_handler()
         .build()?;
