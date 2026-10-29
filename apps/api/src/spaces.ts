@@ -142,7 +142,7 @@ function readSpace(db: DatabaseSync, spaceId: string): SpaceSummary {
 }
 
 // One BEGIN IMMEDIATE transaction: the checks and the write see the same revisions.
-function transaction<T>(db: DatabaseSync, work: () => T): T {
+export function transaction<T>(db: DatabaseSync, work: () => T): T {
   db.exec('BEGIN IMMEDIATE')
   try {
     const result = work()

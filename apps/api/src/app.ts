@@ -4,6 +4,7 @@ import { registerBackgroundMedia } from './background-media.ts'
 import { registerAuth } from './auth.ts'
 import type { ApiConfig } from './config.ts'
 import { newRequestId, registerErrorHandling } from './errors.ts'
+import { registerFocus } from './focus.ts'
 import { registerSpaces } from './spaces.ts'
 import { registerSandbox } from './sandbox.ts'
 import { registerUiStatic } from './ui-static.ts'
@@ -28,6 +29,7 @@ export function buildApp({ db, config, onPairingCode, now = () => new Date(), lo
   const invalidateWidgetSessions = registerWidgetGateway(app, { db, now })
   const backgroundMedia = registerBackgroundMedia(app, { db, now, dataDir: config.dataDir })
   registerSpaces(app, { db, now, invalidateWidgetSessions, backgroundMedia })
+  registerFocus(app, { db, now })
   registerWidgetPackages(app, { db, now, dataDir: config.dataDir })
   registerWidgetUploads(app, { db, now, dataDir: config.dataDir })
   registerWidgetSecrets(app, { db, now })

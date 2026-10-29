@@ -36,6 +36,9 @@ describe('openDatabase', () => {
     expect(tables(db)).toEqual([
       'background_media',
       'background_media_leases',
+      'focus',
+      'focus_projects',
+      'focus_sessions',
       'screens',
       'sessions',
       'spaces',
@@ -375,7 +378,7 @@ describe('theme choice migration', () => {
     previous.prepare('INSERT INTO widgets (id,screen_id,source_kind,source_type,config,config_version,appearance,x,y,w,h) VALUES (?, ?, ?, ?, ?, 1, ?, 0,0,2,2)').run('bad', SEED_SCREEN_ID, 'builtin', 'placeholder', '{}', 'not json')
     previous.close()
     const db = await openDatabase(file, ctx())
-    expect(userVersion(db)).toBe(14)
+    expect(userVersion(db)).toBe(MIGRATIONS.length)
     expect(JSON.parse((db.prepare('SELECT theme FROM spaces WHERE id = ?').get(SEED_SPACE_ID) as { theme: string }).theme)).toEqual({ palette: 'builtin:lifedashboard', mode: 'light', style: 'solid' })
     expect(JSON.parse((db.prepare('SELECT theme FROM screens WHERE id = ?').get(SEED_SCREEN_ID) as { theme: string }).theme)).toEqual({ palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' })
     for (const table of ['spaces', 'screens']) expect(db.prepare(`SELECT theme FROM ${table} WHERE id IN ('null','unknown')`).all()).toEqual([{ theme: null }, { theme: null }])

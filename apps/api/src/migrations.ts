@@ -240,4 +240,32 @@ WHERE CASE WHEN json_valid(background)
 `,
   `CREATE INDEX widget_audit_at ON widget_audit(at);`,
   migrateThemeChoices,
+  `
+CREATE TABLE focus (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  settings TEXT NOT NULL,
+  run TEXT NOT NULL,
+  revision INTEGER NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE focus_projects (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  color TEXT NOT NULL,
+  archived_at TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE focus_sessions (
+  id TEXT PRIMARY KEY,
+  day TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  ended_at TEXT NOT NULL,
+  planned_ms INTEGER NOT NULL,
+  focus_ms INTEGER NOT NULL,
+  completed INTEGER NOT NULL,
+  label TEXT,
+  project_id TEXT REFERENCES focus_projects(id)
+);
+CREATE INDEX focus_sessions_day ON focus_sessions(day);
+`,
 ]
