@@ -11,7 +11,7 @@ const TextField = Vue.defineComponent({
 const Button = Vue.defineComponent({ props: ['disabled'], setup: (props, { attrs, slots }) => () => Vue.h('button', { ...attrs, disabled: props.disabled }, slots.default?.()) })
 const Select = Vue.defineComponent({ props: ['modelValue', 'options'], setup: (props, { attrs }) => () => Vue.h('ui-select', { ...attrs, options: props.options }) })
 const component = compileSfc(new URL('../app/widgets/builtin/pomodoro/TaskPicker.vue', import.meta.url), {
-  'reka-ui': { PopoverRoot: pass('popover'), PopoverTrigger: pass('trigger'), PopoverPortal: pass('portal'), PopoverContent: pass('content') },
+  'reka-ui': { FieldRoot: pass('field'), PopoverRoot: pass('popover'), PopoverTrigger: pass('trigger'), PopoverPortal: pass('portal'), PopoverContent: pass('content') },
   '@lifedashboard/contracts/space': { nextColor, SPACE_COLORS },
   '../../../ui/UiButton.vue': Button,
   '../../../ui/UiSelect.vue': Select,

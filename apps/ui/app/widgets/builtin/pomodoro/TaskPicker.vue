@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
+import { FieldRoot, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { nextColor, SPACE_COLORS, type SpaceColor } from '@lifedashboard/contracts/space'
 import UiButton from '../../../ui/UiButton.vue'
 import UiSelect from '../../../ui/UiSelect.vue'
@@ -54,7 +54,7 @@ async function addProject() {
     <PopoverTrigger as-child><slot /></PopoverTrigger>
     <PopoverPortal>
       <PopoverContent class="task-picker" side="top" :side-offset="6" aria-label="Task">
-        <UiTextField v-model="draft" class="task-picker__label" aria-label="Task" placeholder="What are you working on?" :maxlength="120" @keydown.enter.prevent="apply(label, state.run.projectId)" />
+        <FieldRoot><UiTextField v-model="draft" class="task-picker__label" aria-label="Task" placeholder="What are you working on?" :maxlength="120" @keydown.enter.prevent="apply(label, state.run.projectId)" /></FieldRoot>
         <p v-if="labelError" class="task-picker__error" role="alert">{{ labelError }}</p>
 
         <div v-if="state.recentLabels.length" class="task-picker__recent">
@@ -65,7 +65,7 @@ async function addProject() {
 
         <UiButton v-if="!adding" @click="adding = true">+ New project</UiButton>
         <div v-else class="task-picker__new">
-          <UiTextField v-model="projectName" aria-label="Project name" placeholder="Project name" :maxlength="40" @keydown.enter.prevent="projectName.trim() && addProject()" />
+          <FieldRoot><UiTextField v-model="projectName" aria-label="Project name" placeholder="Project name" :maxlength="40" @keydown.enter.prevent="projectName.trim() && addProject()" /></FieldRoot>
           <div class="task-picker__colors" role="group" aria-label="Project colour">
             <button
               v-for="(hue, key) in SPACE_COLORS"

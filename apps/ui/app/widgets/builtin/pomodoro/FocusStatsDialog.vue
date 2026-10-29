@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, watch } from 'vue'
+import { FieldRoot } from 'reka-ui'
 import type { FocusSession } from '@lifedashboard/contracts/focus'
 import { SPACE_COLORS, type SpaceColor } from '@lifedashboard/contracts/space'
 import { api } from '../../../api'
@@ -121,7 +122,7 @@ watch(
         <h3 class="focus-stats__subtitle">Projects</h3>
         <ul class="focus-stats__list">
           <li v-for="project in state.projects" :key="project.id" class="focus-stats__project" :class="{ 'focus-stats__project--archived': project.archivedAt !== null }">
-            <UiTextField :model-value="project.name" :aria-label="`Name of ${project.name}`" :maxlength="40" @change="patch(project.id, { name: ($event.target as HTMLInputElement).value.trim() })" />
+            <FieldRoot><UiTextField :model-value="project.name" :aria-label="`Name of ${project.name}`" :maxlength="40" @change="patch(project.id, { name: ($event.target as HTMLInputElement).value.trim() })" /></FieldRoot>
             <span class="focus-stats__colors" role="group" :aria-label="`Colour of ${project.name}`">
               <button
                 v-for="(value, key) in SPACE_COLORS"
