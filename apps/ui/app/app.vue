@@ -398,6 +398,7 @@ html {
 }
 
 .app__header {
+  z-index: 2; /* above the board, which extends under it so a widget shadow is not cut at the header edge */
   display: flex;
   align-items: center;
   padding: 0 5rem 0 1rem;
@@ -446,6 +447,7 @@ html {
 }
 
 .app__footer {
+  z-index: 2; /* above the board, which extends under it */
   display: flex;
   align-items: center;
   justify-content: center;
