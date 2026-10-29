@@ -27,6 +27,8 @@ export function useWidgetContext(source: {
   themeId: () => string
   // True when the widget's theme differs from the board's: comfort.css swaps surface-1 and blur.
   foreign: () => boolean
+  // Serialized font variables of the frame; a font change alone re-reads the tokens.
+  fonts: () => string
   variant: () => string
   config: () => Record<string, unknown>
   frame: () => Element | null
@@ -82,9 +84,9 @@ export function useWidgetContext(source: {
   watch(source.frameMode, (frame) => {
     context.frame = frame
   })
-  // `foreign` can change the computed tokens without changing the id, so watch both.
+  // `foreign` and the fonts can change the computed tokens without changing the id.
   // Post-flush reads the frame's updated class before the caller's nextTick resolves.
-  watch(() => [source.themeId(), source.foreign()] as const, readTheme, { flush: 'post' })
+  watch(() => [source.themeId(), source.foreign(), source.fonts()] as const, readTheme, { flush: 'post' })
   onMounted(() => {
     if (typeof IntersectionObserver !== 'undefined') {
       observer = new IntersectionObserver((entries) => {

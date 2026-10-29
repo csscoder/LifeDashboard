@@ -5,7 +5,10 @@ import { compileScript, parse } from 'vue/compiler-sfc'
 import { afterEach, expect, it, vi } from 'vitest'
 import * as gateway from '@lifedashboard/contracts/widget-gateway'
 import * as variants from '@lifedashboard/contracts/widget-variants'
-import { compileSfc } from './helpers/sfc-renderer'
+import * as builtin from '../app/theme/builtin'
+import * as resolve from '../app/theme/resolve'
+import * as shadow from '../app/theme/shadow'
+import { compileSfc, mountComponent } from './helpers/sfc-renderer'
 import { useWidgetContext } from '../app/widgets/context'
 
 interface HostNode {
@@ -61,7 +64,7 @@ it('pauses an offscreen widget and a hidden tab, resumes only when both are visi
   const frame = {} as Element
   let context!: gateway.WidgetContext
   const mounted = mount({ setup() {
-    context = useWidgetContext({ size: () => ({ w: 3, h: 3 }), themeId: () => 'builtin:gruvbox-light-solid', foreign: () => false,
+    context = useWidgetContext({ size: () => ({ w: 3, h: 3 }), themeId: () => 'builtin:gruvbox-light-solid', foreign: () => false, fonts: () => '{}',
       config: () => ({}), variant: () => '', frame: () => frame, frameMode: () => 'framed' })
     return () => Vue.h('div')
   } })
@@ -433,4 +436,14 @@ it('drops the look when the version has no variants and defaults an unavailable 
  expect(f.controller.context()?.variant).toBe('')
  expect(f.hostProps.variant).toBe('gone')
  } finally { f.cleanup() }
+})
+
+it('puts the theme font variables on the root widget element, not on the wrapper', () => {
+  const Frame = compileSfc(new URL('../app/widgets/WidgetFrame.vue', import.meta.url), { '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow })
+  const fonts = { '--ld-font-body': "'Inter', system-ui, sans-serif" }
+  const ui = mountComponent(Frame, { themeId: 'builtin:gruvbox-dark-solid', fonts }, [])
+  const widget = ui.nodes().find(el => String(el.props.class).startsWith('widget '))!
+  const wrapper = ui.nodes().find(el => el.props.class === 'widget__wrapper')!
+  expect(widget.props.style).toEqual(fonts)
+  expect(wrapper.props.style).toBeUndefined()
 })

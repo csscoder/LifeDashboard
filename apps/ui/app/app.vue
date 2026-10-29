@@ -30,6 +30,7 @@ import type { ThemeChoice } from '@lifedashboard/contracts/theme'
 import { DEFAULT_THEME, themeMeta } from './theme/builtin'
 import { BUILTIN_PALETTE_IDS } from './theme/palettes'
 import { useColorScheme } from './theme/color-scheme'
+import { fontVars } from './theme/fonts'
 import { resolveTheme, themeClass } from './theme/resolve'
 
 type AppState = 'checking' | 'pairing' | 'ready' | 'unavailable'
@@ -261,7 +262,7 @@ onMounted(check)
 </script>
 
 <template>
-  <div :class="rootClass">
+  <div :class="rootClass" :style="fontVars(boardTheme)">
     <div class="space__backdrop" />
     <PixiBackground v-if="state === 'ready'" :background="boardRef?.background ?? null" @error="backgroundNotice = $event" />
     <div class="app">

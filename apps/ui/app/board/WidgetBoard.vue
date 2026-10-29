@@ -6,6 +6,7 @@ import { api } from '../api'
 import { useBackgroundLeases } from '../background/use-media-leases'
 import { askDelete, pendingDelete } from '../spaces/confirm-delete'
 import { afterDelete } from '../spaces/nav'
+import { fontVars } from '../theme/fonts'
 import { resolveWidgetLook } from '../theme/resolve'
 import type { ThemeChoice } from '@lifedashboard/contracts/theme'
 import { useColorScheme } from '../theme/color-scheme'
@@ -108,7 +109,7 @@ function setBackground(next: ScreenBackground | null) {
 const placed = computed(() =>
   shown.value.layout.flatMap((placement) => {
     const instance = shown.value.instances.find((item) => item.id === placement.instanceId)
-    return instance ? [{ instance, placement, look: resolveWidgetLook(instance.appearance, props.themeId, scheme.value) }] : []
+    return instance ? [{ instance, placement, look: resolveWidgetLook(instance.appearance, props.themeId, scheme.value, props.themeChoice) }] : []
   }),
 )
 
@@ -638,6 +639,7 @@ defineExpose({
             :variant="instance.appearance?.variant ?? null"
             :skin="look.skin"
             :foreign="look.foreign"
+            :fonts="look.fonts"
             :shadow="instance.appearance?.shadow"
             :widget-id="instance.id"
             :config="instance.config"
@@ -687,7 +689,7 @@ defineExpose({
         @pointercancel="onPointerUp"
       >
         <div class="board__card" :style="cardStyle">
-          <WidgetHost :source="draftSource" :size="activeRect" :theme-id="themeId" />
+          <WidgetHost :source="draftSource" :size="activeRect" :theme-id="themeId" :fonts="fontVars(themeChoice)" />
           <span class="board__resize" aria-hidden="true" @pointerdown.stop="onPointerDown($event, 'resize')" />
         </div>
       </div>

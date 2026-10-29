@@ -2,6 +2,7 @@ import type { ThemeMode, ThemeStyle } from '@lifedashboard/contracts/theme'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { APPEARANCE_STORAGE_KEY, loadAppearance, saveAppearance } from '../app/theme/appearance'
 import { DEFAULT_THEME, themeKey, themeMeta } from '../app/theme/builtin'
+import { fontVars } from '../app/theme/fonts'
 import { resolveTheme, resolveWidgetLook, themeClass } from '../app/theme/resolve'
 
 const g = (mode: ThemeMode, style: ThemeStyle = 'glass') => ({ palette: 'builtin:gruvbox', mode, style })
@@ -16,18 +17,38 @@ it('takes the first known choice and resolves auto', () => {
 it('keeps an auto widget equal to an auto board non-foreign in both schemes', () => {
   for (const scheme of ['light', 'dark'] as const) {
     const board = resolveTheme([g('auto')], scheme)
-    expect(resolveWidgetLook({ theme: g('auto'), shadow: null, variant: null }, board, scheme).foreign).toBe(false)
+    expect(resolveWidgetLook({ theme: g('auto'), shadow: null, variant: null }, board, scheme, g('auto')).foreign).toBe(false)
   }
 })
 it('marks a different choice foreign and keeps the board key for bare', () => {
   const board = 'builtin:gruvbox-dark-glass'
-  expect(resolveWidgetLook({ theme: g('dark', 'solid'), shadow: null, variant: null }, board, 'dark')).toEqual({ themeId: 'builtin:gruvbox-dark-solid', skin: 'solid', foreign: true })
-  expect(resolveWidgetLook({ theme: 'bare', shadow: null, variant: null }, board, 'dark')).toEqual({ themeId: board, skin: 'bare', foreign: false })
+  expect(resolveWidgetLook({ theme: g('dark', 'solid'), shadow: null, variant: null }, board, 'dark', g('dark'))).toEqual({ themeId: 'builtin:gruvbox-dark-solid', skin: 'solid', foreign: true, fonts: {} })
+  expect(resolveWidgetLook({ theme: 'bare', shadow: null, variant: null }, board, 'dark', g('dark'))).toEqual({ themeId: board, skin: 'bare', foreign: false, fonts: {} })
 })
 it.each([['undefined', undefined], ['null theme', { theme: null, shadow: null, variant: null }], ['unknown palette', { theme: { palette: 'builtin:nord', mode: 'dark', style: 'solid' }, shadow: null, variant: null }]] as const)(
   'a widget with %s inherits a non-default board', (_, appearance) => {
-    expect(resolveWidgetLook(appearance, 'builtin:gruvbox-light-solid', 'dark')).toEqual({ themeId: 'builtin:gruvbox-light-solid', skin: 'solid', foreign: false })
+    expect(resolveWidgetLook(appearance, 'builtin:gruvbox-light-solid', 'dark', g('light', 'solid'))).toEqual({ themeId: 'builtin:gruvbox-light-solid', skin: 'solid', foreign: false, fonts: {} })
   })
+describe('widget fonts', () => {
+  const board = { ...g('dark'), heading: 'unbounded', body: 'inter' }
+  const boardId = 'builtin:gruvbox-dark-glass'
+  const look = (theme: unknown) => resolveWidgetLook({ theme, shadow: null, variant: null } as never, boardId, 'dark', board).fonts
+  it.each([['null', null], ['bare', 'bare']])('a %s theme gets the board fonts', (_, theme) => {
+    expect(look(theme)).toEqual(fontVars(board))
+  })
+  it('an undefined appearance gets the board fonts', () => {
+    expect(resolveWidgetLook(undefined, boardId, 'dark', board).fonts).toEqual(fontVars(board))
+  })
+  it('a widget with its own palette and no fonts renders the system fonts', () => {
+    expect(look({ palette: 'builtin:catppuccin', mode: 'dark', style: 'solid' })).toEqual({})
+  })
+  it('an own body font sets only the body variables', () => {
+    expect(Object.keys(look({ palette: 'builtin:catppuccin', mode: 'dark', style: 'solid', body: 'lora' })).sort()).toEqual(['--ld-font-body', '--ld-font-ui'])
+  })
+  it('an own choice with an unknown palette inherits the board fonts', () => {
+    expect(look({ palette: 'builtin:nord', mode: 'dark', style: 'solid' })).toEqual(fontVars(board))
+  })
+})
 it('reads combination meta and defaults invalid ids', () => {
   expect(themeMeta('builtin:rose-pine-light-solid')).toEqual({ id: 'builtin:rose-pine-light-solid', mode: 'light', skin: 'solid' })
   for (const id of ['user:deleted', 'builtin:nord-dark-glass', 'builtin:gruvbox-auto-glass', 'builtin:gruvbox-dark-paper']) {

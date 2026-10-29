@@ -8,14 +8,16 @@ import { useWidgetContext } from '../app/widgets/context'
 // Vitest runs in Node: the frame's computed style is a stub whose surface-1 follows `surface`.
 // onMounted is a no-op outside a component, so only the watch path runs here.
 let surface = 'translucent'
+let heading = ''
 const scopes: ReturnType<typeof effectScope>[] = []
 
 beforeEach(() => {
   surface = 'translucent'
+  heading = ''
   vi.stubGlobal('document', { visibilityState: 'visible', documentElement: {}, addEventListener() {}, removeEventListener() {} })
   vi.stubGlobal('getComputedStyle', () => ({
     fontSize: '16px',
-    getPropertyValue: (name: string) => (name === '--ld-surface-1' ? surface : ''),
+    getPropertyValue: (name: string) => (name === '--ld-surface-1' ? surface : name === '--ld-font-heading' ? heading : ''),
   }))
   vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
@@ -30,6 +32,7 @@ function setup(foreign: boolean, config: () => Record<string, unknown> = () => (
   const flag = ref(foreign)
   const variant = ref('roman')
   const frameMode = ref<'framed' | 'frameless'>('frameless')
+  const fonts = ref('{}')
   const scope = effectScope()
   scopes.push(scope)
   const context = scope.run(() =>
@@ -37,13 +40,14 @@ function setup(foreign: boolean, config: () => Record<string, unknown> = () => (
       size: () => ({ w: 2, h: 2 }),
       themeId: () => 'builtin:lifedashboard-dark-glass',
       foreign: () => flag.value,
+      fonts: () => fonts.value,
       config,
       variant: () => variant.value,
       frame: () => ({}) as Element,
       frameMode: () => frameMode.value,
     }),
   )!
-  return { flag, frameMode, variant, context }
+  return { flag, fonts, frameMode, variant, context }
 }
 
 describe('useWidgetContext', () => {
@@ -67,6 +71,19 @@ describe('useWidgetContext', () => {
     frameMode.value = 'frameless'
     await nextTick()
     expect(context.frame).toBe('frameless')
+  })
+
+  it('re-reads tokens when only the fonts change, and when they are reset', async () => {
+    const { fonts, context } = setup(false)
+    heading = "'Lora', system-ui, serif"
+    fonts.value = JSON.stringify({ '--ld-font-heading': heading })
+    await nextTick()
+    expect(context.theme.tokens['--ld-font-heading']).toBe(heading)
+    expect(context.theme.id).toBe('builtin:lifedashboard-dark-glass')
+    heading = ''
+    fonts.value = '{}'
+    await nextTick()
+    expect(context.theme.tokens['--ld-font-heading']).toBeUndefined()
   })
 
   it('re-reads tokens when foreign flips while the theme id stays, in both directions', async () => {
@@ -170,7 +187,7 @@ it('updates widget theme and tokens when an automatic theme follows matchMedia',
   const scheme = useColorScheme()
   const id = computed(() => resolveTheme([{ palette: 'builtin:gruvbox', mode: 'auto', style: 'glass' }], scheme.value))
   const scope = effectScope(); scopes.push(scope)
-  const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => id.value, foreign: () => false, config: () => ({}), variant: () => '', frame: () => ({}) as Element, frameMode: () => 'framed' }))!
+  const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => id.value, foreign: () => false, fonts: () => '{}', config: () => ({}), variant: () => '', frame: () => ({}) as Element, frameMode: () => 'framed' }))!
   expect(context.theme.id).toBe('builtin:gruvbox-dark-glass')
   surface = 'light surface'
   change({ matches: false })

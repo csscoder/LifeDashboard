@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import * as grid from '@lifedashboard/contracts/grid'
 import * as spaces from '@lifedashboard/contracts/space'
 import type { ThemeChoice } from '@lifedashboard/contracts/theme'
+import * as fonts from '../app/theme/fonts'
 import * as appearance from '../app/theme/appearance'
 import * as builtin from '../app/theme/builtin'
 import * as palettes from '../app/theme/palettes'
@@ -51,7 +52,7 @@ const App = compileSfc(new URL('../app/app.vue', import.meta.url), {
   './widgets/catalog': { installedPackages: Vue.ref([]), loadPackages: vi.fn(), pickerEntries: () => [] },
   './widgets/modals': { widgetModals: { activeModal: Vue.ref(null), error: Vue.ref(null), retryVersion: Vue.ref(0), context: () => null, cancelAll() {}, dispose() {} } },
   './theme/appearance': appearance, './theme/builtin': builtin, './theme/palettes': palettes,
-  './theme/resolve': resolve, './theme/color-scheme': schemeModule,
+  './theme/resolve': resolve, './theme/color-scheme': schemeModule, './theme/fonts': fonts,
   ...Object.fromEntries(['widgets/WidgetModal', 'widgets/SandboxWidget', 'background/PixiBackground', 'PairingForm', 'ConfirmDialog', 'spaces/ConfirmDelete', 'spaces/ScreenDots', 'spaces/SpaceTitle', 'widgets/PackagesDialog'].map(path => [`./${path}.vue`, Empty])),
 })
 beforeEach(() => {
@@ -124,4 +125,11 @@ it('uses screen choices before the space and dashboard and resolves automatic mo
   await Vue.nextTick()
   expect(rootClass(ui)).toContain('space--theme-gruvbox-light-glass')
   expect(ui.nodes().find(n => n.props['data-widget-theme'])?.props['data-widget-theme']).toBe('builtin:gruvbox-light-glass')
+})
+
+it('applies the effective choice fonts as inline variables on the space root', async () => {
+  space.theme = { palette: 'builtin:catppuccin', mode: 'light', style: 'solid', heading: 'lora' }
+  const ui = await mount()
+  const root = ui.nodes().find(n => String(n.props.class).startsWith('space '))!
+  expect(root.props.style).toEqual({ '--ld-font-heading': "'Lora', system-ui, serif", '--ld-font-display': "'Lora', system-ui, serif" })
 })

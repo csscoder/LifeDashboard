@@ -27,6 +27,7 @@ const props = defineProps<{
   themeId: string
   skin?: FrameSkin
   foreign?: boolean
+  fonts?: Record<string, string>
   shadow?: DropShadow | null
   widgetId?: string
   config?: Record<string, unknown>
@@ -43,6 +44,7 @@ const context = useWidgetContext({
   variant: () => resolveVariant(info.value?.variants, props.variant),
   themeId: () => props.themeId,
   foreign: () => props.foreign,
+  fonts: () => JSON.stringify(props.fonts ?? {}),
   config: () => normalizeConfig(info.value?.settings, props.config ?? {}, flags.value),
   frame: () => frame.value?.$el ?? null,
   frameMode: () => (props.skin === 'bare' ? 'frameless' : 'framed'),
@@ -88,7 +90,7 @@ if (props.widgetId && props.source.kind === 'builtin') {
 </script>
 
 <template>
-  <WidgetFrame ref="frameBox" :theme-id="themeId" :skin="skin" :foreign="foreign" :shadow="shadow">
+  <WidgetFrame ref="frameBox" :theme-id="themeId" :skin="skin" :foreign="foreign" :fonts="fonts" :shadow="shadow">
     <div v-if="!widgetId" class="grid place-items-center h-full text-center text-base font-strong text-secondary">{{ title }}</div>
     <component :is="renderer" v-else-if="renderer" />
     <SandboxWidget v-else-if="info?.hash && source.kind === 'package'" :key="`${info.hash}:${widgetModals.runtimeVersion(widgetId)}`" :surface-id="runtimeId" :widget-id="widgetId" :hash="info.hash" :title="title" :package-id="source.packageId" :version="source.version" :context="context" />

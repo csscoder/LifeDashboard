@@ -7,7 +7,7 @@ import { shadowCss } from '../theme/shadow'
 
 // A resolved theme id: the widget's own choice or the one it inherits. `skin` and `foreign` come from
 // resolveWidgetLook; without them the frame draws the theme's own skin (the build draft).
-const props = defineProps<{ themeId: string; skin?: FrameSkin; foreign?: boolean; shadow?: DropShadow | null }>()
+const props = defineProps<{ themeId: string; skin?: FrameSkin; foreign?: boolean; shadow?: DropShadow | null; fonts?: Record<string, string> }>()
 
 const skin = computed(() => props.skin ?? themeMeta(props.themeId).skin)
 const classes = computed(() => [
@@ -26,7 +26,7 @@ const wrapperStyle = computed(() => {
 </script>
 
 <template>
-  <div :class="classes">
+  <div :class="classes" :style="fonts">
     <div class="widget__wrapper" :style="wrapperStyle">
       <div class="widget__box">
         <div class="widget__body ld-content">
