@@ -6,7 +6,7 @@ import {
 import type { SpaceColor } from '@lifedashboard/contracts/space'
 import type { ApiResult } from '../app/api'
 import { createFocusStore, focusNotice } from '../app/focus/store'
-import { holdToasts, toasts } from '../app/toasts'
+import { holdToasts, showToast, toasts } from '../app/toasts'
 
 const S = DEFAULT_FOCUS_SETTINGS
 const FOCUS = 1_500_000
@@ -416,6 +416,35 @@ describe('focus store', () => {
 })
 
 describe('focus notices', () => {
+  afterEach(() => {
+    holdToasts(false)
+    toasts.value = []
+  })
+
+  const widgetToast = () => showToast({ source: 'W', title: 'ping', body: '' })
+
+  it('creating a store does not hold toasts', () => {
+    setup()
+    widgetToast()
+    expect(toasts.value).toHaveLength(1)
+  })
+
+  it('starting a focus holds toasts', async () => {
+    const { store } = await loaded()
+    store.start()
+    widgetToast()
+    expect(toasts.value).toEqual([])
+  })
+
+  it.each(['pause', 'skip', 'reset'] as const)('%s releases the held toasts', async (action) => {
+    const { store } = await loaded()
+    store.start()
+    widgetToast()
+    expect(toasts.value).toEqual([])
+    store[action]()
+    expect(toasts.value.map((t) => t.title)).toEqual(['ping'])
+  })
+
   it('store notices bypass the toast hold', () => {
     holdToasts(true)
     try {
