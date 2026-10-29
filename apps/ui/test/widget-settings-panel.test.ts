@@ -58,6 +58,7 @@ describe('widget settings panel', () => {
       expect(ui.text()).toContain('Text size, %')
       const field = ui.nodes().find((el) => el.tag === 'ui-numberfield')!
       expect('integer' in field.props).toBe(true)
+      expect('stepper' in field.props).toBe(true)
       expect(field.props.min).toBe(SCALE_LIMITS[0])
       expect(field.props.max).toBe(SCALE_LIMITS[1])
       expect(field.props.modelValue).toBe(25)

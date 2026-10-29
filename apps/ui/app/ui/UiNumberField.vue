@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useFieldBridge } from './field-bridge'
 import { computed, ref } from 'vue'
-import { NumberFieldRoot, NumberFieldInput } from 'reka-ui'
+import { NumberFieldRoot, NumberFieldInput, NumberFieldIncrement, NumberFieldDecrement } from 'reka-ui'
 import { numberFormatOptions } from './number-format'
 defineOptions({ inheritAttrs: false })
-const props = defineProps<{ modelValue: number; integer: boolean; min?: number; max?: number; disabled?: boolean }>()
+const props = defineProps<{ modelValue: number; integer: boolean; min?: number; max?: number; disabled?: boolean; stepper?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
 const { control, disabled, bindings } = useFieldBridge(props)
 // Integer schemas can have fractional bounds. Reka anchors its step grid at min.
@@ -22,7 +22,12 @@ function update(value: number | null | undefined) {
 
 <template>
   <NumberFieldRoot :key="revision" :model-value="modelValue" :step="integer ? 1 : undefined" :step-snapping="integer" :format-options="numberFormatOptions(integer)" :min="minimum" :max="maximum" :disabled="disabled" @update:model-value="update">
-    <NumberFieldInput ref="control" v-bind="bindings()" class="ui-number-field" />
+    <div v-if="stepper" class="ui-number-field__row">
+      <NumberFieldDecrement class="ui-number-field__step" aria-label="Decrease">−</NumberFieldDecrement>
+      <NumberFieldInput ref="control" v-bind="bindings()" class="ui-number-field" />
+      <NumberFieldIncrement class="ui-number-field__step" aria-label="Increase">+</NumberFieldIncrement>
+    </div>
+    <NumberFieldInput v-else ref="control" v-bind="bindings()" class="ui-number-field" />
   </NumberFieldRoot>
 </template>
 
@@ -30,4 +35,9 @@ function update(value: number | null | undefined) {
 .ui-number-field { width: 100%; box-sizing: border-box; padding: 0.5rem 0.625rem; border: var(--ld-border-width) solid var(--ld-border-default); border-radius: var(--ld-radius-control); background: var(--ld-surface-3); color: var(--ld-text-primary); font: inherit; }
 .ui-number-field:focus-visible { outline: 0.125rem solid var(--ld-focus-ring); outline-offset: 0.125rem; }
 .ui-number-field:disabled, .ui-number-field[data-disabled] { opacity: 0.6; }
+.ui-number-field__row { display: flex; gap: 0.375rem; align-items: stretch; }
+.ui-number-field__row .ui-number-field { flex: 1; min-width: 0; text-align: center; }
+.ui-number-field__step { flex: none; width: 2.25rem; border: var(--ld-border-width) solid var(--ld-border-default); border-radius: var(--ld-radius-control); background: var(--ld-surface-3); color: var(--ld-text-primary); font: inherit; cursor: pointer; }
+.ui-number-field__step:focus-visible { outline: 0.125rem solid var(--ld-focus-ring); outline-offset: 0.125rem; }
+.ui-number-field__step[data-disabled] { opacity: 0.6; cursor: default; }
 </style>

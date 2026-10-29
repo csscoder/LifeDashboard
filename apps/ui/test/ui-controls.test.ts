@@ -9,7 +9,7 @@ const part = (name: string) => Vue.defineComponent({ name, setup: (_, { slots })
 const reka = Object.fromEntries([
   'SwitchRoot', 'SwitchThumb', 'SliderRoot', 'SliderTrack', 'SliderRange', 'SliderThumb',
   'RadioGroupRoot', 'RadioGroupItem', 'RadioGroupIndicator',
-  'NumberFieldRoot', 'NumberFieldInput', 'ColorFieldRoot', 'ColorFieldInput', 'FieldControl',
+  'NumberFieldRoot', 'NumberFieldInput', 'NumberFieldIncrement', 'NumberFieldDecrement', 'ColorFieldRoot', 'ColorFieldInput', 'FieldControl',
   'PopoverRoot', 'PopoverTrigger', 'PopoverContent', 'ColorSwatch',
   'ColorAreaRoot', 'ColorAreaArea', 'ColorAreaThumb', 'ColorSliderRoot', 'ColorSliderTrack', 'ColorSliderThumb',
 ].map(name => [name, part(name)]))
@@ -68,6 +68,12 @@ describe('UiNumberField', () => {
       'format-options': integer ? { useGrouping: false, maximumFractionDigits: 0 } : { useGrouping: false, maximumSignificantDigits: 17 }, min: -5, max: 10, disabled: true,
     })
     expect(ui.nodes().filter(n => n.props.id === 'setting').map(n => n.tag)).toEqual(['NumberFieldInput'])
+  })
+  it('renders step buttons only with `stepper`', () => {
+    const tags = (stepper: boolean) => mountComponent(compile('UiNumberField'), { modelValue: 2, integer: true, stepper }, ['update:modelValue']).nodes().map(n => n.tag)
+    expect(tags(false)).not.toContain('NumberFieldIncrement')
+    expect(tags(false)).not.toContain('NumberFieldDecrement')
+    expect(tags(true)).toEqual(expect.arrayContaining(['NumberFieldDecrement', 'NumberFieldInput', 'NumberFieldIncrement']))
   })
   it.each([1.25, 0.125, -5, 10])('preserves valid value %s', value => {
     const ui = mount()

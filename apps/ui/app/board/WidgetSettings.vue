@@ -150,7 +150,7 @@ defineExpose({ open, close, isOpen })
     <Separator class="settings__separator" />
     <h2 class="settings__heading">Scale</h2>
     <SettingsRow label="Text size, %">
-      <UiNumberField integer :min="SCALE_LIMITS[0]" :max="SCALE_LIMITS[1]" :model-value="appearance?.scale ?? 0"
+      <UiNumberField integer stepper :min="SCALE_LIMITS[0]" :max="SCALE_LIMITS[1]" :model-value="appearance?.scale ?? 0"
         @update:model-value="emit('change', withScale(appearance, $event))" />
     </SettingsRow>
     <template v-if="hasWidgetBlock">
