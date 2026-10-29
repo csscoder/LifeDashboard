@@ -147,6 +147,8 @@ defineExpose({ open, close, isOpen })
         <UiColorField :model-value="shadow.color" :alpha="shadow.opacity" @update:model-value="setShadow('color', $event)" @update:alpha="setShadow('opacity', $event)" />
       </SettingsRow>
     </template>
+    <Separator class="settings__separator" />
+    <h2 class="settings__heading">Scale</h2>
     <SettingsRow label="Text size, %">
       <UiNumberField integer :min="SCALE_LIMITS[0]" :max="SCALE_LIMITS[1]" :model-value="appearance?.scale ?? 0"
         @update:model-value="emit('change', withScale(appearance, $event))" />
