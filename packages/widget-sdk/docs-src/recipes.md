@@ -53,7 +53,7 @@ onBeforeUnmount(stop)
 }
 
 .hand {
-  width: 0.125rem;
+  width: 0.125em;
   height: 50%;
   margin: 0 auto;
   background: var(--ld-text-primary);

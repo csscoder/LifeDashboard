@@ -21,7 +21,7 @@ const widget = useWidget() // call inside component setup; throws outside a widg
 | `sizeClass` | `xs`, `s`, `m`, `l` or `xl`, from the smaller side of `size`. Read it instead of computing a class |
 | `frame` | `framed` or `frameless`, the host-selected frame. Since sdk 2 |
 | `theme` | `{ id, scheme, tokens }`: `scheme` is `light` or `dark`; `tokens` maps each `--ld-*` name to its resolved value |
-| `rootFontSize` | the dashboard's root font size in px, so `rem` in the frame matches the board |
+| `rootFontSize` | the dashboard's root font size in px; use it only when a value must be a px number, since content is sized in `em` |
 | `contentScale` | the user's text size for this widget, 0.5–1.5; the runtime already applies it to `body`. Since sdk 6 |
 | `config` | the manifest settings, with defaults for missing or invalid values. A secret setting is a boolean: `true` when set |
 | `variant` | the selected look id, or an empty string without variants. Missing or unknown ids fall back to the manifest default. Since sdk 5 |

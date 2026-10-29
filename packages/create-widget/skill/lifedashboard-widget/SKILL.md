@@ -24,7 +24,7 @@ The docs live in `node_modules/@lifedashboard/widget-sdk/docs/`. Open the page t
 - `api.md`: `useWidget()`, context fields, `state`, `notify`, `http`, `call`, permissions and limits, `sdk` levels.
 - `runtime.md`: sandbox, CSP, storage and media rules, runtime baseline.
 - `errors.md`: what each `WidgetError` code means and what the widget should do.
-- `design.md`: theme tokens, grid sizing, size classes, `rootFontSize`, `contentScale`, framed vs frameless.
+- `design.md`: theme tokens, grid sizing, size classes, units and scaling (everything in `em`, designed for 16px), `rootFontSize`, `contentScale`, framed vs frameless.
 - `settings.md`: settings schema, secret settings, `REDACTED`.
 - `recipes.md`: visibility-aware animation, adapting to size class, HTTP retry, revision conflicts.
 - `workflow.md`: `dev`, `check`, `build`, handover, and engine checks for media widgets.

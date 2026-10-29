@@ -94,6 +94,8 @@ describe('page content', () => {
     expect(design).toContain('## Typography and content')
     for (const token of ['font-heading', 'font-body', 'size-h1', 'size-h2', 'size-h3', 'size-body', 'size-small', 'leading-heading', 'link']) expect(design).toContain(token)
     expect(design).toContain('in `em`')
+    expect(design).toContain('## Units and scaling')
+    for (const rule of ['Design for 16px', 'Write every length inside the widget in `em`', 'Never size content in `rem`', 'var(--ld-content-scale, 1)', '`@container` queries']) expect(design).toContain(rule)
     for (const content of docs.values()) {
       for (const id of ['builtin:glass', 'builtin:paper', 'builtin:obsidian']) expect(content).not.toContain(id)
     }
@@ -136,7 +138,7 @@ describe('page content', () => {
     const docs = await freshDocs()
     expect(docs.get('api.md')).toMatch(/\| `contentScale` \| .*Since sdk 6/)
     expect(docs.get('api.md')).toContain('Level 6: `context.contentScale`')
-    expect(docs.get('design.md')).toContain('var(--ld-content-scale)')
+    expect(docs.get('design.md')).toContain('var(--ld-content-scale, 1)')
     expect(docs.get('design.md')).toContain('150 %')
   })
 

@@ -80,7 +80,7 @@ describe('createWidgetProject', () => {
       'network', 'WebM', 'Opus', 'assets/', 'var(--ld-', 'context.size', 'sizeClass', 'context.frame',
       'context.visible', '"frame": "frameless"', 'npx ld-widget dev', 'npx ld-widget check', 'npx ld-widget build',
       '.ld-widget/dev.log', 'dist/<id>-<version>/', 'Widgets → Choose folder',
-      'Keep `title` and `id`', 'default` size', 'height: 100%', 'compiled files', 'npx ld-widget shot',
+      'Size EVERY length inside the widget in `em`', '1em = 16px', 'Units and scaling', 'Keep `title` and `id`', 'default` size', 'height: 100%', 'compiled files', 'npx ld-widget shot',
     ]) expect(instructions).toContain(rule)
     expect(instructions).not.toContain('dist/types')
     expect(instructions).not.toMatch(/Hermes|MCP/)

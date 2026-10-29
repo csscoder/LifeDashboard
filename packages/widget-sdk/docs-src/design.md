@@ -10,12 +10,24 @@
 - At the `default` size the essential content is visible without scrolling. Check `min` and `default` first, then `max`.
 - Round or square content, such as a clock face or a gauge, sizes from the smaller side of the widget, so it fits when the widget is wider than tall or taller than wide. Give the root `container-type: size` and the content `width: min(100cqw, 100cqh); aspect-ratio: 1`. `width: 100%; height: 100%` on square content clips it in a non-square widget. See the clock in [recipes.md](recipes.md).
 
-## em, rem and rootFontSize
+## Units and scaling
 
-- Size content text and spacing in `em`, or use the `size-*` tokens, so content follows its inherited typography. Use `rem` only for frame-independent values.
-- `context.rootFontSize` is the dashboard's root font size in px. Use it only when a value must be a px number, such as a canvas size.
-- The user scales widget content from 50 % to 150 %. Only `em` and `size-*` follow this scale; `rem` does not. A widget that sets its own `body` font size multiplies it by `var(--ld-content-scale)` to follow the setting. Read `context.contentScale` only when a px number is needed.
-- Size every length inside the widget in `em`: text, padding, gaps, icons, control heights and widths. The `widget-padding`, `gap`, `control-height` and `radius-*` tokens are in `rem`, so they do not follow the scale; write the same values in `em`. An `em` length resolves against the element's own `font-size`, so put the text size on an inner element when the element itself also needs `em` lengths. Multiply container units by the factor: `font-size: calc(5cqw * var(--ld-content-scale, 1))`.
+A widget scales on two levels:
+
+1. **The grid.** The widget rectangle grows with the cells it occupies and with the window. Layout that depends on the rectangle uses `sizeClass`, container units (`cqw`, `cqh`, `min(100cqw, 100cqh)`) and container queries.
+2. **The user's text size.** The user sets the widget's text size from 50 % to 150 % in the widget settings, so the content fits their eyes. The dashboard does this by setting the font size of the widget root, and every `em` length inside follows it by inheritance.
+
+Rules:
+
+- **Design for 16px.** `1em` is 16px at the default settings, so write px values divided by 16: 12px is `0.75em`, 24px is `1.5em`.
+- **Write every length inside the widget in `em`:** font sizes, padding, margins, gaps, widths, heights, icon and SVG sizes, control heights, border radii, and the thresholds of `@container` queries (inside a container query, `em` resolves against the container's font size, so the layout switches earlier when the user enlarges the text).
+- **Never size content in `rem`, `px`, `vw` or `vh`.** They ignore the user's text size and the widget falls apart: the text grows while the boxes around it stay the same. The only exceptions are hairlines (`border` and `outline` widths of 1–2px).
+- **Use the `size-*` tokens** (`size-h1` … `size-small`): they are in `em`. The `widget-padding`, `gap`, `control-height` and `radius-*` tokens are in `rem` and do not follow the user's text size, so write the same values in `em` instead (for example `0.75em` for padding and gaps).
+- **Container units that size content follow the user too.** Multiply them by the factor: `font-size: calc(5cqw * var(--ld-content-scale, 1))`. A shape that must fit the rectangle, such as a clock face with `width: min(100cqw, 100cqh)`, is level 1 only and is not multiplied.
+- **`em` resolves against the element's own `font-size`** for every property except `font-size` itself. When an element has its own `font-size` and also needs `em` lengths, put the text size on an inner element, or divide the length by the element's size.
+- **Never set `font-size` on `html` or `body`** in `px` or `rem`. A widget that must set its own `body` font size multiplies it by `var(--ld-content-scale, 1)`. The runtime already sets the body size to `1rem × --ld-font-scale × --ld-content-scale`, and widget CSS keeps priority over that rule.
+- `context.rootFontSize` (the dashboard's root font size in px) and `context.contentScale` (the user's factor, 0.5–1.5, sdk 6) are for values that must be a px number, such as a canvas size: `px = em × rootFontSize × contentScale`.
+- A modal window of a widget always uses `contentScale` 1.
 
 ## Theme tokens
 
