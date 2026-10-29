@@ -75,7 +75,7 @@ In `board.test.ts`: a screen with `theme: { ...base, heading: 'lora' }` parses u
 **Files:**
 - Create: `apps/ui/app/theme/fonts.ts`, `apps/ui/scripts/fetch-fonts.ts`, `apps/ui/app/theme/fonts/*` (script output), `apps/ui/app/theme/styles/fonts.css` (script output)
 - Modify: `apps/ui/package.json` (script `"fetch:fonts": "node scripts/fetch-fonts.ts"`), `apps/ui/app/theme/styles/layers.css` (`@import './fonts.css';` before the layered imports, outside any layer)
-- Test: `apps/ui/test/theme-fonts.test.ts` (new)
+- Test: `apps/ui/test/theme-fonts.test.ts` (new), `apps/ui/test/fetch-fonts.test.ts` (new)
 
 **Interfaces:**
 - Produces (`fonts.ts`):
@@ -84,6 +84,7 @@ In `board.test.ts`: a screen with `theme: { ...base, heading: 'lora' }` parses u
   - `fontStack(font: FontFamily): string`
   - `fontVars(choice: ThemeChoice | null | undefined): Record<string, string>` — entries only for known slugs.
   - `withFont(choice: ThemeChoice, key: 'heading' | 'body', slug: string | null): ThemeChoice` — `null` removes the key; result keys in the canonical order.
+- Produces (`scripts/fetch-fonts.ts`): `fetchFonts(options: { fetch: typeof fetch; fontsDir: URL; cssFile: URL; fonts?: readonly FontFamily[] }): Promise<void>`; the CLI calls it with the real paths when `import.meta.main`.
 
 - [ ] **Step 1: Write failing tests** in `theme-fonts.test.ts`:
   - For every `BUILTIN_FONTS` entry, `<slug>-latin.woff2`, `<slug>-cyrillic.woff2` and `<slug>.OFL.txt` exist in `app/theme/fonts/`, and no other file is there.
@@ -92,13 +93,18 @@ In `board.test.ts`: a screen with `theme: { ...base, heading: 'lora' }` parses u
   - `fontVars({ ...base, heading: 'unbounded', body: 'inter' })` equals the four variables with those stacks; `fontVars({ ...base, heading: 'comic' })` and `fontVars(null)` equal `{}`.
   - `withFont({ ...base, body: 'inter' }, 'heading', 'lora')` has keys `['palette','mode','style','heading','body']`; `withFont(..., 'body', null)` has no `body`.
 
-- [ ] **Step 2: Run** `pnpm -C apps/ui test -- theme-fonts`. Expected: FAIL (module and files missing).
+  In `fetch-fonts.test.ts`, with a stub `fetch` (no network) and a temporary `fontsDir` and `cssFile` pre-filled with sentinel files:
+  - two families where the first succeeds and the second gets HTTP 500: rejects with `<Name>: HTTP 500 <url>`, and the sentinel files and CSS are unchanged;
+  - a family whose CSS lacks the `/* cyrillic */` block: rejects with `<Name>: missing cyrillic subset`, nothing changed;
+  - two successful families: `fontsDir` holds exactly their four `.woff2` and two `.OFL.txt`, and `cssFile` has four `@font-face` rules.
+
+- [ ] **Step 2: Run** `pnpm -C apps/ui test -- theme-fonts fetch-fonts`. Expected: FAIL (modules and files missing).
 
 - [ ] **Step 3: Implement `fonts.ts`.** Fill `weight` from each family's Google Fonts metadata (`https://fonts.google.com/metadata/fonts` or `google/fonts` `METADATA.pb`); record the check date in a comment.
 
 - [ ] **Step 4: Implement `scripts/fetch-fonts.ts`** per the spec section «Fetch script». It keeps the faces under the `/* latin */` and `/* cyrillic */` comments, throws `<Name>: missing <subset> subset` or `<Name>: HTTP <status> <url>`, writes into a temporary directory and replaces `app/theme/fonts/` and `fonts.css` only after every family succeeded. OFL path: `ofl/<name lower-cased, spaces removed>/OFL.txt`.
 
-- [ ] **Step 5: Run** `pnpm -C apps/ui fetch:fonts`, then `pnpm -C apps/ui test -- theme-fonts`. Expected: PASS. Record the total size of `app/theme/fonts/*.woff2` (`du -ch`) in the task report. If a family lacks `cyrillic`, stop and report it: the catalog is a user decision.
+- [ ] **Step 5: Run** `pnpm -C apps/ui fetch:fonts`, then `pnpm -C apps/ui test -- theme-fonts fetch-fonts`. Expected: PASS. Record the total size of `app/theme/fonts/*.woff2` (`du -ch`) in the task report. If a family lacks `cyrillic`, stop and report it: the catalog is a user decision.
 
 - [ ] **Step 6: Run** `pnpm -C apps/ui build`. Expected: exit 0, and `.output/public/_nuxt/` contains the 24 fingerprinted `.woff2` files.
 
@@ -142,13 +148,13 @@ In `board.test.ts`: a screen with `theme: { ...base, heading: 'lora' }` parses u
 ### Task 4: Font rows in `ThemePicker`
 
 **Files:**
-- Modify: `apps/ui/app/theme/ThemePicker.vue`
-- Test: `apps/ui/test/theme-picker.test.ts`
+- Modify: `apps/ui/app/theme/ThemePicker.vue`, `apps/ui/test/helpers/theme-picker.ts` (register `../ui/UiSelect.vue` compiled as in `apps/ui/test/ui-select.test.ts`, and `./fonts`, in the `compileSfc` module map)
+- Test: `apps/ui/test/theme-picker.test.ts` (its local module map gets the same two entries)
 
 **Interfaces:**
 - Consumes: `BUILTIN_FONTS`, `BUILTIN_FONT_SLUGS`, `fontStack`, `withFont` (Task 2); `UiSelect` (`modelValue: string`, `options: { value, label }[]`, `disabled`; `''` is a valid option value).
 
-- [ ] **Step 1: Write failing tests** (existing `compileSfc`/`mountComponent` helpers, `UiSelect` compiled as in the file's other tests):
+- [ ] **Step 1: Write failing tests** (existing `compileSfc`/`mountComponent` helpers; `UiSelect` compiled as in `ui-select.test.ts`):
   - With `modelValue` `{catppuccin, dark, glass}`, choosing `Unbounded` in `Heading font` emits `{ palette: 'builtin:catppuccin', mode: 'dark', style: 'glass', heading: 'unbounded' }` with that key order.
   - With `heading: 'unbounded'`, choosing `Theme default` emits the choice without `heading`.
   - Both selects list `Theme default` plus the 12 names in catalog order.
