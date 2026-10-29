@@ -4,6 +4,7 @@ import { useWidget } from '@lifedashboard/widget-sdk'
 import { SPACE_COLORS } from '@lifedashboard/contracts/space'
 import { alerts } from '../../../focus/alerts'
 import { focusStore, useFocusPresence } from '../../../focus/store'
+import FocusStatsDialog from './FocusStatsDialog.vue'
 import TaskPicker from './TaskPicker.vue'
 import tomato from './tomato.webp'
 import { formatClock, formatTotal, goalDots, isCompact, remainingMs, ringProgress, ringTone, toggleAction } from './view'
@@ -13,6 +14,7 @@ useFocusPresence()
 
 const state = focusStore.state
 const now = ref(Date.now())
+const statsOpen = ref(false)
 const run = computed(() => state.run)
 const clock = computed(() => formatClock(remainingMs(run.value, now.value)))
 const progress = computed(() => ringProgress(run.value, now.value))
@@ -123,7 +125,9 @@ function onKey(event: KeyboardEvent) {
         <!-- aria-disabled, not disabled: stays focusable while ready, where reset changes nothing. -->
         <button type="button" aria-label="Reset" :aria-disabled="run.status === 'ready'" :disabled="!state.loaded" @click="focusStore.reset()">↺</button>
       </div>
+      <button type="button" class="pomodoro__stats" aria-label="Statistics" @click="statsOpen = true">▥</button>
     </template>
+    <FocusStatsDialog v-model:open="statsOpen" />
   </div>
 </template>
 
@@ -208,8 +212,12 @@ function onKey(event: KeyboardEvent) {
 }
 .pomodoro:hover .pomodoro__controls,
 .pomodoro:focus-within .pomodoro__controls { opacity: 1; }
+.pomodoro__stats { position: absolute; top: 0; right: 0; opacity: 0; transition: opacity var(--ld-duration-fast) var(--ld-ease-standard); }
+.pomodoro:hover .pomodoro__stats,
+.pomodoro:focus-within .pomodoro__stats { opacity: 1; }
 
 .pomodoro__controls button,
+.pomodoro__stats,
 .pomodoro__retry {
   min-width: 1.75rem;
   height: 1.75rem;
