@@ -80,10 +80,14 @@ const node = (tag: string, text = ''): HostNode => {
     return this.children.flatMap(descendants).filter(el => attribute ? el.props[attribute] !== undefined : el.tag === selector)
   },
   getBoundingClientRect() { return this.rect },
-  // Only attribute selectors such as `[popover]`.
+  // Only attribute selectors such as `[popover]` and single classes such as `.widget`.
   closest(selector) {
     const attribute = /^\[([\w-]+)\]$/.exec(selector)?.[1]
-    for (let el: HostNode | null = this; el; el = el.parent) if (attribute && el.props[attribute] !== undefined) return el
+    const name = selector.startsWith('.') ? selector.slice(1) : undefined
+    for (let el: HostNode | null = this; el; el = el.parent) {
+      if (attribute && el.props[attribute] !== undefined) return el
+      if (name && String(el.props.class ?? '').split(' ').includes(name)) return el
+    }
     return null
   },
 })

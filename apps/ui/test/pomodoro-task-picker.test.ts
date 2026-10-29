@@ -11,7 +11,13 @@ const TextField = Vue.defineComponent({
 const Button = Vue.defineComponent({ props: ['disabled'], setup: (props, { attrs, slots }) => () => Vue.h('button', { ...attrs, disabled: props.disabled }, slots.default?.()) })
 const Select = Vue.defineComponent({ props: ['modelValue', 'options'], setup: (props, { attrs }) => () => Vue.h('ui-select', { ...attrs, options: props.options }) })
 const component = compileSfc(new URL('../app/widgets/builtin/pomodoro/TaskPicker.vue', import.meta.url), {
-  'reka-ui': { FieldRoot: pass('field'), PopoverRoot: pass('popover'), PopoverTrigger: pass('trigger'), PopoverPortal: pass('portal'), PopoverContent: pass('content') },
+  'reka-ui': {
+    FieldRoot: pass('field'),
+    PopoverRoot: Vue.defineComponent({ emits: ['update:open'], setup: (_, { emit, slots }) => () => Vue.h('popover', { show: () => emit('update:open', true) }, slots.default?.()) }),
+    PopoverTrigger: pass('trigger'),
+    PopoverPortal: Vue.defineComponent({ props: ['to', 'disabled'], setup: (props, { slots }) => () => Vue.h('portal', { ...props }, slots.default?.()) }),
+    PopoverContent: pass('content'),
+  },
   '@lifedashboard/contracts/space': { nextColor, SPACE_COLORS },
   '../../../ui/UiButton.vue': Button,
   '../../../ui/UiSelect.vue': Select,
@@ -37,6 +43,18 @@ function mount(overrides: Record<string, unknown> = {}) {
 const enter = (el: { props: Record<string, any> }) => el.props.onKeydown({ key: 'Enter', preventDefault() {} })
 
 describe('pomodoro task picker', () => {
+  it('opens in the space, which carries the theme tokens, above the tiles and not in the body', async () => {
+    const store = { state: Vue.reactive({ run: { label: null, projectId: null }, projects: [], recentLabels: [] }), setTask: vi.fn(), createProject: vi.fn() }
+    const Space = Vue.defineComponent({ setup: () => () => Vue.h('div', { class: 'space space--theme-x' }, [
+      Vue.h('div', { class: 'widget widget--theme-x' }, [Vue.h('div', { class: 'widget__body' }, [Vue.h(component, { store })])]),
+    ]) })
+    const ui = mountComponent(Space, {}, [])
+    ui.nodes().find((el) => el.tag === 'popover')!.props.show()
+    await Vue.nextTick()
+    const space = ui.nodes().find((el) => el.props.class === 'space space--theme-x')
+    expect(ui.nodes().find((el) => el.tag === 'portal')!.props.to).toBe(space)
+  })
+
   it('submits a trimmed label', async () => {
     const { store, ui, input, type } = mount()
     type('What are you working on?', '  Refactor grid  ')

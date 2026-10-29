@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef, useTemplateRef } from 'vue'
 import { FieldRoot, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { nextColor, SPACE_COLORS, type SpaceColor } from '@lifedashboard/contracts/space'
 import UiButton from '../../../ui/UiButton.vue'
@@ -21,6 +21,11 @@ const projectError = ref('')
 const picked = ref<SpaceColor | null>(null)
 const busy = ref(false)
 
+// The content opens in the space, like UiColorField picks its target: the body lacks the theme tokens, and every
+// tile card is a stacking context, so in the tile it would sit under later tiles. Outside a space it goes to the body.
+const trigger = useTemplateRef<{ $el: Element }>('trigger')
+const portalTarget = shallowRef<Element | string>('body')
+
 const projects = computed(() => state.projects.filter(({ archivedAt }) => archivedAt === null))
 const color = computed(() => picked.value ?? nextColor(projects.value.map((project) => project.color)))
 const options = computed(() => [{ value: '', label: 'No project' }, ...projects.value.map(({ id, name }) => ({ value: id, label: name }))])
@@ -29,6 +34,7 @@ const label = computed(() => draft.value.trim() || null)
 function onOpen(next: boolean) {
   open.value = next
   if (next) {
+    portalTarget.value = trigger.value?.$el.closest('.space') ?? 'body'
     draft.value = state.run.label ?? ''
     labelError.value = projectError.value = projectName.value = ''
     adding.value = false
@@ -61,8 +67,8 @@ async function addProject() {
 
 <template>
   <PopoverRoot :open="open" @update:open="onOpen">
-    <PopoverTrigger as-child><slot /></PopoverTrigger>
-    <PopoverPortal>
+    <PopoverTrigger ref="trigger" as-child><slot /></PopoverTrigger>
+    <PopoverPortal :to="portalTarget">
       <PopoverContent class="task-picker" side="top" :side-offset="6" aria-label="Task">
         <FieldRoot><UiTextField v-model="draft" class="task-picker__label" aria-label="Task" placeholder="What are you working on?" :maxlength="120" @keydown.enter.prevent="apply(label, state.run.projectId)" /></FieldRoot>
         <p v-if="labelError" class="task-picker__error" role="alert">{{ labelError }}</p>
