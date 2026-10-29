@@ -102,6 +102,12 @@ The widget builds its own UI (buttons, inputs, lists, modal workspaces) in isola
 - Without a library, use native elements (`<button>`, `<input>`, `<select>`) and style them with `--ld-*` tokens. Never leave the browser's default look.
 - User options are not widget UI: declare them in `settings` and the dashboard draws them. See [settings.md](settings.md).
 
+## Text selection
+
+Text in a widget is not selectable by default: the runtime sets `user-select: none` on the widget body, so a click or a drag on a widget never starts a text selection. Text inside `<input>`, `<textarea>` and `[contenteditable]` stays selectable so the user can type.
+
+Enable selection only when the user's task asks for it, for example for text to copy such as a code, an address or a note. Set `user-select: text` and `-webkit-user-select: text` on the element that holds that text, never on `body` or the widget root.
+
 ## Looks (variants)
 
 Several visual designs of one function (clock faces, hands, gauge styles) are one widget with `variants`, not several widgets. A variant changes the look only, never data or behavior. Draw every variant with `--ld-*` tokens. Read `context.variant`, which updates reactively when the user changes the Look selector in the dashboard's settings panel.

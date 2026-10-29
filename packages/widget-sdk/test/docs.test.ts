@@ -95,6 +95,7 @@ describe('page content', () => {
     for (const token of ['font-heading', 'font-body', 'size-h1', 'size-h2', 'size-h3', 'size-body', 'size-small', 'leading-heading', 'link']) expect(design).toContain(token)
     expect(design).toContain('in `em`')
     expect(design).toContain('## Units and scaling')
+    for (const rule of ['## Text selection', 'not selectable by default', 'user-select: text', '-webkit-user-select: text']) expect(design).toContain(rule)
     for (const rule of ['Design for 16px', 'Write every length inside the widget in `em`', 'Never size content in `rem`', 'var(--ld-content-scale, 1)', '`@container` queries']) expect(design).toContain(rule)
     for (const content of docs.values()) {
       for (const id of ['builtin:glass', 'builtin:paper', 'builtin:obsidian']) expect(content).not.toContain(id)

@@ -37,6 +37,10 @@ it('gives plain widget text the theme body typography and color', () => {
     'font-size': 'var(--ld-size-body)', 'line-height': 'var(--ld-leading)', 'letter-spacing': 'var(--ld-tracking)',
   })
 })
+it('makes widget text unselectable by default, except in editable controls', () => {
+  expect(declarations(':where(.ld-content)')).toMatchObject({ 'user-select': 'none', '-webkit-user-select': 'none' })
+  expect(declarations(':where(.ld-content) :where(input, textarea, [contenteditable])')).toMatchObject({ 'user-select': 'text', '-webkit-user-select': 'text' })
+})
 it('gives keyboard-focused links a visible theme focus ring', () => {
   expect(declarations(':where(.ld-content) :where(a):focus-visible')).toMatchObject({
     outline: '0.125rem solid var(--ld-focus-ring)', 'outline-offset': '0.125rem',

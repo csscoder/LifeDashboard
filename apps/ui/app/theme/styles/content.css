@@ -5,6 +5,14 @@
     font-size: var(--ld-size-body);
     line-height: var(--ld-leading);
     letter-spacing: var(--ld-tracking);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Typing needs a selectable field; an element can opt in to selectable text with user-select: text. */
+  :where(.ld-content) :where(input, textarea, [contenteditable]) {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   :where(.ld-content) :where(h1, h2, h3, h4, h5, h6) {

@@ -15,6 +15,7 @@ Read it when a rule below is unclear or a task is not covered here.
 - Style with `var(--ld-…)` theme tokens only.
 - Use semantic headings, paragraphs, lists, `small` and links; theme typography already styles them.
 - Size EVERY length inside the widget in `em` (text, padding, gaps, widths, heights, icons, radii, `@container` thresholds), designing for 1em = 16px, so the user's text size scales the whole widget. Never `rem`, `px`, `vw` or `vh` for content; only 1–2px hairlines. Use `size-*` tokens; write `widget-padding`, `gap`, `control-height` and `radius-*` values in `em` (those tokens are `rem`). Multiply container units that size content by `var(--ld-content-scale, 1)`. See design.md, «Units and scaling».
+- Text is not selectable by default: the runtime sets `user-select: none`, and text in inputs, textareas and `[contenteditable]` stays selectable. Enable selection (`user-select: text` and `-webkit-user-select: text`) only on the element whose text the user's task asks to be selectable or copyable, never on `body` or the widget root. See design.md, «Text selection».
 - Use text-primary for headings/body, text-secondary for secondary text, text-muted for hints, `--ld-link` for links, accent-text for emphasis and status-text on status-subtle for status.
 - Adapt to `context.size` and `context.sizeClass`. Read `context.frame`.
 - Pause animation while `context.visible` is false.
