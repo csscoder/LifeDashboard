@@ -4,6 +4,7 @@ import { useWidget } from '@lifedashboard/widget-sdk'
 import { SPACE_COLORS } from '@lifedashboard/contracts/space'
 import { alerts } from '../../../focus/alerts'
 import { focusStore, useFocusPresence } from '../../../focus/store'
+import TaskPicker from './TaskPicker.vue'
 import tomato from './tomato.webp'
 import { formatClock, formatTotal, goalDots, isCompact, remainingMs, ringProgress, ringTone, toggleAction } from './view'
 
@@ -109,10 +110,12 @@ function onKey(event: KeyboardEvent) {
         </div>
       </div>
 
-      <div v-if="!compact" class="pomodoro__label">
-        <i v-if="project" class="pomodoro__project" :style="{ background: `oklch(0.7 0.15 ${SPACE_COLORS[project.color]})` }" :title="project.name" />
-        <span :class="{ 'pomodoro__muted': !run.label }">{{ run.label || project?.name || 'No task' }}</span>
-      </div>
+      <TaskPicker v-if="!compact" :store="focusStore">
+        <button type="button" class="pomodoro__label" :aria-label="run.label || 'Set task'" :disabled="!state.loaded">
+          <i v-if="project" class="pomodoro__project" :style="{ background: `oklch(0.7 0.15 ${SPACE_COLORS[project.color]})` }" :title="project.name" />
+          <span :class="{ 'pomodoro__muted': !run.label }">{{ run.label || project?.name || 'No task' }}</span>
+        </button>
+      </TaskPicker>
 
       <div class="pomodoro__controls">
         <button type="button" :aria-label="run.status === 'running' ? 'Pause' : 'Start'" :disabled="!state.loaded" @click="toggle">{{ run.status === 'running' ? '⏸' : '▶' }}</button>
@@ -189,7 +192,7 @@ function onKey(event: KeyboardEvent) {
   cursor: pointer;
 }
 
-.pomodoro__label { display: flex; align-items: center; gap: 1.5cqmin; max-width: 100%; color: var(--ld-text-primary); font-size: max(0.625rem, 5cqmin); }
+.pomodoro__label { display: flex; border: 0; background: none; font: inherit; cursor: pointer; align-items: center; gap: 1.5cqmin; max-width: 100%; color: var(--ld-text-primary); font-size: max(0.625rem, 5cqmin); }
 .pomodoro__label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pomodoro__project { flex: none; width: 3cqmin; height: 3cqmin; border-radius: 50%; }
 .pomodoro__muted { color: var(--ld-text-muted); }
