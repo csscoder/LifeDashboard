@@ -19,6 +19,7 @@ const adding = ref(false)
 const projectName = ref('')
 const projectError = ref('')
 const picked = ref<SpaceColor | null>(null)
+const busy = ref(false)
 
 const projects = computed(() => state.projects.filter(({ archivedAt }) => archivedAt === null))
 const color = computed(() => picked.value ?? nextColor(projects.value.map((project) => project.color)))
@@ -39,13 +40,22 @@ function apply(nextLabel: string | null, projectId: string | null) {
   labelError.value = props.store.setTask(nextLabel, projectId) ?? ''
   if (!labelError.value) onOpen(false)
 }
+// Projects can only be archived, so a second request (double click, Enter then click, retry) would be a permanent duplicate.
 async function addProject() {
-  const result = await props.store.createProject(projectName.value.trim(), color.value)
-  if (!result.ok) {
-    projectError.value = result.error
-    return
+  if (busy.value) return
+  busy.value = true
+  try {
+    const result = await props.store.createProject(projectName.value.trim(), color.value)
+    if (!result.ok) {
+      projectError.value = result.error
+      return
+    }
+    adding.value = false
+    projectName.value = ''
+    apply(label.value, result.project.id)
+  } finally {
+    busy.value = false
   }
-  apply(label.value, result.project.id)
 }
 </script>
 
@@ -79,7 +89,7 @@ async function addProject() {
             />
           </div>
           <p v-if="projectError" class="task-picker__error" role="alert">{{ projectError }}</p>
-          <UiButton :disabled="!projectName.trim()" @click="addProject">Add</UiButton>
+          <UiButton :disabled="busy || !projectName.trim()" @click="addProject">Add</UiButton>
         </div>
 
         <UiButton @click="apply(null, null)">Clear</UiButton>
