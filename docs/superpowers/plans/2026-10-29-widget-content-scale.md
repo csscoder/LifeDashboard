@@ -122,7 +122,7 @@ describe('withScale', () => {
   - `WidgetBoard` passes `:scale="instance.appearance?.scale ?? null"`; the build draft passes nothing.
   - `frame.css` formula.
   - `PlaceholderWidget`: drop `text-2xl`, add a scoped `font-size: 1.5em; line-height: calc(4 / 3)`.
-- [ ] **Step 4: Run** `pnpm -C apps/ui test` and `pnpm -C apps/ui typecheck`. Expected: PASS.
+- [ ] **Step 4: Run** `pnpm -C apps/ui test` and `pnpm typecheck`. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(ui): scale widget content in the host frame`
 
 ---
@@ -139,7 +139,8 @@ describe('withScale', () => {
 
 - [ ] **Step 1: Write failing tests.**
   - `widget-context.test.ts`: a source `contentScale: () => factor.value` starts the context at `1.2` and follows a change to `0.5` after `nextTick`. Add `contentScale: () => 1` to the other `useWidgetContext` calls.
-  - `widget-host.test.ts`, in `copies theme, config, locale, secret flags and root font size to the modal…`: a caller at `scale: 30` has `contentScale: 1.3`, and the modal context has `contentScale: 1`.
+  - `widget-context.test.ts`, in `copies theme, config, locale, secret flags and root font size to the modal…`: a caller context with `contentScale: 1.3` gives the modal context `contentScale: 1`.
+  - `widget-host.test.ts`, with the existing `surfaceFixture`: a real `WidgetHost` mounted with `scale: 30` passes a context with `contentScale: 1.3` to `SandboxWidget`.
   - `sandbox-root.test.ts`: the runtime context fixture gets `contentScale: 1.5`; the root style has `--ld-content-scale` `1.5` and follows a context patch to `0.8`; the prepended style text matches `/@layer ld\.base\s*\{\s*body\.ld-content\s*\{\s*font-size: calc\(var\(--ld-font-scale, 1\) \* var\(--ld-content-scale, 1\) \* 1rem\)/`; `body.style.fontSize` stays `''`.
   - `shell-state.test.ts`: `shellContext(...)` returns `contentScale: 1`.
   - `build.test.ts`: the built manifest has `sdk: 6`.
@@ -172,7 +173,7 @@ describe('withScale', () => {
   - `widget-settings-board.test.ts`: the `confirmation` constant becomes the Global Constraints copy; `resetWidget` on an instance with `scale: 40` removes its appearance.
 - [ ] **Step 2: Run** `pnpm -C apps/ui test`. Expected: FAIL in the new cases.
 - [ ] **Step 3: Implement** the spec's `SettingsRow` after the shadow controls, with `:min="SCALE_LIMITS[0]" :max="SCALE_LIMITS[1]"`, and the new confirmation copy in `WidgetBoard.resetSettings`.
-- [ ] **Step 4: Run** `pnpm -C apps/ui test` and `pnpm -C apps/ui typecheck`. Expected: PASS.
+- [ ] **Step 4: Run** `pnpm -C apps/ui test` and `pnpm typecheck`. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(ui): text size setting in the widget panel`
 
 ---
@@ -193,7 +194,7 @@ expect(docs.get('design.md')).toContain('150 %')
 ```
 - [ ] **Step 2: Run** `pnpm -C packages/widget-sdk test`. Expected: FAIL.
 - [ ] **Step 3: Write** the spec's «SDK and documentation» text: the `contentScale` row after `rootFontSize`; `Level 6` in «sdk levels»; the scale paragraph in «em, rem and rootFontSize»; `contentScale` next to `rootFontSize` in the `index.md` and `SKILL.md` design summaries; one README line on the per-widget text size. Run `pnpm -C packages/widget-sdk run docs`.
-- [ ] **Step 4: Run** `pnpm -C packages/widget-sdk test`. Expected: PASS.
+- [ ] **Step 4: Run** `pnpm -C packages/widget-sdk test`, `pnpm -C packages/create-widget test` and `pnpm typecheck`. Expected: PASS.
 - [ ] **Step 5: Commit** `docs: widget content scale`
 
 ---
