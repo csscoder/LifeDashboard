@@ -23,7 +23,10 @@ export interface WidgetAppearance {
   theme: ThemeChoice | 'bare' | null // null: inherit the board theme; bare: no frame
   shadow: DropShadow | null // null: the theme's own shadow
   variant: string | null // null: the widget's default look
+  scale: number | null // integer percent offset of the text size, SCALE_LIMITS; null: no offset
 }
+
+export const SCALE_LIMITS = [-50, 50] as const
 
 export interface WidgetInstance {
   id: string
@@ -108,12 +111,13 @@ export function isUuid(value: unknown): value is string {
  * both build it here, so boards compare equal as JSON (isSameBoard).
  */
 export function normalizeAppearance(appearance: WidgetAppearance | null | undefined): WidgetAppearance | undefined {
-  if (!appearance || (appearance.theme === null && appearance.shadow === null && appearance.variant === null)) return undefined
+  if (!appearance || (appearance.theme === null && appearance.shadow === null && appearance.variant === null && !appearance.scale)) return undefined
   const { shadow } = appearance
   return {
     theme: appearance.theme,
     shadow: shadow && { x: shadow.x, y: shadow.y, blur: shadow.blur, color: shadow.color, opacity: shadow.opacity },
     variant: appearance.variant,
+    scale: appearance.scale || null, // 0 is stored as null
   }
 }
 
@@ -187,7 +191,7 @@ function isNonEmptyString(value: unknown): value is string {
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i
 
-// undefined: nothing set (absent, null or all three fields null); null: invalid.
+// undefined: nothing set (absent, null or all four fields empty); null: invalid.
 function parseAppearance(raw: unknown): WidgetAppearance | undefined | null {
   if (raw === undefined || raw === null) return undefined
   if (!isRecord(raw)) return null
@@ -197,7 +201,13 @@ function parseAppearance(raw: unknown): WidgetAppearance | undefined | null {
   if (shadow !== null && !isDropShadow(shadow)) return null
   const variant = raw.variant ?? null
   if (variant !== null && !isVariantId(variant)) return null
-  return normalizeAppearance({ theme: theme.value, shadow, variant })
+  const scale = raw.scale ?? null
+  if (scale !== null && !isScale(scale)) return null
+  return normalizeAppearance({ theme: theme.value, shadow, variant, scale })
+}
+
+function isScale(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= SCALE_LIMITS[0] && value <= SCALE_LIMITS[1]
 }
 
 function isDropShadow(value: unknown): value is DropShadow {

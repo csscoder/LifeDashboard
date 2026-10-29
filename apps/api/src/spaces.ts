@@ -274,7 +274,7 @@ function readBoard(db: DatabaseSync, spaceId: string): SpaceBoard {
         ...(background !== null && { background: parseScreenBackground(JSON.parse(background)) as ScreenBackground }),
         instances: placed.map((row) => {
           const parsed = row.appearance === null ? null : JSON.parse(row.appearance) as WidgetAppearance
-          const appearance = parsed && normalizeAppearance({ ...parsed, theme: parsed.theme ?? null, variant: parsed.variant ?? null })
+          const appearance = parsed && normalizeAppearance({ ...parsed, theme: parsed.theme ?? null, variant: parsed.variant ?? null, scale: parsed.scale ?? null })
           return {
             id: row.id,
             source: sourceOf(row),

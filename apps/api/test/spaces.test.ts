@@ -578,7 +578,7 @@ describe('package widget version transitions', () => {
     }
     original = oneWidget(A, SEED_SCREEN_ID)
     original.instances[0]!.source = { kind: 'package', packageId: 'dev.test.hello', version: '1.0.0' }
-    original.instances[0]!.appearance = { theme: { palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' }, shadow: null, variant: null }
+    original.instances[0]!.appearance = { theme: { palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' }, shadow: null, variant: null, scale: null }
     original.layout[0] = { instanceId: A, x: 0, y: 0, w: 3, h: 3 }
     const saved = await put({ expectedRevision: 1, screens: [original] })
     expect(saved.statusCode, saved.body).toBe(200)
@@ -653,7 +653,7 @@ describe('package widget version transitions', () => {
 })
 
 describe('widget appearance', () => {
-  const look = { theme: 'bare', shadow: { x: 2, y: 4, blur: 12, color: '#102030', opacity: 0.25 }, variant: null }
+  const look = { theme: 'bare', shadow: { x: 2, y: 4, blur: 12, color: '#102030', opacity: 0.25 }, variant: null, scale: null }
   const styled = (appearance: unknown) => ({
     ...screen,
     instances: [{ ...screen.instances[0]!, appearance }, screen.instances[1]!],
@@ -664,7 +664,7 @@ describe('widget appearance', () => {
     t.db.prepare('UPDATE widgets SET appearance = ? WHERE id = ?')
       .run(JSON.stringify({ shadow: look.shadow, variant: null }), screen.instances[0]!.id)
     const board = await getBoard()
-    expect(board.screens[0]!.instances[0]!.appearance).toEqual({ theme: null, shadow: look.shadow, variant: null })
+    expect(board.screens[0]!.instances[0]!.appearance).toEqual({ theme: null, shadow: look.shadow, variant: null, scale: null })
     const response = await put({ expectedRevision: board.revision, screens: board.screens })
     expect(response.statusCode).toBe(200)
     expect(response.json().data.screens).toEqual(board.screens)
@@ -672,6 +672,20 @@ describe('widget appearance', () => {
     const { appearance, ...instance } = board.screens[0]!.instances[0]!
     expect(instance).toEqual(screen.instances[0])
     expect(board.screens[0]!.layout).toEqual(screen.layout)
+  })
+
+  it('saves and loads a stored scale unchanged', async () => {
+    const scaled = { ...look, scale: 20 }
+    expect((await put({ expectedRevision: 1, screens: [styled(scaled)] })).statusCode).toBe(200)
+    expect((await getBoard()).screens[0]!.instances[0]!.appearance).toStrictEqual(scaled)
+  })
+
+  it('reads a stored row without scale as scale null', async () => {
+    expect((await put({ expectedRevision: 1, screens: [screen] })).statusCode).toBe(200)
+    t.db.prepare('UPDATE widgets SET appearance = ? WHERE id = ?')
+      .run(JSON.stringify({ theme: 'bare', shadow: null, variant: null }), screen.instances[0]!.id)
+    expect((await getBoard()).screens[0]!.instances[0]!.appearance)
+      .toStrictEqual({ theme: 'bare', shadow: null, variant: null, scale: null })
   })
 
   it('round-trips appearance after config and leaves the key out for widgets without one', async () => {
@@ -726,7 +740,7 @@ describe('space and screen theme persistence', () => {
     const legacy = { ...screen, themeId: 'builtin:obsidian', instances: [{ ...screen.instances[0]!, appearance: { themeId: 'builtin:bare', shadow: null } }, screen.instances[1]!] }
     const response = await put({ expectedRevision: 1, screens: [legacy] })
     expect(response.statusCode).toBe(200)
-    const expected = { ...screen, theme: obsidian, instances: [{ ...screen.instances[0]!, appearance: { theme: 'bare', shadow: null, variant: null } }, screen.instances[1]!] }
+    const expected = { ...screen, theme: obsidian, instances: [{ ...screen.instances[0]!, appearance: { theme: 'bare', shadow: null, variant: null, scale: null } }, screen.instances[1]!] }
     expect(response.json().data.screens).toEqual([expected])
     expect((await getBoard()).screens).toEqual([expected])
     expect(JSON.stringify(response.json().data)).not.toContain('themeId')

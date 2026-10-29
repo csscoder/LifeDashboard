@@ -143,7 +143,7 @@ describe('parseScreenBoard', () => {
 
 describe('widget appearance', () => {
   const paper = { palette: 'builtin:lifedashboard', mode: 'light', style: 'solid' } as const
-  const look = { theme: paper, shadow: { x: 0, y: 8, blur: 16, color: '#1a2B3c', opacity: 0.5 }, variant: null }
+  const look = { theme: paper, shadow: { x: 0, y: 8, blur: 16, color: '#1a2B3c', opacity: 0.5 }, variant: null, scale: null }
   const withLook = (appearance: unknown) => mutated((d) => { d.instances[0].appearance = appearance })
   const first = (raw: unknown) => {
     const result = parseScreenBoard(raw)
@@ -153,17 +153,37 @@ describe('widget appearance', () => {
 
   it('parses a stored appearance without variant', () => {
     expect(first(withLook({ themeId: 'builtin:paper', shadow: null })).appearance)
-      .toEqual({ theme: paper, shadow: null, variant: null })
+      .toEqual({ theme: paper, shadow: null, variant: null, scale: null })
   })
 
   it('keeps a variant-only appearance and omits an all-null appearance', () => {
     expect(first(withLook({ themeId: null, shadow: null, variant: 'roman' })).appearance)
-      .toEqual({ theme: null, shadow: null, variant: 'roman' })
+      .toEqual({ theme: null, shadow: null, variant: 'roman', scale: null })
     expect(first(withLook({ themeId: null, shadow: null, variant: null }))).not.toHaveProperty('appearance')
   })
 
   it.each(['Roman', 3])('rejects invalid variant %j', (variant) => {
     expect(parseScreenBoard(withLook({ themeId: null, shadow: null, variant })).ok).toBe(false)
+  })
+
+  it.each([-50, 50, 12])('keeps scale %d', (scale) => {
+    expect(first(withLook({ theme: 'bare', shadow: null, variant: null, scale })).appearance)
+      .toStrictEqual({ theme: 'bare', shadow: null, variant: null, scale })
+  })
+
+  it('reads a missing or zero scale as null and keeps the rest', () => {
+    const expected = { theme: 'bare', shadow: null, variant: null, scale: null }
+    expect(first(withLook({ theme: 'bare', shadow: null, variant: null })).appearance).toStrictEqual(expected)
+    expect(first(withLook({ theme: 'bare', shadow: null, variant: null, scale: 0 })).appearance).toStrictEqual(expected)
+  })
+
+  it('omits an appearance whose fields are all empty', () => {
+    expect(first(withLook({ theme: null, shadow: null, variant: null, scale: 0 }))).not.toHaveProperty('appearance')
+    expect(first(withLook({ theme: null, shadow: null, variant: null, scale: null }))).not.toHaveProperty('appearance')
+  })
+
+  it('orders scale last', () => {
+    expect(Object.keys(first(withLook({ scale: 5, variant: null, shadow: null, theme: 'bare' })).appearance!)).toEqual(['theme', 'shadow', 'variant', 'scale'])
   })
 
   it('keeps a valid appearance last, in canonical key order, without unknown fields', () => {
@@ -184,7 +204,7 @@ describe('widget appearance', () => {
   })
 
   it.each([['builtin:bare', 'bare'], ['builtin:deleted-1', null], [`user:${A}`, null], [null, null]])('maps legacy widget theme %j', (themeId, theme) => {
-    expect(first(withLook({ themeId, shadow: DEFAULT_SHADOW })).appearance).toStrictEqual({ theme, shadow: DEFAULT_SHADOW, variant: null })
+    expect(first(withLook({ themeId, shadow: DEFAULT_SHADOW })).appearance).toStrictEqual({ theme, shadow: DEFAULT_SHADOW, variant: null, scale: null })
   })
 
   it('maps bare and omits an empty legacy appearance', () => {
@@ -197,7 +217,7 @@ describe('widget appearance', () => {
       { x: -32, y: -32, blur: 0, color: '#000000', opacity: 0 },
       { x: 32, y: 32, blur: 48, color: '#FFFFFF', opacity: 1 },
     ]) {
-      expect(first(withLook({ themeId: null, shadow, variant: null })).appearance).toStrictEqual({ theme: null, shadow, variant: null })
+      expect(first(withLook({ themeId: null, shadow, variant: null })).appearance).toStrictEqual({ theme: null, shadow, variant: null, scale: null })
     }
   })
 
@@ -222,6 +242,10 @@ describe('widget appearance', () => {
     ['NaN opacity', shadowWith({ opacity: Number.NaN })],
     ['string opacity', shadowWith({ opacity: '0.5' })],
     ['a missing colour', { themeId: null, shadow: { x: 0, y: 8, blur: 16, opacity: 0.5 } }],
+    ['scale above 50', { theme: null, shadow: null, variant: null, scale: 51 }],
+    ['scale below -50', { theme: null, shadow: null, variant: null, scale: -51 }],
+    ['a fractional scale', { theme: null, shadow: null, variant: null, scale: 1.5 }],
+    ['a string scale', { theme: null, shadow: null, variant: null, scale: '10' }],
   ])('rejects %s', (_name, appearance) => {
     const result = parseScreenBoard(withLook(appearance))
     expect(result).toEqual({ ok: false, error: 'instances[0]: invalid widget appearance' })
@@ -237,13 +261,14 @@ describe('normalizeAppearance', () => {
   it.each([
     ['undefined', undefined],
     ['null', null],
-    ['all three fields null', { theme: null, shadow: null, variant: null }],
+    ['all four fields null', { theme: null, shadow: null, variant: null, scale: null }],
+    ['all four fields empty', { theme: null, shadow: null, variant: null, scale: 0 }],
   ])('returns undefined for %s', (_name, appearance) => {
     expect(normalizeAppearance(appearance)).toBeUndefined()
   })
 
   it('rebuilds the canonical key order', () => {
-    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 16, y: 8, x: 0 }, theme: null, variant: null }
-    expect(JSON.stringify(normalizeAppearance(scrambled))).toBe(JSON.stringify({ theme: null, shadow: DEFAULT_SHADOW, variant: null }))
+    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 16, y: 8, x: 0 }, theme: null, variant: null, scale: null }
+    expect(JSON.stringify(normalizeAppearance(scrambled))).toBe(JSON.stringify({ theme: null, shadow: DEFAULT_SHADOW, variant: null, scale: null }))
   })
 })

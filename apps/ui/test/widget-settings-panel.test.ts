@@ -52,14 +52,14 @@ describe('widget settings panel', () => {
   it('hides Look without variants', () => { expect(mount().text()).not.toContain('Look') })
   it('resolves missing looks and preserves style and shadow when picking a look', () => {
     const variants = { default: 'plain', items: [{ id: 'plain', title: 'Plain' }, { id: 'roman', title: 'Roman numerals' }] }
-    const appearance = { theme: { palette: 'builtin:nord', mode: 'dark', style: 'solid' }, shadow: board.DEFAULT_SHADOW, variant: 'gone' }
+    const appearance = { theme: { palette: 'builtin:nord', mode: 'dark', style: 'solid' }, shadow: board.DEFAULT_SHADOW, variant: 'gone', scale: null }
     const ui = mount(undefined, { variants, appearance })
     expect(ui.text()).toContain('Look')
     const look = ui.nodes().filter(el => el.tag === 'ui-select')[0]!
     expect(look.props.modelValue).toBe('plain')
     expect(look.props.options).toEqual([{ value: 'plain', label: 'Plain' }, { value: 'roman', label: 'Roman numerals' }])
     look.props.pick('roman')
-    expect(ui.events).toEqual([['change', { ...appearance, variant: 'roman' }]])
+    expect(ui.events).toEqual([['change', { ...appearance, variant: 'roman', scale: null }]])
   })
   it('orders separated blocks and uses themed shadow controls without native inputs', () => {
     const ui = mount(undefined, { versions: ['1'], appearance: { shadow: board.DEFAULT_SHADOW } })
@@ -103,15 +103,15 @@ describe('widget settings panel', () => {
   })
 
   it('picks a palette or no frame while keeping the shadow', async () => {
-    const ui = mount(undefined, { appearance: { theme: null, shadow: board.DEFAULT_SHADOW, variant: null }, inherited: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' } })
+    const ui = mount(undefined, { appearance: { theme: null, shadow: board.DEFAULT_SHADOW, variant: null, scale: null }, inherited: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' } })
     await Vue.nextTick()
     expect(ui.panel().props['aria-label']).toBe('Widget settings')
     for (const label of ['Style', 'Shadow', 'Blur', 'Color', 'Reset to defaults']) expect(ui.text()).toContain(label)
     expect(ui.button('Inherit').props['aria-checked']).toBe(true)
     ui.button('Catppuccin').click()
-    expect(ui.events).toEqual([['change', { theme: { palette: 'builtin:catppuccin', mode: 'light', style: 'solid' }, shadow: board.DEFAULT_SHADOW, variant: null }]])
+    expect(ui.events).toEqual([['change', { theme: { palette: 'builtin:catppuccin', mode: 'light', style: 'solid' }, shadow: board.DEFAULT_SHADOW, variant: null, scale: null }]])
     ui.button('No frame').click()
-    expect(ui.events.at(-1)).toEqual(['change', { theme: 'bare', shadow: board.DEFAULT_SHADOW, variant: null }])
+    expect(ui.events.at(-1)).toEqual(['change', { theme: 'bare', shadow: board.DEFAULT_SHADOW, variant: null, scale: null }])
   })
 
   it('applies a version picked in the themed select', async () => {
@@ -126,14 +126,14 @@ describe('widget settings panel', () => {
   })
 
   it('shows the shadow controls only while the shadow is on', async () => {
-    const ui = mount(undefined, { appearance: { theme: null, shadow: null, variant: null } })
+    const ui = mount(undefined, { appearance: { theme: null, shadow: null, variant: null, scale: null } })
     const sliders = () => ui.nodes().filter((el) => el.tag === 'ui-slider')
     const colour = () => ui.nodes().find((el) => el.tag === 'ui-colorfield')
     expect(sliders()).toHaveLength(0)
     expect(colour()).toBeUndefined()
     expect(ui.text()).not.toContain('Blur')
     expect(ui.button('Reset to defaults')).toBeDefined()
-    ui.props.appearance = { theme: null, shadow: board.DEFAULT_SHADOW, variant: null }
+    ui.props.appearance = { theme: null, shadow: board.DEFAULT_SHADOW, variant: null, scale: null }
     await Vue.nextTick()
     expect(sliders().map((el) => el.props.modelValue)).toEqual([board.DEFAULT_SHADOW.x, board.DEFAULT_SHADOW.y, board.DEFAULT_SHADOW.blur])
     expect(sliders().every((el) => !el.props.disabled)).toBe(true)
@@ -141,11 +141,11 @@ describe('widget settings panel', () => {
     expect(colour()?.props.alpha).toBe(board.DEFAULT_SHADOW.opacity)
     expect(ui.text()).not.toContain('Opacity')
     colour()!.props['onUpdate:alpha'](0.25)
-    expect(ui.events.at(-1)).toEqual(['change', { theme: null, shadow: { ...board.DEFAULT_SHADOW, opacity: 0.25 }, variant: null }])
+    expect(ui.events.at(-1)).toEqual(['change', { theme: null, shadow: { ...board.DEFAULT_SHADOW, opacity: 0.25 }, variant: null, scale: null }])
   })
 
   it('resets the whole widget from one button below every setting', () => {
-    const ui = mount(Editor, { appearance: { theme: null, shadow: board.DEFAULT_SHADOW, variant: null } })
+    const ui = mount(Editor, { appearance: { theme: null, shadow: board.DEFAULT_SHADOW, variant: null, scale: null } })
     expect(ui.button('Reset')).toBeUndefined()
     const reset = ui.button('Reset to defaults')
     const all = ui.nodes()
