@@ -23,6 +23,7 @@ const widget = useWidget() // call inside component setup; throws outside a widg
 | `theme` | `{ id, scheme, tokens }`: `scheme` is `light` or `dark`; `tokens` maps each `--ld-*` name to its resolved value |
 | `rootFontSize` | the dashboard's root font size in px; use it only when a value must be a px number, since content is sized in `em` |
 | `contentScale` | the user's text size for this widget, 0.5–1.5; the runtime already applies it to `body`. Since sdk 6 |
+| `focus` | `{ phase, running, endsAt }`: the user's Pomodoro state, read-only. `phase` is `none`, `focus` or `break`; `endsAt` is a ms timestamp or `null`. Since sdk 7 |
 | `config` | the manifest settings, with defaults for missing or invalid values. A secret setting is a boolean: `true` when set |
 | `variant` | the selected look id, or an empty string without variants. Missing or unknown ids fall back to the manifest default. Since sdk 5 |
 | `locale` | the dashboard locale |
@@ -94,6 +95,7 @@ Errors are `WidgetError` objects with a `code`. See [errors.md](errors.md).
 - Level 4: named modal workspaces through `widget.modal`.
 - Level 5: manifest `variants`, `context.variant` and `color` settings.
 - Level 6: `context.contentScale`. The runtime scales `body` for packages of every level.
+- Level 7: `context.focus`.
 
 ## modal
 

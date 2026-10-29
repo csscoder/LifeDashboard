@@ -14,6 +14,7 @@ const CONTEXT: WidgetContext = {
   theme: { id: 'builtin:lifedashboard-dark-glass', scheme: 'dark', tokens: { '--ld-bg': '#000' } },
   rootFontSize: 16,
   contentScale: 1,
+  focus: { phase: 'none', running: false, endsAt: null },
   config: {},
   locale: 'ru-RU',
   visible: true,

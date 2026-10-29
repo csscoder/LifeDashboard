@@ -150,6 +150,20 @@ async function update(change: (data: Data) => Data): Promise<void> {
 
 Each retry reads the newest state. If your writes can race often, add a limit on attempts.
 
+## Defer noise during focus
+
+Hold sounds, animations and `notify` while the user runs a focus interval. `context.focus` is read-only and carries no label, project or history.
+
+```ts
+const focusing = () => context.focus.phase === 'focus' && context.focus.running
+
+function alertUser(text: string) {
+  if (!focusing()) widget.notify(text)
+}
+```
+
+Read `context.focus` again when you need it; do not cache the value.
+
 ## Named modal workspace
 
 Keep the starter widget compact. Add a modal only when the user needs a larger workspace.

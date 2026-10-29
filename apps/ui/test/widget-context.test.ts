@@ -4,6 +4,7 @@ import { normalizeConfig, type SettingsSchema } from '@lifedashboard/contracts/w
 import type { InstalledPackage } from '@lifedashboard/contracts/widget-package'
 import { describeSource } from '../app/widgets/catalog'
 import { useWidgetContext } from '../app/widgets/context'
+import type { FocusStatus } from '@lifedashboard/contracts/widget-gateway'
 
 // Vitest runs in Node: the frame's computed style is a stub whose surface-1 follows `surface`.
 // onMounted is a no-op outside a component, so only the watch path runs here.
@@ -44,6 +45,7 @@ function setup(foreign: boolean, config: () => Record<string, unknown> = () => (
       config,
       variant: () => variant.value,
       contentScale: () => 1,
+      focus: () => ({ phase: 'none', running: false, endsAt: null }),
       frame: () => ({}) as Element,
       frameMode: () => frameMode.value,
     }),
@@ -52,10 +54,20 @@ function setup(foreign: boolean, config: () => Record<string, unknown> = () => (
 }
 
 describe('useWidgetContext', () => {
+  it('context.focus follows the source', async () => {
+    const focus = ref<FocusStatus>({ phase: 'none', running: false, endsAt: null })
+    const scope = effectScope(); scopes.push(scope)
+    const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => 'builtin:lifedashboard-dark-glass', foreign: () => false, fonts: () => '{}', config: () => ({}), variant: () => '', contentScale: () => 1, focus: () => focus.value, frame: () => ({}) as Element, frameMode: () => 'framed' }))!
+    expect(context.focus).toEqual({ phase: 'none', running: false, endsAt: null })
+    focus.value = { phase: 'focus', running: true, endsAt: 123 }
+    await nextTick()
+    expect(context.focus).toEqual({ phase: 'focus', running: true, endsAt: 123 })
+  })
+
   it('starts with the content scale factor and follows changes', async () => {
     const factor = ref(1.2)
     const scope = effectScope(); scopes.push(scope)
-    const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => 'builtin:lifedashboard-dark-glass', foreign: () => false, fonts: () => '{}', config: () => ({}), variant: () => '', contentScale: () => factor.value, frame: () => ({}) as Element, frameMode: () => 'framed' }))!
+    const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => 'builtin:lifedashboard-dark-glass', foreign: () => false, fonts: () => '{}', config: () => ({}), variant: () => '', contentScale: () => factor.value, focus: () => ({ phase: 'none', running: false, endsAt: null }), frame: () => ({}) as Element, frameMode: () => 'framed' }))!
     expect(context.contentScale).toBe(1.2)
     factor.value = 0.5
     await nextTick()
@@ -198,7 +210,7 @@ it('updates widget theme and tokens when an automatic theme follows matchMedia',
   const scheme = useColorScheme()
   const id = computed(() => resolveTheme([{ palette: 'builtin:gruvbox', mode: 'auto', style: 'glass' }], scheme.value))
   const scope = effectScope(); scopes.push(scope)
-  const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => id.value, foreign: () => false, fonts: () => '{}', config: () => ({}), variant: () => '', contentScale: () => 1, frame: () => ({}) as Element, frameMode: () => 'framed' }))!
+  const context = scope.run(() => useWidgetContext({ size: () => ({ w: 2, h: 2 }), themeId: () => id.value, foreign: () => false, fonts: () => '{}', config: () => ({}), variant: () => '', contentScale: () => 1, focus: () => ({ phase: 'none', running: false, endsAt: null }), frame: () => ({}) as Element, frameMode: () => 'framed' }))!
   expect(context.theme.id).toBe('builtin:gruvbox-dark-glass')
   surface = 'light surface'
   change({ matches: false })

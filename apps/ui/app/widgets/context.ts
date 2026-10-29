@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted, reactive, watch } from 'vue'
 import type { Size } from '@lifedashboard/contracts/grid'
-import { sizeClass, type WidgetContext } from '@lifedashboard/contracts/widget-gateway'
+import { sizeClass, type FocusStatus, type WidgetContext } from '@lifedashboard/contracts/widget-gateway'
 import { themeMeta } from '../theme/builtin'
 import { OPTIONAL_TOKENS, REQUIRED_TOKENS } from '../theme/contract'
 
@@ -31,6 +31,7 @@ export function useWidgetContext(source: {
   fonts: () => string
   variant: () => string
   contentScale: () => number
+  focus: () => FocusStatus
   config: () => Record<string, unknown>
   frame: () => Element | null
   frameMode: () => WidgetContext['frame']
@@ -45,6 +46,7 @@ export function useWidgetContext(source: {
     config: source.config(),
     variant: source.variant(),
     contentScale: source.contentScale(),
+    focus: source.focus(),
     locale: navigator.language,
     visible: document.visibilityState === 'visible' && typeof IntersectionObserver === 'undefined',
   })
@@ -85,6 +87,9 @@ export function useWidgetContext(source: {
   })
   watch(source.contentScale, (contentScale) => {
     context.contentScale = contentScale
+  })
+  watch(source.focus, (focus) => {
+    context.focus = focus
   })
   watch(source.frameMode, (frame) => {
     context.frame = frame

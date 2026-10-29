@@ -301,6 +301,12 @@ export function sizeClass(size: Size): SizeClass {
   return 'xl'
 }
 
+export interface FocusStatus {
+  phase: 'none' | 'focus' | 'break'
+  running: boolean
+  endsAt: number | null
+}
+
 export interface WidgetContext {
   /** Resolved look id, or an empty string when no variants are declared. @since sdk 5 */
   variant: string
@@ -319,6 +325,11 @@ export interface WidgetContext {
    * The user's text size for this widget as a factor, 0.5–1.5. @since sdk 6
    */
   contentScale: number
+  /**
+   * Whether the user is in a Pomodoro focus interval. Read-only; defer sounds, animations and `notify`
+   * while `phase === 'focus' && running`. @since sdk 7
+   */
+  focus: FocusStatus
   /**
    * Values of the manifest settings, with defaults used for missing or invalid non-secret values;
    * an empty object when the manifest declares no settings. Each secret setting is only a boolean:
@@ -344,9 +355,9 @@ export const WIDGET_ERROR_CODES = [
 export type WidgetErrorCode = (typeof WIDGET_ERROR_CODES)[number]
 
 export const SDK_VERSION = 1
-export const SDK_LEVELS = [1, 2, 3, 4, 5, 6] as const
+export const SDK_LEVELS = [1, 2, 3, 4, 5, 6, 7] as const
 export type SdkLevel = (typeof SDK_LEVELS)[number]
-export const SDK_TARGET_LEVEL: SdkLevel = 6
+export const SDK_TARGET_LEVEL: SdkLevel = 7
 
 export interface InitMessage {
   t: 'ld:init'

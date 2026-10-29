@@ -99,7 +99,7 @@ describe('InitMessage modal mount type', () => {
     const context: InitMessage['context'] = {
       variant: '', size: { w: 2, h: 2 }, sizeClass: 's', frame: 'frameless',
       theme: { id: 'default', scheme: 'light', tokens: {} },
-      rootFontSize: 16, contentScale: 1, config: {}, locale: 'en', visible: true,
+      rootFontSize: 16, contentScale: 1, focus: { phase: 'none', running: false, endsAt: null }, config: {}, locale: 'en', visible: true,
     }
     const message = {
       t: 'ld:init', context,

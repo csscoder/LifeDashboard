@@ -66,7 +66,7 @@ it('pauses an offscreen widget and a hidden tab, resumes only when both are visi
   let context!: gateway.WidgetContext
   const mounted = mount({ setup() {
     context = useWidgetContext({ size: () => ({ w: 3, h: 3 }), themeId: () => 'builtin:gruvbox-light-solid', foreign: () => false, fonts: () => '{}',
-      config: () => ({}), variant: () => '', contentScale: () => 1, frame: () => frame, frameMode: () => 'framed' })
+      config: () => ({}), variant: () => '', contentScale: () => 1, focus: () => ({ phase: 'none', running: false, endsAt: null }), frame: () => frame, frameMode: () => 'framed' })
     return () => Vue.h('div')
   } })
   await Vue.nextTick()
@@ -112,7 +112,7 @@ it('renders and copies an installed widget exception with its exact package vers
     if (!(id in modules)) throw new Error(`Unexpected import ${id}`)
     return modules[id]
   }, exports)
-  const context: gateway.WidgetContext = { variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, contentScale: 1,
+  const context: gateway.WidgetContext = { variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, contentScale: 1, focus: { phase: 'none', running: false, endsAt: null },
     theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: true }
   const host = mount({ render: () => Vue.h(exports.default!, { widgetId: 'widget', hash: 'hash', title: 'Probe', packageId: 'dev.test.probe', version: '1.2.3', context }) })
   await Vue.nextTick(); await Vue.nextTick(); hello()
@@ -164,7 +164,7 @@ async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean
   }
   const exports: { default?: Vue.Component } = {}
   new Function('require', 'exports', code)((id: string) => { if (!(id in modules)) throw new Error(`Unexpected import ${id}`); return modules[id] }, exports)
-  const context = Vue.reactive<gateway.WidgetContext>({ variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, contentScale: 1, theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: false })
+  const context = Vue.reactive<gateway.WidgetContext>({ variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, contentScale: 1, focus: { phase: 'none', running: false, endsAt: null }, theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: false })
   if (!hosts) controller.registerCaller({ owner: { widgetId: 'widget', runtimeId: 'widget', hash: 'hash', title: 'Probe', packageId: 'dev.test', version: '1' }, context: () => context, restart: async () => {} })
   let Host: Vue.Component | undefined
   if (hosts) {
@@ -183,6 +183,7 @@ async function surfaceFixture(hosts = false, options: { holdModalStart?: boolean
       './secret-flags': { useSecretFlags: () => Vue.ref(new Set()) },
       './SandboxWidget.vue': { ...exports, __esModule: true },
       '../board/widget-settings': boardSettings,
+      '../focus/store': { focusStore: { status: Vue.ref({ phase: 'none', running: false, endsAt: null }) } },
       './WidgetFrame.vue': options.realFrame
         ? { __esModule: true, default: compileSfc(new URL('../app/widgets/WidgetFrame.vue', import.meta.url), { '../theme/builtin': builtin, '../theme/resolve': resolve, '../theme/shadow': shadow, '../board/widget-settings': boardSettings }) }
         : { __esModule: true, default: Vue.defineComponent({ setup(_props, { slots }) { return () => Vue.h('section', slots.default?.()) } }) },
@@ -365,7 +366,7 @@ it('ends a late-created session after SandboxWidget unmount without attaching a 
  '../confirmations': await import('../app/confirmations'), '../toasts': { showToast() {} }, './modals': { widgetModals: controller }, './broker': { ...broker, listenForHello } }
  const exports: { default?: Vue.Component } = {}
  new Function('require', 'exports', code)((id: string) => { if (!(id in modules)) throw new Error(`Unexpected import ${id}`); return modules[id] }, exports)
- const context: gateway.WidgetContext = { variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, contentScale: 1, theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: true }
+ const context: gateway.WidgetContext = { variant: '', size: { w: 3, h: 3 }, sizeClass: 's', frame: 'framed', rootFontSize: 16, contentScale: 1, focus: { phase: 'none', running: false, endsAt: null }, theme: { id: 'builtin:gruvbox-light-solid', scheme: 'light', tokens: {} }, config: {}, locale: 'en', visible: true }
  const mounted = mount({ render: () => Vue.h(exports.default!, { widgetId: 'late', hash: 'hash', title: 'Probe', packageId: 'dev.test', version: '1', context }) })
  mounted.app.unmount(); resolveSession({ ok: true, data: { widgetSession: 'late-secret', grants: [] } })
  await vi.waitFor(() => expect(ended).toEqual(['late-secret']))

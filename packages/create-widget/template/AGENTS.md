@@ -19,6 +19,7 @@ Read it when a rule below is unclear or a task is not covered here.
 - Use text-primary for headings/body, text-secondary for secondary text, text-muted for hints, `--ld-link` for links, accent-text for emphasis and status-text on status-subtle for status.
 - Adapt to `context.size` and `context.sizeClass`. Read `context.frame`.
 - Pause animation while `context.visible` is false.
+- `context.focus` tells whether the user is focusing; defer sounds, animations and `notify` while `phase === 'focus' && running`.
 - Object-like widgets (clocks, gauges, stickers) set `"frame": "frameless"` in `widget.json` and draw no card background.
 - The widget root fills the frame: give it `height: 100%`. At the `default` size the essential content is visible without scrolling.
 - Keep `title` and `id` in `widget.json` as created, unless the user asks to change them.

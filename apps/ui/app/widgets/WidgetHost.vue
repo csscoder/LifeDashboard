@@ -7,6 +7,7 @@ import { normalizeConfig } from '@lifedashboard/contracts/widget-settings'
 import { scaleFactor } from '../board/widget-settings'
 import { provideInProcessWidget } from '@lifedashboard/widget-sdk'
 import { api } from '../api'
+import { focusStore } from '../focus/store'
 import { cancelConfirmations, requestConfirmation } from '../confirmations'
 import type { FrameSkin } from '../theme/resolve'
 import { showToast } from '../toasts'
@@ -45,6 +46,7 @@ const context = useWidgetContext({
   size: () => props.size,
   variant: () => resolveVariant(info.value?.variants, props.variant),
   contentScale: () => scaleFactor(props.scale),
+  focus: () => focusStore.status.value,
   themeId: () => props.themeId,
   foreign: () => props.foreign,
   fonts: () => JSON.stringify(props.fonts ?? {}),

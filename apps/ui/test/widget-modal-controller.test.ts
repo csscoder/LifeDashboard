@@ -5,7 +5,7 @@ import { createDashboardModals } from '../app/widgets/modals'
 import type { ModalOwner } from '@lifedashboard/widget-sdk/host'
 import type { WidgetContext } from '@lifedashboard/contracts/widget-gateway'
 const owner = (id: string): ModalOwner => ({ widgetId: id, runtimeId: id, hash: 'hash', packageId: 'dev.test', version: '1', title: 'Test' })
-const context = { visible: false, frame: 'framed', size: { w: 3, h: 3 }, sizeClass: 's', rootFontSize: 16, contentScale: 1, theme: { id: 'paper', scheme: 'light', tokens: {} }, config: {}, locale: 'en' } as WidgetContext
+const context = { visible: false, frame: 'framed', size: { w: 3, h: 3 }, sizeClass: 's', rootFontSize: 16, contentScale: 1, focus: { phase: 'none', running: false, endsAt: null }, theme: { id: 'paper', scheme: 'light', tokens: {} }, config: {}, locale: 'en' } as WidgetContext
 it('opens from a registered caller and exposes activeModal', async () => {
  const m = createDashboardModals(); m.registerCaller({ owner: owner('w1'), context: () => context, restart: async () => {} })
  await m.open('w1', { view: 'workspace' }); expect(m.activeModal.value?.owner.widgetId).toBe('w1'); m.dispose()
