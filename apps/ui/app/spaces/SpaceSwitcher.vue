@@ -286,18 +286,6 @@ onUnmounted(() => {
     box-shadow var(--ld-duration-base) var(--ld-ease-standard);
 }
 
-.space-switcher__trigger::after {
-  content: '';
-  position: absolute;
-  top: -0.125rem;
-  right: -0.125rem;
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: var(--ld-info);
-  box-shadow: 0 0 0.5rem var(--ld-info);
-}
-
 .space-switcher__trigger:disabled {
   opacity: 0.5;
   cursor: default;
