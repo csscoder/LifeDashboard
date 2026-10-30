@@ -724,13 +724,14 @@ defineExpose({
   box-sizing: border-box;
   container-type: inline-size;
   /* The board reaches under the header and the footer (3.5rem each, both transparent), so the clip edge of
-     its scroll area is the window edge and a widget shadow is not cut off where the header ends. */
+     its scroll area is the window edge and a widget shadow is not cut off where the header ends. The grid
+     keeps the same 1rem from every edge: widgets may sit under the header and footer controls. */
   height: calc(100% + 7rem);
   margin-block: -3.5rem;
   overflow-x: hidden; /* the screen slide starts beyond the padding */
   overflow-y: auto;
   scrollbar-gutter: stable;
-  padding: 4.5rem 1rem;
+  padding: 1rem;
 }
 
 .board__grid {
