@@ -1,11 +1,18 @@
 import * as Vue from 'vue'
-import { describe, expect, it } from 'vitest'
+import * as reka from 'reka-ui'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as variantsModule from '@lifedashboard/contracts/widget-variants'
 import * as board from '@lifedashboard/contracts/board'
 import { SCALE_LIMITS } from '@lifedashboard/contracts/board'
 import { themeModules } from './helpers/theme-picker'
 import * as widgetSettings from '../app/board/widget-settings'
-import { compileSfc, mountComponent } from './helpers/sfc-renderer'
+import { compileSfc, mountComponent, type HostNode } from './helpers/sfc-renderer'
+
+// The custom test renderer has no DOM; Reka only needs the class for instanceof checks, and TabsContent waits a frame.
+beforeEach(() => {
+  vi.stubGlobal('Element', class {})
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callback(0); return 0 })
+})
 
 const GenericForm = Vue.defineComponent({ name: 'GenericForm', setup: () => () => Vue.h('generic-form') })
 const Editor = Vue.defineComponent({
@@ -32,7 +39,7 @@ const component = compileSfc(new URL('../app/board/WidgetSettings.vue', import.m
   '../ui/UiNumberField.vue': control('ui-numberfield'),
   '@lifedashboard/contracts/widget-variants': variantsModule,
   './SettingsRow.vue': Row,
-  'reka-ui': { Separator: control('separator') },
+  'reka-ui': { ...reka, Separator: control('separator') },
   ...Object.fromEntries(['Switch', 'Slider', 'ColorField', 'Button'].map(name => [`../ui/Ui${name}.vue`, control(name === 'Button' ? 'button' : `ui-${name.toLowerCase()}`)])),
 })
 const schema = { type: 'object', properties: { zone: { type: 'string', title: 'Zone', default: 'UTC' } } }
@@ -44,12 +51,33 @@ function mount(editor?: Vue.Component, overrides: Record<string, unknown> = {}) 
   }, ['config', 'change', 'version', 'reset'])
 }
 
+const textOf = (n: HostNode): string => n.text + n.children.map(textOf).join('')
+const tabs = (ui: ReturnType<typeof mount>) => ui.nodes().filter((el) => el.props.role === 'tab')
+// Reka ids a panel by its value: «…-content-display».
+const tabPanel = (ui: ReturnType<typeof mount>, label: string) =>
+  ui.nodes().find((el) => el.props.role === 'tabpanel' && String(el.props.id).endsWith(`-content-${label.toLowerCase()}`))!
+// Reka switches tabs on mousedown; the trigger merges its handlers into an array.
+const press = (tab: HostNode) => [tab.props.onMousedown].flat().forEach((handler) => handler({ button: 0, ctrlKey: false, preventDefault() {} }))
+const inPanel = (node: HostNode | null): boolean => !!node && (node.props.role === 'tabpanel' || inPanel(node.parent))
+
 describe('widget settings panel', () => {
-  it('focuses the theme picker when opened without a package version selector', async () => {
+  it('opens on the Widget tab, then Style, Display and Package, with reset below the tabs', () => {
+    const ui = mount(undefined, { versions: ['1'], appearance: { shadow: board.DEFAULT_SHADOW } })
+    expect(tabs(ui).map(textOf)).toEqual(['Widget', 'Style', 'Display', 'Package'])
+    expect(tabs(ui).map((el) => el.props['aria-selected'])).toEqual(['true', 'false', 'false', 'false'])
+    expect(textOf(tabPanel(ui, 'Widget'))).toBe('')
+    expect(ui.nodes().some((el) => el.tag === 'generic-form' && inPanel(el))).toBe(true)
+    expect(textOf(tabPanel(ui, 'Style'))).toContain('Inherit')
+    for (const label of ['Text size, %', 'Shadow', 'Blur']) expect(textOf(tabPanel(ui, 'Display'))).toContain(label)
+    expect(textOf(tabPanel(ui, 'Package'))).toContain('Apply version')
+    expect(inPanel(ui.button('Reset to defaults'))).toBe(false)
+    expect(tabs(mount()).map(textOf)).toEqual(['Widget', 'Style', 'Display'])
+  })
+  it('focuses the open tab when opened', async () => {
     const ui = mount()
     await Vue.nextTick()
     ui.panel().props.onToggle({ newState: 'open' })
-    expect(ui.button('Inherit').focused).toBe(true)
+    expect(tabs(ui)[0]!.focused).toBe(true)
   })
   it('sets the text size as an integer within SCALE_LIMITS, framed or bare', () => {
     for (const theme of [null, 'bare'] as const) {
@@ -84,28 +112,29 @@ describe('widget settings panel', () => {
     look.props.pick('roman')
     expect(ui.events).toEqual([['change', { ...appearance, variant: 'roman', scale: null }]])
   })
-  it('orders separated blocks and uses themed shadow controls without native inputs', () => {
+  it('uses themed shadow controls without native inputs', () => {
     const ui = mount(undefined, { versions: ['1'], appearance: { shadow: board.DEFAULT_SHADOW } })
-    const text = ui.text()
-    expect(text.indexOf('Package')).toBeLessThan(text.indexOf('Appearance'))
-    expect(text.indexOf('Appearance')).toBeLessThan(text.indexOf('Scale'))
-    expect(text.indexOf('Scale')).toBeLessThan(text.indexOf('Text size, %'))
-    expect(text.indexOf('Text size, %')).toBeLessThan(text.indexOf('Widget'))
-    expect(ui.nodes().filter(el => el.tag === 'separator')).toHaveLength(4)
-    expect(mount().text()).not.toContain('Package')
-    expect(mount().nodes().filter(el => el.tag === 'separator')).toHaveLength(3)
     expect(ui.nodes().filter(el => el.tag === 'input')).toHaveLength(0)
     expect(ui.nodes().filter(el => el.tag === 'ui-switch')).toHaveLength(1)
     expect(ui.nodes().filter(el => el.tag === 'ui-slider')).toHaveLength(3)
     expect(ui.nodes().filter(el => el.tag === 'ui-colorfield')).toHaveLength(1)
   })
-  it('leaves out the Widget block when the widget has no settings', () => {
+  it('leaves out the Widget tab when the widget has no settings and opens on Style', () => {
     for (const empty of [undefined, { type: 'object', properties: {} }]) {
       const ui = mount(undefined, { schema: empty })
-      expect(ui.text()).not.toContain('Widget')
-      expect(ui.nodes().filter(el => el.tag === 'separator')).toHaveLength(2)
+      expect(tabs(ui).map(textOf)).toEqual(['Style', 'Display'])
+      expect(tabs(ui)[0]!.props['aria-selected']).toBe('true')
       expect(ui.button('Reset to defaults')).toBeDefined()
     }
+  })
+  it('opens the next widget on its first tab', async () => {
+    const ui = mount()
+    press(tabs(ui)[2]!)
+    await Vue.nextTick()
+    expect(tabs(ui)[2]!.props['aria-selected']).toBe('true')
+    ui.props.widgetId = 'w2'
+    await Vue.nextTick()
+    expect(tabs(ui)[0]!.props['aria-selected']).toBe('true')
   })
   it('takes the focus of a click on its text, so the board main never gets it and closes the panel', () => {
     const panel = mount().nodes().find((el) => el.props.role === 'dialog')!
@@ -130,7 +159,7 @@ describe('widget settings panel', () => {
   it('shows the widget’s own editor without a schema', () => {
     const ui = mount(Editor, { schema: undefined })
     expect(ui.nodes().some((el) => el.tag === 'own-editor')).toBe(true)
-    expect(ui.text()).toContain('Widget')
+    expect(tabs(ui).map(textOf)[0]).toBe('Widget')
   })
 
   it('picks a palette or no frame while keeping the shadow', async () => {

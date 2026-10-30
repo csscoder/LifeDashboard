@@ -26,6 +26,11 @@ export function scaleFactor(scale: number | null | undefined): number {
   return (100 + (scale ?? 0)) / 100
 }
 
+/** The panel is at most 20 % taller than its widget, and never taller than the viewport minus its margins. */
+export function panelMaxHeight(widgetHeight: number, viewportHeight: number, margin = 8): number {
+  return Math.min(widgetHeight * 1.2, viewportHeight - 2 * margin)
+}
+
 /**
  * Top-left of a fixed panel beside the widget: to its right, else to its left, `margin` inside the viewport.
  * CSS anchor positioning is not in every browser (spec «Decisions»).

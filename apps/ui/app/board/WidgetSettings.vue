@@ -11,9 +11,9 @@ import type { SettingsSchema } from '@lifedashboard/contracts/widget-settings'
 import type { ThemeChoice } from '@lifedashboard/contracts/theme'
 import { BUILTIN_PALETTE_IDS } from '../theme/palettes'
 import ThemePicker from '../theme/ThemePicker.vue'
-import { panelPosition, withScale, withShadow, withStyle, withVariant } from './widget-settings'
+import { panelMaxHeight, panelPosition, withScale, withShadow, withStyle, withVariant } from './widget-settings'
 import { resolveVariant, type WidgetVariants } from '@lifedashboard/contracts/widget-variants'
-import { Separator } from 'reka-ui'
+import { Separator, TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui'
 import SettingsRow from './SettingsRow.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiSwitch from '../ui/UiSwitch.vue'
@@ -60,6 +60,11 @@ const offsets = [
 // A built-in editor needs no schema; the generic form needs at least one setting.
 const hasWidgetBlock = computed(() => Boolean(props.editor || (props.schema && Object.keys(props.schema.properties).length > 0)))
 const versionOptions = computed(() => props.versions.map((item) => ({ value: item, label: item })))
+// The widget's own settings come first and open by default; another widget opens on its first tab again.
+const firstTab = () => (hasWidgetBlock.value ? 'widget' : 'style')
+const tab = ref(firstTab())
+watch(() => props.widgetId, () => { tab.value = firstTab() })
+watch(hasWidgetBlock, (has) => { if (!has && tab.value === 'widget') tab.value = 'style' })
 
 function isOpen(): boolean {
   return panel.value?.matches(':popover-open') ?? false
@@ -69,6 +74,8 @@ function isOpen(): boolean {
 function open(anchor: Element) {
   const el = panel.value
   if (!el) return
+  // The height limit comes first: the position is measured from the limited size.
+  el.style.setProperty('--panel-max-height', `${panelMaxHeight(anchor.getBoundingClientRect().height, window.innerHeight)}px`)
   if (!isOpen()) el.showPopover()
   const { left, top } = panelPosition(anchor.getBoundingClientRect(), el.getBoundingClientRect(), {
     width: window.innerWidth,
@@ -123,58 +130,62 @@ defineExpose({ open, close, isOpen })
     @focusout="onFocusOut"
   >
     <div class="settings__scroll">
-    <template v-if="versions.length > 0">
-      <h2 class="settings__heading">Package</h2>
-      <SettingsRow label="Version"><UiSelect v-model="selectedVersion" :options="versionOptions" /></SettingsRow>
-      <UiButton :disabled="selectedVersion === version" @click="emit('version', selectedVersion)">Apply version</UiButton>
-      <p class="settings__version-hint">Changing the version keeps the board changes and the widget data. Secrets whose binding changed must be set again.</p>
-      <Separator class="settings__separator" />
-    </template>
-    <h2 class="settings__heading">Appearance</h2>
-    <SettingsRow class="settings__theme" label="Style" :native-label="false">
-      <ThemePicker :model-value="appearance?.theme ?? null" inherit bare :inherited="inherited"
-        :unavailable="!!appearance?.theme && appearance.theme !== 'bare' && !BUILTIN_PALETTE_IDS.has(appearance.theme.palette)"
-        @update:model-value="setStyle" />
-    </SettingsRow>
-    <SettingsRow v-if="variants" label="Look">
-      <UiSelect :model-value="resolveVariant(variants, appearance?.variant)" :options="variants.items.map(item => ({ value: item.id, label: item.title }))" @update:model-value="emit('change', withVariant(appearance, $event))" />
-    </SettingsRow>
-    <SettingsRow label="Shadow"><UiSwitch :model-value="shadow !== null" @update:model-value="setShadowOn" /></SettingsRow>
-    <template v-if="shadow">
-      <SettingsRow v-for="item in offsets" :native-label="false" :key="item.key" :label="item.label" :value="`${shadow[item.key]} px`">
-        <UiSlider :aria-label="item.label" :model-value="shadow[item.key]" :min="item.limits[0]" :max="item.limits[1]" @update:model-value="setShadow(item.key, $event)" />
-      </SettingsRow>
-      <SettingsRow label="Color">
-        <UiColorField :model-value="shadow.color" :alpha="shadow.opacity" @update:model-value="setShadow('color', $event)" @update:alpha="setShadow('opacity', $event)" />
-      </SettingsRow>
-    </template>
-    <Separator class="settings__separator" />
-    <h2 class="settings__heading">Scale</h2>
-    <SettingsRow label="Text size, %">
-      <UiNumberField integer stepper :min="SCALE_LIMITS[0]" :max="SCALE_LIMITS[1]" :model-value="appearance?.scale ?? 0"
-        @update:model-value="emit('change', withScale(appearance, $event))" />
-    </SettingsRow>
-    <template v-if="hasWidgetBlock">
-      <Separator class="settings__separator" />
-      <h2 class="settings__heading">Widget</h2>
-      <component
-        :is="editor"
-        v-if="editor"
-        :key="`editor:${widgetId ?? 'unsaved'}`"
-        :schema="schema"
-        :config="config"
-        @change="emit('config', $event)"
-      />
-      <WidgetConfigForm
-        v-else
-        :key="widgetId ?? 'unsaved'"
-        :schema="schema!"
-        :config="config"
-        :widget-id="widgetId"
-        :secrets="secrets"
-        @change="emit('config', $event)"
-      />
-    </template>
+    <!-- Both kinds of panels stay mounted (hidden), so an open colour picker or form keeps its state across tabs. -->
+    <TabsRoot v-model="tab" class="settings__tabs" :unmount-on-hide="false">
+      <TabsList class="settings__tab-list" aria-label="Widget settings sections">
+        <TabsTrigger v-if="hasWidgetBlock" value="widget" class="settings__tab">Widget</TabsTrigger>
+        <TabsTrigger value="style" class="settings__tab">Style</TabsTrigger>
+        <TabsTrigger value="display" class="settings__tab">Display</TabsTrigger>
+        <TabsTrigger v-if="versions.length > 0" value="package" class="settings__tab">Package</TabsTrigger>
+      </TabsList>
+      <TabsContent v-if="hasWidgetBlock" value="widget" class="settings__panel">
+        <component
+          :is="editor"
+          v-if="editor"
+          :key="`editor:${widgetId ?? 'unsaved'}`"
+          :schema="schema"
+          :config="config"
+          @change="emit('config', $event)"
+        />
+        <WidgetConfigForm
+          v-else
+          :key="widgetId ?? 'unsaved'"
+          :schema="schema!"
+          :config="config"
+          :widget-id="widgetId"
+          :secrets="secrets"
+          @change="emit('config', $event)"
+        />
+      </TabsContent>
+      <TabsContent value="style" class="settings__panel">
+        <ThemePicker :model-value="appearance?.theme ?? null" inherit bare :inherited="inherited"
+          :unavailable="!!appearance?.theme && appearance.theme !== 'bare' && !BUILTIN_PALETTE_IDS.has(appearance.theme.palette)"
+          @update:model-value="setStyle" />
+      </TabsContent>
+      <TabsContent value="display" class="settings__panel">
+        <SettingsRow v-if="variants" label="Look">
+          <UiSelect :model-value="resolveVariant(variants, appearance?.variant)" :options="variants.items.map(item => ({ value: item.id, label: item.title }))" @update:model-value="emit('change', withVariant(appearance, $event))" />
+        </SettingsRow>
+        <SettingsRow label="Text size, %">
+          <UiNumberField integer stepper :min="SCALE_LIMITS[0]" :max="SCALE_LIMITS[1]" :model-value="appearance?.scale ?? 0"
+            @update:model-value="emit('change', withScale(appearance, $event))" />
+        </SettingsRow>
+        <SettingsRow label="Shadow"><UiSwitch :model-value="shadow !== null" @update:model-value="setShadowOn" /></SettingsRow>
+        <template v-if="shadow">
+          <SettingsRow v-for="item in offsets" :native-label="false" :key="item.key" :label="item.label" :value="`${shadow[item.key]} px`">
+            <UiSlider :aria-label="item.label" :model-value="shadow[item.key]" :min="item.limits[0]" :max="item.limits[1]" @update:model-value="setShadow(item.key, $event)" />
+          </SettingsRow>
+          <SettingsRow label="Color">
+            <UiColorField :model-value="shadow.color" :alpha="shadow.opacity" @update:model-value="setShadow('color', $event)" @update:alpha="setShadow('opacity', $event)" />
+          </SettingsRow>
+        </template>
+      </TabsContent>
+      <TabsContent v-if="versions.length > 0" value="package" class="settings__panel">
+        <SettingsRow label="Version"><UiSelect v-model="selectedVersion" :options="versionOptions" /></SettingsRow>
+        <UiButton :disabled="selectedVersion === version" @click="emit('version', selectedVersion)">Apply version</UiButton>
+        <p class="settings__version-hint">Changing the version keeps the board changes and the widget data. Secrets whose binding changed must be set again.</p>
+      </TabsContent>
+    </TabsRoot>
     <Separator class="settings__separator" />
     <div class="settings__footer"><UiButton @click="emit('reset')">Reset to defaults</UiButton></div>
     </div>
@@ -188,6 +199,7 @@ defineExpose({ open, close, isOpen })
   position: fixed;
   inset: auto;
   margin: 0;
+  padding: 0; /* the UA pads a popover; the scroller has its own padding */
   width: 21rem;
   max-width: calc(100vw - 1.5rem);
   border: var(--ld-border-width) solid var(--ld-border-default);
@@ -212,7 +224,7 @@ defineExpose({ open, close, isOpen })
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  max-height: calc(100dvh - 2rem);
+  max-height: calc(var(--panel-max-height, calc(100dvh - 2rem)) - 2 * var(--ld-border-width)); /* inside the panel border */
   overflow-y: auto;
   padding: 0.625rem 0.75rem;
   border-radius: inherit;
@@ -220,8 +232,13 @@ defineExpose({ open, close, isOpen })
 
 .settings__scroll > * { flex: none; }
 
-.settings__theme { grid-template-columns: minmax(0, 1fr); }
-.settings__heading { margin: 0; font: inherit; font-weight: 600; }
+.settings__tab-list { display: flex; gap: 0.25rem; margin-bottom: 0.375rem; padding: 0.1875rem; border-radius: var(--ld-radius-control); background: var(--ld-state-hover); }
+.settings__tab { flex: 1; min-width: 0; min-height: 1.75rem; padding: 0.25rem 0.5rem; border: 0; border-radius: calc(var(--ld-radius-control) - 0.1875rem); background: transparent; color: var(--ld-text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
+.settings__tab:hover { color: var(--ld-text-primary); }
+.settings__tab[data-state='active'] { background: var(--ld-surface-3); color: var(--ld-text-primary); box-shadow: var(--ld-shadow-raised, none); }
+.settings__tab:focus-visible { outline: 0.125rem solid var(--ld-focus-ring); outline-offset: 0.125rem; }
+.settings__panel { display: flex; flex-direction: column; gap: 0.375rem; }
+.settings__panel[hidden] { display: none; }
 .settings__version-hint { margin: 0; font-size: 0.75rem; line-height: 1rem; color: var(--ld-text-secondary); }
 .settings__separator { height: var(--ld-border-width); background: var(--ld-border-default); margin: 0.5rem 0; }
 .settings__footer { display: flex; }

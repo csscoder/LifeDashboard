@@ -1,6 +1,6 @@
 import { DEFAULT_SHADOW } from '@lifedashboard/contracts/board'
 import { describe, expect, it } from 'vitest'
-import { panelPosition, scaleFactor, withScale, withShadow, withStyle, withVariant } from '../app/board/widget-settings'
+import { panelMaxHeight, panelPosition, scaleFactor, withScale, withShadow, withStyle, withVariant } from '../app/board/widget-settings'
 
 const UNKNOWN = { palette: 'builtin:nord', mode: 'dark', style: 'solid' } as const
 
@@ -88,5 +88,14 @@ describe('withVariant', () => {
     expect(withVariant(appearance, null)).toEqual({ ...appearance, variant: null, scale: null })
     expect(withStyle(appearance, { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' })).toEqual({ ...appearance, theme: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' } })
     expect(withShadow(appearance, null)).toEqual({ ...appearance, shadow: null })
+  })
+})
+
+describe('panelMaxHeight', () => {
+  it('lets the panel grow at most 20 % taller than the widget', () => {
+    expect(panelMaxHeight(400, 900)).toBe(480)
+  })
+  it('never goes past the viewport margins', () => {
+    expect(panelMaxHeight(800, 900)).toBe(884)
   })
 })
