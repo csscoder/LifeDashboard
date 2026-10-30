@@ -1,12 +1,23 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
-import { BACKGROUND_PATTERN_SIZES, defaultBackground, type ScreenBackground } from '@lifedashboard/contracts/board'
+import { computed, onUnmounted, ref, useId, watch } from 'vue'
+import { TabsContent } from 'reka-ui'
+import { BACKGROUND_PATTERN_SIZES, defaultBackground, defaultYouTubeBackground, type ScreenBackground } from '@lifedashboard/contracts/board'
 import { discardMedia, importMedia, mediaInfo } from './media-api'
 import { probeMedia } from './import-media'
+import { parseYouTubeUrl } from './youtube'
+import UiSelect from '../ui/UiSelect.vue'
+
+const QUALITY_OPTIONS = [{ value: 'auto', label: 'Auto' }, { value: '1080', label: '1080p' }, { value: '720', label: '720p' }]
+const SHAPE_OPTIONS = [
+  { value: 'diagonal', label: 'Diagonal' }, { value: 'circles', label: 'Circles' }, { value: 'squares', label: 'Squares' },
+  { value: 'triangles', label: 'Triangles' }, { value: 'diamonds', label: 'Diamonds' }, { value: 'crosses', label: 'Crosses' },
+]
 
 const props = defineProps<{ background: ScreenBackground | null; disabled: boolean }>()
 const emit = defineEmits<{ change: [background: ScreenBackground | null] }>()
+const id = useId()
 const filename = ref('')
+const youtubeId = computed(() => props.background?.kind === 'youtube' ? props.background.videoId : null)
 const phase = ref<'checking' | 'uploading' | null>(null)
 const error = ref('')
 const patternScale = computed(() => Math.max(1, Math.round(props.background?.pattern.scale ?? 1)))
@@ -25,12 +36,17 @@ watch(() => props.background?.pattern.shape, shape => {
   if (shape && shape !== 'none') lastPatternShape = shape
 }, { immediate: true, flush: 'sync' })
 
-watch(() => props.background?.mediaId, async id => {
+watch(() => {
+  const background = props.background
+  return background && 'mediaId' in background ? background.mediaId : undefined
+}, async id => {
   const ticket = ++metadataGeneration
   filename.value = ''
   if (!id) return
   const result = await mediaInfo(id)
-  if (!active || ticket !== metadataGeneration || props.background?.mediaId !== id) return
+  const current = props.background
+  const stillReferenced = current && 'mediaId' in current ? current.mediaId : undefined
+  if (!active || ticket !== metadataGeneration || stillReferenced !== id) return
   if (result.ok) filename.value = result.data.name
   else error.value = 'Could not read the background details. The file may be unavailable.'
 }, { immediate: true })
@@ -90,6 +106,31 @@ function remove() {
   error.value = ''
   emit('change', null)
 }
+function applyYouTube(event: Event) {
+  if (props.disabled) return
+  const input = event.target as HTMLInputElement
+  if (!input.value.trim()) {
+    error.value = ''
+    return
+  }
+  const videoId = parseYouTubeUrl(input.value)
+  if (!videoId) {
+    error.value = 'Could not read the YouTube link. Paste a youtube.com or youtu.be video address.'
+    return
+  }
+  input.value = ''
+  cancel()
+  metadataGeneration++
+  filename.value = ''
+  error.value = ''
+  emit('change', defaultYouTubeBackground(videoId))
+}
+function setQuality(value: string) {
+  const current = props.background
+  if (props.disabled || current?.kind !== 'youtube') return
+  const { quality: _previous, ...auto } = current
+  emit('change', value === '720' || value === '1080' ? { ...auto, quality: value } : auto)
+}
 function set(field: 'opacity' | 'dim', event: Event) {
   if (!props.disabled && props.background)
     emit('change', { ...props.background, [field]: Number((event.target as HTMLInputElement).value) / 100 })
@@ -103,7 +144,11 @@ function togglePattern(event: Event) {
     pattern: { ...props.background.pattern, shape: (event.target as HTMLInputElement).checked ? lastPatternShape : 'none' },
   })
 }
-function pattern(field: keyof ScreenBackground['pattern'], event: Event) {
+function setShape(shape: string) {
+  if (!props.disabled && props.background)
+    emit('change', { ...props.background, pattern: { ...props.background.pattern, shape: shape as ScreenBackground['pattern']['shape'] } })
+}
+function pattern(field: Exclude<keyof ScreenBackground['pattern'], 'shape'>, event: Event) {
   if (props.disabled || !props.background) return
   const raw = (event.target as HTMLInputElement).value
   const value = field === 'opacity' ? Number(raw) / 100 : field === 'scale' ? Number(raw) : raw
@@ -112,70 +157,73 @@ function pattern(field: keyof ScreenBackground['pattern'], event: Event) {
 </script>
 
 <template>
-  <section class="background-editor" aria-label="Screen background">
-    <h4>Screen background</h4>
+  <TabsContent value="background" class="background-editor">
     <label class="background-editor__field">
       {{ background ? 'Replace background' : 'Add background' }}
       <input aria-label="Background file" type="file" accept="video/*,image/png,image/jpeg,image/webp,image/avif,.mp4,.m4v,.mov,.webm,.png,.jpg,.jpeg,.webp,.avif" :disabled="disabled" @change="choose">
     </label>
     <p v-if="filename" class="background-editor__filename" :title="filename">{{ filename }}</p>
+    <p v-if="youtubeId" class="background-editor__filename">YouTube · {{ youtubeId }}</p>
+    <label class="background-editor__field">
+      {{ youtubeId ? 'Replace YouTube link' : 'YouTube background' }}
+      <input aria-label="YouTube link" type="url" placeholder="https://www.youtube.com/watch?v=…" :disabled="disabled" @change="applyYouTube">
+    </label>
     <p v-if="phase" role="status" aria-live="polite" class="background-editor__hint">{{ phase === 'checking' ? 'Checking the file…' : 'Importing the background…' }}</p>
     <button v-if="phase" type="button" :disabled="disabled" @click="cancel">Cancel import</button>
     <p v-if="error" role="alert" class="background-editor__error">{{ error }}</p>
-    <p class="background-editor__hint">Video: MP4, M4V, MOV, WebM. Images: PNG, JPEG, WebP, AVIF. A copy is kept in the app. Video plays muted.</p>
+    <p class="background-editor__hint">Video: MP4, M4V, MOV, WebM. Images: PNG, JPEG, WebP, AVIF. A copy is kept in the app. Video plays muted. YouTube plays muted and looped; the desktop app presses Skip when it appears.</p>
     <template v-if="background">
+      <div v-if="background.kind === 'youtube'" class="background-editor__field">
+        <label :for="`${id}-quality`">Video quality</label>
+        <UiSelect :id="`${id}-quality`" aria-label="Video quality" :model-value="background.quality ?? 'auto'" :options="QUALITY_OPTIONS" :disabled="disabled" @update:model-value="setQuality" />
+      </div>
       <label class="background-editor__field">
         <span>{{ background.kind === 'image' ? 'Image opacity' : 'Video opacity' }} <output>{{ Math.round(background.opacity * 100) }}%</output></span>
         <input :aria-label="background.kind === 'image' ? 'Image opacity' : 'Video opacity'" type="range" min="0" max="100" step="1" :value="background.opacity * 100" :disabled="disabled" @input="set('opacity', $event)">
       </label>
-      <label class="background-editor__field">
-        <span>Dimming <output>{{ Math.round(background.dim * 100) }}%</output></span>
-        <input aria-label="Dimming" type="range" min="0" max="100" step="1" :value="background.dim * 100" :disabled="disabled" @input="set('dim', $event)">
-      </label>
-      <label class="background-editor__toggle">
-        <input aria-label="Pattern over the background" type="checkbox" :checked="background.pattern.shape !== 'none'" :disabled="disabled" @change="togglePattern">
-        Pattern over the background
-      </label>
-      <template v-if="background.pattern.shape !== 'none'">
-        <label class="background-editor__field">
-          Pattern shape
-          <select aria-label="Pattern shape" :value="background.pattern.shape" :disabled="disabled" @change="pattern('shape', $event)">
-            <option value="diagonal">Diagonal</option>
-            <option value="circles">Circles</option>
-            <option value="squares">Squares</option>
-            <option value="triangles">Triangles</option>
-            <option value="diamonds">Diamonds</option>
-            <option value="crosses">Crosses</option>
-          </select>
-        </label>
-        <label class="background-editor__color">
-          Pattern color
-          <input aria-label="Pattern color" type="color" :value="background.pattern.color" :disabled="disabled" @input="pattern('color', $event)">
-        </label>
-        <label class="background-editor__field">
-          <span>Pattern opacity <output>{{ Math.round(background.pattern.opacity * 100) }}%</output></span>
-          <input aria-label="Pattern opacity" type="range" min="0" max="100" step="1" :value="background.pattern.opacity * 100" :disabled="disabled" @input="pattern('opacity', $event)">
-        </label>
-        <label class="background-editor__field">
-          <span>Pattern scale <output>{{ patternSize }}</output></span>
-          <input aria-label="Pattern scale" type="range" min="1" max="4" step="1" :value="patternScale" :disabled="disabled" @input="pattern('scale', $event)">
-        </label>
-      </template>
       <button type="button" :disabled="disabled" @click="remove">Remove background</button>
     </template>
-  </section>
+  </TabsContent>
+  <TabsContent v-if="background" value="overlay" class="background-editor">
+    <label class="background-editor__field">
+      <span>Dimming <output>{{ Math.round(background.dim * 100) }}%</output></span>
+      <input aria-label="Dimming" type="range" min="0" max="100" step="1" :value="background.dim * 100" :disabled="disabled" @input="set('dim', $event)">
+    </label>
+    <label class="background-editor__toggle">
+      <input aria-label="Pattern over the background" type="checkbox" :checked="background.pattern.shape !== 'none'" :disabled="disabled" @change="togglePattern">
+      Pattern over the background
+    </label>
+    <template v-if="background.pattern.shape !== 'none'">
+      <div class="background-editor__field">
+        <label :for="`${id}-shape`">Pattern shape</label>
+        <UiSelect :id="`${id}-shape`" aria-label="Pattern shape" :model-value="background.pattern.shape" :options="SHAPE_OPTIONS" :disabled="disabled" @update:model-value="setShape" />
+      </div>
+      <label class="background-editor__color">
+        Pattern color
+        <input aria-label="Pattern color" type="color" :value="background.pattern.color" :disabled="disabled" @input="pattern('color', $event)">
+      </label>
+      <label class="background-editor__field">
+        <span>Pattern opacity <output>{{ Math.round(background.pattern.opacity * 100) }}%</output></span>
+        <input aria-label="Pattern opacity" type="range" min="0" max="100" step="1" :value="background.pattern.opacity * 100" :disabled="disabled" @input="pattern('opacity', $event)">
+      </label>
+      <label class="background-editor__field">
+        <span>Pattern scale <output>{{ patternSize }}</output></span>
+        <input aria-label="Pattern scale" type="range" min="1" max="4" step="1" :value="patternScale" :disabled="disabled" @input="pattern('scale', $event)">
+      </label>
+    </template>
+  </TabsContent>
 </template>
 
 <style scoped>
-.background-editor { display: grid; gap: 0.625rem; margin-top: 0.875rem; padding-top: 0.875rem; border-top: var(--ld-border-width) solid var(--ld-border-default); }
-h4, p { margin: 0; }
-h4 { font-size: inherit; color: var(--ld-text-primary); }
+.background-editor { display: grid; gap: 0.625rem; }
+.background-editor[hidden] { display: none; }
+p { margin: 0; }
 .background-editor__field { display: grid; gap: 0.375rem; color: var(--ld-text-muted); min-width: 0; }
 .background-editor__field > span, .background-editor__color { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 output { color: var(--ld-text-secondary); font-variant-numeric: tabular-nums; }
-input, select, button { min-width: 0; max-width: 100%; font: inherit; }
+input, button { min-width: 0; max-width: 100%; font: inherit; }
 input[type='file'] { width: 100%; font-size: 0.75rem; }
-input[type='file']::file-selector-button, select, button { padding: 0.5rem; border: var(--ld-border-width) solid var(--ld-border-default); border-radius: var(--ld-radius-control); background: var(--ld-surface-3); color: var(--ld-text-primary); cursor: pointer; }
+input[type='file']::file-selector-button, button { padding: 0.5rem; border: var(--ld-border-width) solid var(--ld-border-default); border-radius: var(--ld-radius-control); background: var(--ld-surface-3); color: var(--ld-text-primary); cursor: pointer; }
 input[type='range'] { width: 100%; margin: 0; accent-color: var(--ld-accent); }
 input[type='color'] { width: 3rem; height: 2rem; padding: 0.125rem; border: var(--ld-border-width) solid var(--ld-border-default); border-radius: var(--ld-radius-control); background: var(--ld-surface-3); cursor: pointer; }
 .background-editor__color { color: var(--ld-text-muted); }

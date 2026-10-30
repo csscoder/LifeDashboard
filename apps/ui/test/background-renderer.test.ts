@@ -285,6 +285,31 @@ describe('screen media renderer', () => {
     renderer.destroy()
   })
 
+  it('draws only the overlays for youtube, then hands the canvas over to file media', async () => {
+    const { renderer, app, errors } = await mount()
+    const images = ImageResource.all.length
+    await renderer.setBackground({ videoId: 'dQw4w9WgXcQ', kind: 'youtube', opacity: .8, dim: .3, pattern: { shape: 'squares', color: '#112233', opacity: .5, scale: 2 } })
+    const [, dim, pattern] = app.stage.children
+    expect(app.canvas.hidden).toBe(false)
+    expect([dim.alpha, pattern.alpha, pattern.visible, pattern.tint]).toEqual([.3, .5, true, '#112233'])
+    expect(app.renders).toBeGreaterThan(0)
+    expect([Video.all.length, ImageResource.all.length]).toEqual([0, images])
+    expect(errors).toEqual([null])
+    await load(renderer)
+    expect(Video.all[0]!.src).toContain('/api/v1/background-media/')
+    expect(app.canvas.hidden).toBe(false)
+    renderer.destroy()
+  })
+
+  it('reports lost overlays, not a broken file, when the canvas fails over youtube', async () => {
+    const { renderer, app, errors } = await mount()
+    await renderer.setBackground({ videoId: 'dQw4w9WgXcQ', kind: 'youtube', opacity: 1, dim: .3, pattern: { shape: 'none', color: '#000000', opacity: .25, scale: 1 } })
+    app.canvas.dispatchEvent(new Event('webglcontextlost'))
+    expect(app.canvas.hidden).toBe(true)
+    expect(errors.at(-1)).toBe('Could not draw the dimming and pattern over the YouTube video.')
+    renderer.destroy()
+  })
+
   it('renders on decoded frames and resizing without a constant render loop', async () => {
     const { renderer, app } = await mount(); await load(renderer)
     const video = Video.all[0]!, before = app.renders

@@ -219,7 +219,7 @@ export function registerBackgroundMedia(app: FastifyInstance, { db, dataDir, now
   })
   return {
     validate(screens) {
-      for (const screen of screens) if (screen.background) {
+      for (const screen of screens) if (screen.background && screen.background.kind !== 'youtube') {
         let row: MediaRow
         try { row = find(screen.background.mediaId) } catch { throw new ApiError('VALIDATION_ERROR', 'Background video is not imported') }
         if ((row.mime.startsWith('image/') ? 'image' : 'video') !== screen.background.kind) throw new ApiError('VALIDATION_ERROR', 'Background media kind does not match its MIME')
@@ -228,7 +228,7 @@ export function registerBackgroundMedia(app: FastifyInstance, { db, dataDir, now
       }
     },
     commit(screens) {
-      for (const screen of screens) if (screen.background) db.prepare('UPDATE background_media SET committed = 1 WHERE id = ?').run(screen.background.mediaId)
+      for (const screen of screens) if (screen.background && screen.background.kind !== 'youtube') db.prepare('UPDATE background_media SET committed = 1 WHERE id = ?').run(screen.background.mediaId)
     },
     cleanup,
   }

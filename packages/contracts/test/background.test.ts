@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultBackground, parseScreenBoard } from '../src/board.ts'
+import { defaultBackground, defaultYouTubeBackground, parseScreenBoard } from '../src/board.ts'
 import * as board from '../src/board.ts'
 const id = '00000000-0000-4000-8000-000000000001'
 const background = { mediaId: id, kind: 'video', opacity: 1, dim: .35, pattern: { shape: 'circles', color: '#000000', opacity: .25, scale: 1 } }
@@ -28,6 +28,31 @@ describe('screen backgrounds', () => {
     expect(defaultBackground(id)).toEqual({ ...background, pattern: { ...background.pattern, shape: 'diagonal' } })
     expect(defaultBackground(id, 'image')).toEqual({ ...background, kind: 'image', pattern: { ...background.pattern, shape: 'diagonal' } })
     expect(parseScreenBoard({ ...screen, background: { ...background, kind: 'image' } }).ok).toBe(true)
+  })
+
+  const youtube = { videoId: 'dQw4w9WgXcQ', kind: 'youtube', opacity: 1, dim: .35, pattern: { shape: 'circles', color: '#000000', opacity: .25, scale: 1 } }
+  it('accepts a youtube background with an eleven-character video id', () => {
+    const parsed = parseScreenBoard({ ...screen, background: youtube })
+    expect(parsed).toEqual({ ok: true, value: { ...screen, background: youtube } })
+    if (parsed.ok) expect(Object.keys(parsed.value.background!)).toEqual(['videoId', 'kind', 'opacity', 'dim', 'pattern'])
+  })
+  it.each([
+    { ...youtube, videoId: 'short' }, { ...youtube, videoId: 'dQw4w9WgXcQextra' }, { ...youtube, videoId: 'bad chars!!' },
+    { ...youtube, videoId: id }, { ...youtube, mediaId: id }, { ...youtube, videoId: undefined },
+    { ...youtube, quality: '480' }, { ...youtube, quality: 720 }, { ...youtube, quality: null },
+  ])('rejects invalid youtube background %j', (invalid) => expect(parseScreenBoard({ ...screen, background: invalid }).ok).toBe(false))
+  it.each(['720', '1080'])('keeps youtube quality %s as the last key, the order the editor writes', (quality) => {
+    const parsed = parseScreenBoard({ ...screen, background: { quality, ...youtube } })
+    if (!parsed.ok) throw new Error('expected a valid board')
+    expect(parsed.value.background).toEqual({ ...youtube, quality })
+    expect(Object.keys(parsed.value.background!).at(-1)).toBe('quality')
+  })
+  it('does not accept a quality on file backgrounds', () => {
+    const parsed = parseScreenBoard({ ...screen, background: { ...background, quality: '720' } })
+    expect(parsed).toEqual({ ok: true, value: { ...screen, background } })
+  })
+  it('creates youtube defaults sharing the media default style', () => {
+    expect(defaultYouTubeBackground('dQw4w9WgXcQ')).toEqual({ videoId: 'dQw4w9WgXcQ', kind: 'youtube', opacity: 1, dim: 0.35, pattern: { shape: 'diagonal', color: '#000000', opacity: 0.25, scale: 1 } })
   })
 
   it.each(['none', 'diagonal', 'squares', 'crosses', 'circles', 'triangles', 'diamonds'])('accepts %s with legacy scale values', (shape) => {

@@ -20,6 +20,20 @@ const STOP_TIMEOUT: Duration = Duration::from_secs(5);
 const LOG_TAIL: usize = 20;
 // Separate from the dev data directory (spec 2026-10-11 «Decisions»).
 const DATA_DIR_NAME: &str = "LifeDashboard Desktop";
+// Runs inside every youtube.com embed frame and presses the player's own Skip button
+// once it becomes available; unskippable ads still play (muted). YouTube selector
+// names are not part of any stable API and may need updates over time.
+const AD_SKIP_SCRIPT: &str = r#"(function () {
+  if (!/(^|\.)youtube(-nocookie)?\.com$/.test(location.hostname)) return
+  setInterval(function () {
+    if (document.hidden) return
+    var enabled = function (element) { return element && element.offsetParent !== null && element.getAttribute('aria-disabled') !== 'true' }
+    var skip = document.querySelector('.ytp-ad-skip-button-modern, .ytp-ad-skip-button, .ytp-skip-ad-button')
+    if (enabled(skip)) skip.click()
+    var overlay = document.querySelector('.ytp-ad-overlay-close-button')
+    if (enabled(overlay)) overlay.click()
+  }, 1000)
+})()"#;
 
 enum ApiEvent {
     Ready,
@@ -189,6 +203,8 @@ fn open_window(app: &AppHandle, origin: &str) -> Result<(), Box<dyn std::error::
         .title_bar_style(TitleBarStyle::Overlay)
         .hidden_title(true)
         .initialization_script("document.documentElement.setAttribute('data-desktop', 'macos')")
+        // The all-frames variant is what reaches the cross-origin YouTube embed iframe.
+        .initialization_script_for_all_frames(AD_SKIP_SCRIPT)
         // HTML5 folder drops must reach PackagesDialog.vue, not Tauri's file-drop handler.
         .disable_drag_drop_handler()
         .build()?;

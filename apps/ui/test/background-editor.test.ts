@@ -1,14 +1,23 @@
-import { nextTick } from 'vue'
+import { defineComponent, h, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as board from '@lifedashboard/contracts/board'
 import * as mediaApi from '../app/background/media-api'
 import { probeMedia } from '../app/background/import-media'
+import * as youtube from '../app/background/youtube'
 import { compileSfc, mountComponent, unmountComponents } from './helpers/sfc-renderer'
 
 const component = compileSfc(new URL('../app/background/BackgroundEditor.vue', import.meta.url), {
   '@lifedashboard/contracts/board': board,
   './media-api': mediaApi,
   './import-media': { probeMedia },
+  './youtube': youtube,
+  // The two panels belong to the tabs of ScreenDots; here both render flat.
+  'reka-ui': { TabsContent: defineComponent({ setup: (_, { slots }) => () => slots.default?.() }) },
+  '../ui/UiSelect.vue': defineComponent({
+    props: { modelValue: String, options: Array, disabled: Boolean },
+    emits: ['update:modelValue'],
+    setup: (props, { attrs, emit }) => () => h('ui-select', { ...attrs, ...props, pick: (value: string) => emit('update:modelValue', value) }),
+  }),
 })
 const old = { mediaId: 'old', kind: 'video', opacity: 0.8, dim: 0.35, pattern: { shape: 'circles', color: '#000000', opacity: 0.25, scale: 1 } }
 class Video extends EventTarget {
@@ -51,7 +60,7 @@ describe('screen background editor', () => {
     control(ui, 'Video opacity').props.onInput({ target: { value: '0' } })
     control(ui, 'Pattern opacity').props.onInput({ target: { value: '100' } })
     control(ui, 'Dimming').props.onInput({ target: { value: '100' } })
-    control(ui, 'Pattern shape').props.onChange({ target: { value: 'crosses' } })
+    control(ui, 'Pattern shape').props.pick('crosses')
     control(ui, 'Pattern color').props.onInput({ target: { value: '#ff0000' } })
     control(ui, 'Pattern scale').props.onInput({ target: { value: '4' } })
     expect(ui.events).toEqual([
@@ -83,8 +92,8 @@ describe('screen background editor', () => {
   })
   it.each([['diagonal', 'Diagonal'], ['triangles', 'Triangles']])('offers %s and preserves independent settings when selected', async (shape, label) => {
     const ui = mount(); await settle()
-    expect(ui.nodes().some(node => node.tag === 'option' && node.props.value === shape && node.text === label)).toBe(true)
-    control(ui, 'Pattern shape').props.onChange({ target: { value: shape } })
+    expect(control(ui, 'Pattern shape').props.options).toContainEqual({ value: shape, label })
+    control(ui, 'Pattern shape').props.pick(shape)
     expect(ui.events.at(-1)).toEqual(['change', { ...old, pattern: { ...old.pattern, shape } }])
   })
   it('toggles the micro grid and restores its shape without changing color, opacity, cell size or video settings', async () => {
@@ -200,5 +209,52 @@ describe('screen background editor', () => {
     finish(response(media('old', 'stale.mp4'))); await settle()
     expect(ui.text()).not.toContain('stale.mp4')
     expect(ui.text()).toContain('new.mp4')
+  })
+  it('applies a valid youtube link as a youtube background', async () => {
+    const ui = mount(); await settle()
+    control(ui, 'YouTube link').props.onChange({ target: { value: 'https://youtu.be/dQw4w9WgXcQ?si=x' } })
+    expect(ui.events).toEqual([['change', { videoId: 'dQw4w9WgXcQ', kind: 'youtube', opacity: 1, dim: 0.35, pattern: { shape: 'diagonal', color: '#000000', opacity: 0.25, scale: 1 } }]])
+    ui.props.background = ui.events.at(-1)![1]; await nextTick()
+    expect(ui.text()).toContain('dQw4w9WgXcQ')
+  })
+  it('clears the link field once the link is applied', async () => {
+    const ui = mount(); await settle()
+    const target = { value: 'https://youtu.be/dQw4w9WgXcQ' }
+    control(ui, 'YouTube link').props.onChange({ target })
+    expect(target.value).toBe('')
+  })
+  it('rejects a non-youtube link without emitting and keeps it for correction', async () => {
+    const ui = mount(); await settle()
+    const target = { value: 'https://vimeo.com/123' }
+    control(ui, 'YouTube link').props.onChange({ target })
+    expect(ui.events).toEqual([])
+    expect(target.value).toBe('https://vimeo.com/123')
+    await settle()
+    expect(ui.text()).toContain('Could not read the YouTube link')
+    expect(ui.text()).toContain('old.mp4')
+    control(ui, 'YouTube link').props.onChange({ target: { value: '  ' } })
+    await settle()
+    expect(ui.text()).not.toContain('Could not read the YouTube link')
+    expect(ui.events).toEqual([])
+  })
+  it('offers video quality for youtube only and stores auto as no quality', async () => {
+    const youtube = { videoId: 'dQw4w9WgXcQ', kind: 'youtube', opacity: 1, dim: .35, pattern: { shape: 'circles', color: '#000000', opacity: .25, scale: 1 } }
+    expect(control(mount(), 'Video quality')).toBeUndefined()
+    const ui = mount(youtube); await settle()
+    expect(control(ui, 'Video quality').props.modelValue).toBe('auto')
+    control(ui, 'Video quality').props.pick('720')
+    expect(ui.events.at(-1)?.[1]).toEqual({ ...youtube, quality: '720' })
+    ui.props.background = ui.events.at(-1)![1]; await nextTick()
+    expect(control(ui, 'Video quality').props.modelValue).toBe('720')
+    control(ui, 'Video quality').props.pick('auto')
+    expect(ui.events.at(-1)?.[1]).toEqual(youtube)
+    expect(Object.keys(ui.events.at(-1)![1] as object)).not.toContain('quality')
+  })
+  it('shows a youtube background without fetching media metadata', async () => {
+    const ui = mount({ videoId: 'dQw4w9WgXcQ', kind: 'youtube', opacity: 1, dim: .35, pattern: { shape: 'circles', color: '#000000', opacity: .25, scale: 1 } }); await settle()
+    expect(requests).toEqual([])
+    expect(ui.text()).toContain('dQw4w9WgXcQ')
+    control(ui, 'Video opacity').props.onInput({ target: { value: '40' } })
+    expect(ui.events.at(-1)?.[1]).toMatchObject({ kind: 'youtube', videoId: 'dQw4w9WgXcQ', opacity: 0.4 })
   })
 })

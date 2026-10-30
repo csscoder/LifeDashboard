@@ -14,6 +14,9 @@ function cleanup(actions: (() => void)[]) {
 }
 
 const patternUrls = { circles, squares, diamonds, crosses, diagonal, triangles }
+// YouTube backgrounds render as an iframe under the canvas; the renderer only draws overlays for them.
+const backgroundKey = (background: ScreenBackground) =>
+  background.kind === 'youtube' ? `youtube:${background.videoId}` : `${background.kind}:${background.mediaId}`
 type Media = {
   background: ScreenBackground
   video: HTMLVideoElement | null
@@ -91,9 +94,11 @@ export async function createBackgroundRenderer(host: HTMLElement, onError: (mess
   function fail(media: Media) {
     if (destroyed || current !== media) return
     disposeMedia()
-    onError(media.video
-      ? 'Could not play the background video. Choose another file or a supported codec.'
-      : 'Could not load the background image. Choose another file.')
+    onError(media.background.kind === 'youtube'
+      ? 'Could not draw the dimming and pattern over the YouTube video.'
+      : media.video
+        ? 'Could not play the background video. Choose another file or a supported codec.'
+        : 'Could not load the background image. Choose another file.')
   }
   function render() {
     if (!destroyed && current?.ready && !document.hidden) app.render()
@@ -105,7 +110,7 @@ export async function createBackgroundRenderer(host: HTMLElement, onError: (mess
       app.renderer.resize(width, height)
       pattern.width = width; pattern.height = height
       dim.clear().rect(0, 0, width, height).fill(0x000000)
-      if (current?.ready) {
+      if (current?.ready && current.width > 0) {
         const factor = Math.max(width / current.width, height / current.height)
         sprite.width = current.width * factor
         sprite.height = current.height * factor
@@ -172,6 +177,9 @@ export async function createBackgroundRenderer(host: HTMLElement, onError: (mess
   observer.observe(host)
 
   async function initializeMedia(media: Media) {
+    const background = media.background
+    const mediaId = 'mediaId' in background ? background.mediaId : null
+    if (!mediaId) return // youtube backgrounds never load media through pixi
     const { video, image } = media
     const ready = new Promise<boolean>(resolve => {
       const finish = (value: boolean) => {
@@ -183,7 +191,7 @@ export async function createBackgroundRenderer(host: HTMLElement, onError: (mess
       const loaded = () => finish(true)
       const timeout = setTimeout(() => fail(media), 15000)
       media.cancelWait = () => finish(false)
-      const url = `/api/v1/background-media/${media.background.mediaId}`
+      const url = `/api/v1/background-media/${mediaId}`
       if (video) {
         video.addEventListener('loadeddata', loaded)
         video.src = url
@@ -219,12 +227,12 @@ export async function createBackgroundRenderer(host: HTMLElement, onError: (mess
   return {
     async setBackground(background: ScreenBackground | null) {
       if (destroyed) return
-      if (background && current?.background.mediaId === background.mediaId && current.background.kind === background.kind) {
+      if (background && current && backgroundKey(current.background) === backgroundKey(background)) {
         current.background = background
         if (current.ready) {
           try { apply(current) } catch { fail(current) }
         }
-        return current?.pending
+        return current.pending
       }
       disposeMedia()
       onError(null)
@@ -237,6 +245,13 @@ export async function createBackgroundRenderer(host: HTMLElement, onError: (mess
         failed: () => fail(media), ready: false, pending: Promise.resolve(),
       }
       current = media
+      if (background.kind === 'youtube') {
+        // The iframe below the canvas owns the pixels; only dim and pattern render here.
+        media.ready = true
+        app.canvas.hidden = false
+        try { apply(media) } catch { fail(media); return }
+        return media.pending
+      }
       ;(video ?? image)!.addEventListener('error', media.failed)
       media.pending = initializeMedia(media)
       return media.pending

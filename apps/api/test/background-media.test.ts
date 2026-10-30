@@ -215,5 +215,13 @@ describe('background media', () => {
     expect((await board()).screens[0].background).toEqual(background(media.id))
     expect((await discard(media.id)).statusCode).toBe(409)
   })
+  it('accepts a youtube background without imported media', async () => {
+    const b = await board()
+    const youtube = { videoId: 'dQw4w9WgXcQ', kind: 'youtube', opacity: .8, dim: .3, pattern: { shape: 'diamonds', color: '#123456', opacity: .4, scale: 2 }, quality: '720' }
+    const response = await call(t.app, { method: 'PUT', url: BOARD, cookie, payload: { expectedRevision: b.revision, screens: b.screens.map((s: object) => ({ ...s, background: youtube })) } })
+    expect(response.statusCode).toBe(200)
+    expect(response.json().data.screens[0].background).toEqual(youtube)
+    expect((await board()).screens[0].background).toEqual(youtube)
+  })
 
 })

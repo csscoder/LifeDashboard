@@ -54,9 +54,7 @@ export const BACKGROUND_PATTERN_SIZES = {
   diamonds: { width: 3, height: 3 },
 } as const
 
-export interface ScreenBackground {
-  mediaId: string
-  kind: 'video' | 'image'
+export interface ScreenBackgroundStyle {
   opacity: number
   dim: number
   pattern: {
@@ -67,6 +65,12 @@ export interface ScreenBackground {
   }
 }
 
+export type YouTubeQuality = '720' | '1080'
+
+export type ScreenBackground =
+  | ({ mediaId: string; kind: 'video' | 'image' } & ScreenBackgroundStyle)
+  | ({ videoId: string; kind: 'youtube'; quality?: YouTubeQuality } & ScreenBackgroundStyle)
+
 export interface BackgroundMedia {
   id: string
   name: string
@@ -74,8 +78,12 @@ export interface BackgroundMedia {
   mime: string
 }
 
-export function defaultBackground(mediaId: string, kind: ScreenBackground['kind'] = 'video'): ScreenBackground {
+export function defaultBackground(mediaId: string, kind: 'video' | 'image' = 'video'): ScreenBackground {
   return { mediaId, kind, opacity: 1, dim: 0.35, pattern: { shape: 'diagonal', color: '#000000', opacity: 0.25, scale: 1 } }
+}
+
+export function defaultYouTubeBackground(videoId: string): ScreenBackground {
+  return { videoId, kind: 'youtube', opacity: 1, dim: 0.35, pattern: { shape: 'diagonal', color: '#000000', opacity: 0.25, scale: 1 } }
 }
 
 export interface ScreenBoard {
@@ -235,13 +243,11 @@ function toRect(item: Record<string, unknown>): Rect | null {
   return inBounds(rect) ? rect : null
 }
 
+const YOUTUBE_VIDEO_ID = /^[A-Za-z0-9_-]{11}$/
+
 export function parseScreenBackground(raw: unknown): ScreenBackground | undefined | null {
   if (raw == null) return undefined
   if (!isRecord(raw) || !isRecord(raw.pattern)) return null
-  const legacy = raw.mediaId === undefined && isUuid(raw.videoId)
-  const mediaId = legacy ? raw.videoId : raw.mediaId
-  const kind = legacy ? 'video' : raw.kind
-  if (!isUuid(mediaId) || (kind !== 'video' && kind !== 'image')) return null
   const finite = (value: unknown, min: number, max: number): value is number =>
     typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max
   const { opacity, dim, pattern } = raw
@@ -249,5 +255,17 @@ export function parseScreenBackground(raw: unknown): ScreenBackground | undefine
   if (!finite(opacity, 0, 1) || !finite(dim, 0, 1) || !finite(patternOpacity, 0, 1) || !finite(scale, 0.25, 4) ||
     typeof color !== 'string' || !HEX_COLOR.test(color) ||
     (shape !== 'none' && (typeof shape !== 'string' || !Object.hasOwn(BACKGROUND_PATTERN_SIZES, shape)))) return null
-  return { mediaId, kind, opacity, dim, pattern: { shape: shape as ScreenBackground['pattern']['shape'], color, opacity: patternOpacity, scale } }
+  const style = { opacity, dim, pattern: { shape: shape as ScreenBackgroundStyle['pattern']['shape'], color, opacity: patternOpacity, scale } }
+  if (raw.kind === 'youtube') {
+    const { quality } = raw
+    if (raw.mediaId !== undefined || typeof raw.videoId !== 'string' || !YOUTUBE_VIDEO_ID.test(raw.videoId) ||
+      (quality !== undefined && quality !== '720' && quality !== '1080')) return null
+    // quality stays last: isSameBoard compares JSON and the editor appends the key.
+    return { videoId: raw.videoId, kind: 'youtube', ...style, ...(quality && { quality }) }
+  }
+  const legacy = raw.mediaId === undefined && isUuid(raw.videoId)
+  const mediaId = legacy ? raw.videoId : raw.mediaId
+  const kind = legacy ? 'video' : raw.kind
+  if (!isUuid(mediaId) || (kind !== 'video' && kind !== 'image')) return null
+  return { mediaId, kind, ...style }
 }

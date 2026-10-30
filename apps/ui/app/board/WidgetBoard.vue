@@ -95,8 +95,8 @@ const dirty = computed(() => editing.value && !isSameBoard(working.value, doc.va
 
 const backgroundLeaseError = ref<string | null>(null)
 useBackgroundLeases(() => [
-  ...(space.value?.screens ?? []).flatMap(screen => screen.background ? [screen.background.mediaId] : []),
-  ...(editing.value && working.value.background ? [working.value.background.mediaId] : []),
+  ...(space.value?.screens ?? []).flatMap(screen => screen.background && 'mediaId' in screen.background ? [screen.background.mediaId] : []),
+  ...(editing.value && working.value.background && 'mediaId' in working.value.background ? [working.value.background.mediaId] : []),
 ], message => { backgroundLeaseError.value = message })
 const background = computed<ScreenBackground | null>(() => shown.value.background ?? null)
 const backgroundKey = computed(() => `${space.value?.spaceId ?? ''}:${shown.value.id}`)

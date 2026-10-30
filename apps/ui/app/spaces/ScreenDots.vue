@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, useId, useTemplateRef, watch } from 'vue'
+import { TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui'
 import type { ScreenBackground } from '@lifedashboard/contracts/board'
 import BackgroundEditor from '../background/BackgroundEditor.vue'
 import type { ThemeChoice } from '@lifedashboard/contracts/theme'
 import { BUILTIN_PALETTE_IDS } from '../theme/palettes'
 import ThemePicker from '../theme/ThemePicker.vue'
+import UiButton from '../ui/UiButton.vue'
 
 // Screen navigation of the active space, centred in the footer; hidden for one screen outside edit mode.
 const props = defineProps<{
@@ -42,11 +44,29 @@ const emit = defineEmits<{
 const panelId = useId()
 const panel = useTemplateRef<HTMLElement>('panelBox')
 const open = ref(false)
+// The last tab stays chosen between openings.
+const tab = ref<'theme' | 'background' | 'overlay'>('theme')
+watch(() => props.background, (value) => { if (!value && tab.value === 'overlay') tab.value = 'background' })
 
 function close() {
   if (panel.value?.matches(':popover-open')) panel.value.hidePopover()
   open.value = false
 }
+
+// What Cancel restores: the draft as it was when the panel opened.
+let opened: Pick<typeof props, 'theme' | 'background'> = { theme: null, background: null }
+// Remounting the editor aborts an import still running, which would otherwise land in the draft afterwards.
+const editorRun = ref(0)
+
+function cancel() {
+  emit('theme', opened.theme)
+  emit('background', opened.background)
+  editorRun.value++
+  close()
+}
+
+// A shorter tab keeps the tab strip under the pointer; a taller one still lifts the panel.
+let panelTop = Infinity
 
 function positionPanel() {
   if (!panel.value?.matches(':popover-open')) return
@@ -58,14 +78,19 @@ function positionPanel() {
   box.style.maxHeight = `${Math.max(0, rect.top - gap - margin)}px`
   const size = box.getBoundingClientRect()
   box.style.left = `${Math.max(margin, Math.min(rect.left + rect.width / 2 - size.width / 2, window.innerWidth - size.width - margin))}px`
-  box.style.top = `${Math.max(margin, rect.top - size.height - gap)}px`
+  panelTop = Math.min(panelTop, Math.max(margin, rect.top - size.height - gap))
+  box.style.top = `${panelTop}px`
 }
 
 function onToggle(event: ToggleEvent) {
+  panelTop = Infinity
   open.value = event.newState === 'open'
   if (!open.value) return
+  opened = { theme: props.theme, background: props.background }
   positionPanel()
-  panel.value?.querySelector('.theme-picker')?.querySelector<HTMLElement>('button')?.focus()
+  // The picker of a hidden Theme tab cannot take focus.
+  const first = tab.value === 'theme' ? panel.value?.querySelector('.theme-picker')?.querySelector<HTMLElement>('button') : panel.value?.querySelector<HTMLElement>(`.dots__tab--${tab.value}`)
+  first?.focus()
 }
 
 function remove() {
@@ -74,8 +99,10 @@ function remove() {
   emit('remove')
 }
 
-function onScroll(event: Event) {
-  if (event.target !== panel.value) close()
+// Only an explicit action closes the panel: its lists scroll, and a resize moves the anchor.
+function reanchor() {
+  panelTop = Infinity
+  positionPanel()
 }
 
 let observer: ResizeObserver | null = null
@@ -88,13 +115,13 @@ watch(() => [props.index, props.count, props.editing, props.disabled], close, { 
 onMounted(() => {
   observer = new ResizeObserver(positionPanel)
   if (panel.value) observer.observe(panel.value)
-  window.addEventListener('resize', close)
-  window.addEventListener('scroll', onScroll, true)
+  window.addEventListener('resize', reanchor)
+  window.addEventListener('scroll', positionPanel, true)
 })
 onUnmounted(() => {
   observer?.disconnect()
-  window.removeEventListener('resize', close)
-  window.removeEventListener('scroll', onScroll, true)
+  window.removeEventListener('resize', reanchor)
+  window.removeEventListener('scroll', positionPanel, true)
 })
 </script>
 
@@ -155,14 +182,25 @@ onUnmounted(() => {
         <h3>Screen {{ index + 1 }}</h3>
         <button type="button" class="dots__close" aria-label="Close screen settings" @click="close">×</button>
       </header>
-      <div class="dots__theme">
-        Screen theme
-        <ThemePicker :model-value="theme" inherit :inherited="inherited" :disabled="disabled"
-          :unavailable="!!theme && !BUILTIN_PALETTE_IDS.has(theme.palette)"
-          @update:model-value="$event !== 'bare' && emit('theme', $event)" />
+      <!-- All panels stay mounted (hidden), so an import in progress or a colour picker keeps its state across tabs. -->
+      <TabsRoot v-model="tab" class="dots__tabs" :unmount-on-hide="false">
+        <TabsList class="dots__tab-list" aria-label="Screen settings sections">
+          <TabsTrigger value="theme" class="dots__tab dots__tab--theme">Theme</TabsTrigger>
+          <TabsTrigger value="background" class="dots__tab dots__tab--background">Background</TabsTrigger>
+          <TabsTrigger v-if="background" value="overlay" class="dots__tab dots__tab--overlay">Overlay</TabsTrigger>
+        </TabsList>
+        <TabsContent value="theme" class="dots__theme">
+          <ThemePicker :model-value="theme" inherit :inherited="inherited" :disabled="disabled"
+            :unavailable="!!theme && !BUILTIN_PALETTE_IDS.has(theme.palette)"
+            @update:model-value="$event !== 'bare' && emit('theme', $event)" />
+        </TabsContent>
+        <BackgroundEditor :key="`${screenKey}:${editorRun}`" :background="background" :disabled="disabled" @change="emit('background', $event)" />
+      </TabsRoot>
+      <p class="dots__hint">Done on the board saves these changes</p>
+      <div class="dots__actions">
+        <UiButton class="dots__action dots__action--save" @click="close">Save</UiButton>
+        <UiButton class="dots__action" :disabled="disabled" @click="cancel">Cancel</UiButton>
       </div>
-      <p class="dots__hint">Saved with the board changes</p>
-      <BackgroundEditor :key="screenKey" :background="background" :disabled="disabled" @change="emit('background', $event)" />
       <button type="button" class="dots__delete" :disabled="disabled || !canRemove"
         :title="canRemove ? undefined : removeTitle" @click="remove">{{ removeLabel }}</button>
       <p v-if="!canRemove" class="dots__hint">{{ removeTitle }}</p>
@@ -306,9 +344,18 @@ onUnmounted(() => {
 .dots__panel-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; }
 .dots__panel-header h3 { margin: 0; font-size: 0.9375rem; }
 .dots__close { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--ld-state-hover); color: var(--ld-text-secondary); font: inherit; cursor: pointer; }
+.dots__tabs { display: grid; gap: 0.625rem; }
+.dots__tab-list { display: flex; gap: 0.25rem; padding: 0.1875rem; border-radius: var(--ld-radius-control); background: var(--ld-state-hover); }
+.dots__tab { flex: 1; min-width: 0; min-height: 1.75rem; padding: 0.25rem 0.5rem; border: 0; border-radius: calc(var(--ld-radius-control) - 0.1875rem); background: transparent; color: var(--ld-text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
+.dots__tab:hover { color: var(--ld-text-primary); }
+.dots__tab[data-state='active'] { background: var(--ld-surface-3); color: var(--ld-text-primary); box-shadow: var(--ld-shadow-raised, none); }
 .dots__theme { display: grid; gap: 0.5rem; color: var(--ld-text-muted); }
+.dots__theme[hidden] { display: none; }
 .dots__hint { margin: 0.5rem 0 0; color: var(--ld-text-muted); font-size: 0.75rem; }
-.dots__delete { width: 100%; margin-top: 0.875rem; padding: 0.5rem; border: var(--ld-border-width) solid var(--ld-danger); border-radius: var(--ld-radius-control); background: var(--ld-danger-subtle); color: var(--ld-danger-text); font: inherit; cursor: pointer; }
+.dots__actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+.dots__action { flex: 1; height: 2rem; }
+.dots__action--save { border-color: var(--ld-accent); background: var(--ld-accent-subtle); color: var(--ld-accent-text); }
+.dots__delete { width: 100%; margin-top: 0.5rem; padding: 0.5rem; border: var(--ld-border-width) solid var(--ld-danger); border-radius: var(--ld-radius-control); background: var(--ld-danger-subtle); color: var(--ld-danger-text); font: inherit; cursor: pointer; }
 .dots__delete:disabled { opacity: 0.4; cursor: default; }
 
 @media (prefers-reduced-motion: reduce) {

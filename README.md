@@ -57,7 +57,7 @@ The following describes the implementation in the repository as of **October 202
 | Spaces and screens | Spaces are managed from the corner switcher (create, rename, icon and theme, delete); screens are added and deleted in edit mode; the last open space and screen are remembered per browser. |
 | Hermes Agent | Planned; no Hermes adapter or chat UI is implemented in the current application. |
 | Desktop app | Local macOS (Apple Silicon) build with Tauri: the app runs the same API and UI; ad-hoc signed, not notarized or distributed. |
-| Screen backgrounds | Import a local video (MP4/M4V/MOV/WebM) or image (PNG/JPEG/WebP/AVIF); Pixi cover rendering, independent background/grid opacity, dimming, and an optional pixel PNG microtexture. Codec support depends on the browser. |
+| Screen backgrounds | Import a local video (MP4/M4V/MOV/WebM) or image (PNG/JPEG/WebP/AVIF), or paste a YouTube link; Pixi cover rendering, independent background/grid opacity, dimming, and an optional pixel PNG microtexture. Codec support depends on the browser. |
 
 The newest appearance features have not yet completed the full documented browser-acceptance checks. Treat the current code as a development build.
 
@@ -185,9 +185,10 @@ LifeDashboard treats visual design as a first-class feature:
 - The active-screen gear also imports video or image backgrounds. Background settings preview in the draft and follow Done/Cancel. A copy of the file lives in the application data directory; the original file is not modified.
 - Background controls include dimming, background opacity, and a separate optional pixel PNG microtexture: diagonal, squares, crosses, circles, triangles or diamonds. Native repeating cells are 2×2 px for diagonal, 3×3 px for squares/crosses/triangles/diamonds, and 6×6 px for circles, with integer enlargement from 1× to 4× and no smoothing. Colour and grid opacity are independent. Turning the grid off preserves its other settings during editing.
 - One Pixi canvas displays the active screen only. Video loops muted, pauses when the page is hidden, and respects reduced motion. Static images render on settings/size changes. Browser codec/GPU failures restore the theme backdrop with a notice. No transcoding is performed.
+- A YouTube background plays muted and looped in an embed under the same canvas, so dimming and the microtexture draw over it. It pauses when the page is hidden and respects reduced motion. Video quality (Auto, 1080p, 720p) caps the player size; a video without that size plays the best it has. The desktop app presses the player's Skip button when it appears.
 - Files are streamed rather than buffered in API memory. Saved screen references and renewable leases protect active drafts/playback across tabs; unused app copies are reclaimed after release, with a 24-hour fallback expiry for abandoned imports/leases.
 - Per-widget appearance: inherit the resolved screen theme, use another theme, or remove the frame.
-- Configurable widget shadows, including shadows that can follow the shape of frameless content.
+- Configurable widget shadows, including shadows that can follow the shape of frameless content. New and reset widgets start with X 20, Y 20, Blur 20, black at 50 %.
 - A shared design-token vocabulary for consistent UI across widgets.
 - Animations where they improve the experience, with consideration for reduced-motion preferences.
 

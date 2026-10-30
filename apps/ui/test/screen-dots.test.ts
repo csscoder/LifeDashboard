@@ -1,24 +1,33 @@
+import { readFileSync } from 'node:fs'
 import { nextTick } from 'vue'
+import { parse } from 'vue/compiler-sfc'
+import * as reka from 'reka-ui'
 import * as boardContracts from '@lifedashboard/contracts/board'
 import * as mediaApi from '../app/background/media-api'
 import { probeMedia } from '../app/background/import-media'
+import * as youtube from '../app/background/youtube'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { themeModules } from './helpers/theme-picker'
+import { UiSelect } from './helpers/ui-select-stub'
 import { withTheme } from '../app/board/edit-session'
-import { compileSfc, mountComponent, unmountComponents } from './helpers/sfc-renderer'
+import { compileSfc, mountComponent, unmountComponents, type HostNode } from './helpers/sfc-renderer'
 
 const editor = compileSfc(new URL('../app/background/BackgroundEditor.vue', import.meta.url), {
-  '@lifedashboard/contracts/board': boardContracts, './media-api': mediaApi, './import-media': { probeMedia },
+  '@lifedashboard/contracts/board': boardContracts, './media-api': mediaApi, './import-media': { probeMedia }, './youtube': youtube, 'reka-ui': reka, '../ui/UiSelect.vue': UiSelect,
 })
 let resized: () => void
 const component = compileSfc(new URL('../app/spaces/ScreenDots.vue', import.meta.url), {
   ...themeModules,
+  'reka-ui': reka,
+  '../ui/UiButton.vue': compileSfc(new URL('../app/ui/UiButton.vue', import.meta.url), { 'reka-ui': reka }),
   '../background/BackgroundEditor.vue': { __esModule: true, default: editor },
 })
 beforeEach(() => {
   vi.stubGlobal('window', { innerWidth: 1280, innerHeight: 800, addEventListener: vi.fn(), removeEventListener: vi.fn() })
   vi.stubGlobal('ResizeObserver', class { constructor(callback: () => void) { resized = callback } observe() {} disconnect() {} })
   vi.stubGlobal('fetch', async () => Response.json({ data: { id: 'id', name: 'Video.mp4', size: 128, mime: 'video/mp4' } }))
+  // TabsContent waits a frame.
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callback(0); return 0 })
 })
 afterEach(() => { unmountComponents(); vi.unstubAllGlobals() })
 function mount(overrides: Record<string, unknown> = {}) {
@@ -34,6 +43,115 @@ function open(ui: ReturnType<typeof mount>) {
   panel.props.onToggle({ newState: 'open' })
   return panel
 }
+
+const textOf = (node: HostNode): string => [node.text, ...node.children.map(textOf)].join('')
+const tabs = (ui: ReturnType<typeof mount>) => ui.nodes().filter(el => el.props.role === 'tab')
+const tabPanel = (ui: ReturnType<typeof mount>, value: string) =>
+  ui.nodes().find(el => el.props.role === 'tabpanel' && String(el.props.id).endsWith(`-content-${value}`))
+// Reka switches tabs on mousedown; the trigger merges its handlers into an array.
+const press = (tab: HostNode) => [tab.props.onMousedown].flat().forEach(handler => handler({ button: 0, ctrlKey: false, preventDefault() {} }))
+const tab = (ui: ReturnType<typeof mount>, label: string) => tabs(ui).find(el => textOf(el) === label)!
+const inTabPanel = (node: HostNode | null): boolean => !!node && (node.props.role === 'tabpanel' || inTabPanel(node.parent))
+const video = { mediaId: '00000000-0000-4000-8000-000000000001', kind: 'video', opacity: 1, dim: .35, pattern: { shape: 'diagonal', color: '#000000', opacity: .25, scale: 1 } }
+
+describe('screen settings tabs', () => {
+  it('splits the panel into Theme, Background and Overlay and keeps deletion below the tabs', async () => {
+    const ui = mount({ background: video }); await nextTick()
+    expect(tabs(ui).map(textOf)).toEqual(['Theme', 'Background', 'Overlay'])
+    expect(tabs(ui).map(el => el.props['aria-selected'])).toEqual(['true', 'false', 'false'])
+    expect(textOf(tabPanel(ui, 'theme')!)).toContain('Inherit')
+    const background = textOf(tabPanel(ui, 'background')!)
+    for (const label of ['Replace background', 'YouTube background', 'Video opacity', 'Remove background']) expect(background).toContain(label)
+    expect(background).not.toContain('Dimming')
+    const overlay = textOf(tabPanel(ui, 'overlay')!)
+    for (const label of ['Dimming', 'Pattern over the background', 'Pattern opacity', 'Pattern scale']) expect(overlay).toContain(label)
+    expect(overlay).not.toContain('Video opacity')
+    expect(inTabPanel(ui.button('Delete screen')!)).toBe(false)
+    expect(ui.nodes().some(el => el.text === 'Screen background' || el.text.includes('Screen theme'))).toBe(false)
+  })
+
+  it('offers Overlay only with a background and returns to Background when it is removed', async () => {
+    const ui = mount({ background: video }); await nextTick()
+    press(tab(ui, 'Overlay')); await nextTick()
+    expect(tab(ui, 'Overlay').props['aria-selected']).toBe('true')
+    ui.props.background = null; await nextTick(); await nextTick()
+    expect(tabs(ui).map(textOf)).toEqual(['Theme', 'Background'])
+    expect(tab(ui, 'Background').props['aria-selected']).toBe('true')
+    expect(tabPanel(ui, 'overlay')).toBeUndefined()
+  })
+
+  it('keeps the chosen tab between openings and focuses it instead of the hidden picker', async () => {
+    const ui = mount({ background: video }); await nextTick()
+    press(tab(ui, 'Background')); await nextTick()
+    const panel = open(ui)
+    expect(tab(ui, 'Background').focused).toBe(true)
+    expect(ui.button('Inherit').focused).toBe(false)
+    panel.props.onToggle({ newState: 'closed' }); await nextTick()
+    expect(tab(ui, 'Background').props['aria-selected']).toBe('true')
+  })
+
+  it('saves by closing the panel and leaving the draft alone', async () => {
+    const ui = mount({ background: video }), panel = open(ui)
+    ui.props.background = { ...video, dim: .9 }; await nextTick()
+    ui.button('Save').props.onClick()
+    expect(panel.open).toBe(false)
+    expect(ui.events).toEqual([])
+  })
+
+  it('cancels back to the theme and background the panel opened with', async () => {
+    const theme = { palette: 'builtin:gruvbox', mode: 'dark', style: 'glass' }
+    const ui = mount({ background: video, theme }), panel = open(ui)
+    ui.props.theme = null
+    ui.props.background = { ...video, dim: .9 }; await nextTick()
+    ui.button('Cancel').props.onClick()
+    expect(panel.open).toBe(false)
+    expect(ui.events).toEqual([['theme', theme], ['background', video]])
+  })
+
+  it('restores a screen without a background and drops an import still running', async () => {
+    const ui = mount(), panel = open(ui)
+    const editor = () => ui.nodes().find(el => el.props['aria-label'] === 'Background file')!
+    const before = editor()
+    ui.props.background = video; await nextTick()
+    ui.button('Cancel').props.onClick(); await nextTick()
+    expect(ui.events).toEqual([['theme', null], ['background', null]])
+    expect(panel.open).toBe(false)
+    expect(editor()).not.toBe(before)
+  })
+
+  it('opens a fresh Cancel baseline each time', async () => {
+    const ui = mount({ background: video }), panel = open(ui)
+    panel.props.onToggle({ newState: 'closed' })
+    ui.props.background = { ...video, dim: .5 }; await nextTick()
+    panel.open = true
+    panel.props.onToggle({ newState: 'open' })
+    ui.props.background = { ...video, dim: .9 }; await nextTick()
+    ui.button('Cancel').props.onClick()
+    expect(ui.events.at(-1)).toEqual(['background', { ...video, dim: .5 }])
+  })
+
+  it('keeps the tab strip in place on a shorter tab, lifts for a taller one and re-anchors on opening', async () => {
+    const ui = mount({ background: video }); await nextTick()
+    const panel = open(ui)
+    expect(panel.style.top).toBe('492px')
+    panel.rect = { ...panel.rect, height: 100 }; resized()
+    expect(panel.style.top).toBe('492px')
+    panel.rect = { ...panel.rect, height: 300 }; resized()
+    expect(panel.style.top).toBe('392px')
+    panel.rect = { ...panel.rect, height: 100 }; resized()
+    expect(panel.style.top).toBe('392px')
+    panel.props.onToggle({ newState: 'closed' })
+    panel.props.onToggle({ newState: 'open' })
+    expect(panel.style.top).toBe('592px')
+  })
+
+  it('hides a form section despite its grid layout', () => {
+    for (const url of ['../app/spaces/ScreenDots.vue', '../app/background/BackgroundEditor.vue']) {
+      const { descriptor } = parse(readFileSync(new URL(url, import.meta.url), 'utf8'))
+      expect(descriptor.styles[0]!.content).toMatch(/\[hidden\] \{ display: none; \}/)
+    }
+  })
+})
 
 describe('screen settings popover', () => {
   it('offers a gear only for the active screen in edit mode', async () => {
@@ -89,18 +207,22 @@ describe('screen settings popover', () => {
     expect(panel.open).toBe(false)
   })
 
-  it('allows the panel to scroll but closes when its anchor scrolls or the viewport resizes', () => {
+  it('stays open on any scroll or resize and follows its anchor', () => {
     const ui = mount(), panel = open(ui)
     const calls = vi.mocked(window.addEventListener).mock.calls
+    const active = ui.nodes().find(el => String(el.props.class).includes('dots__item--on'))!
     const scroll = calls.find(([name]) => name === 'scroll')![1] as (event: { target: unknown }) => void
-    scroll({ target: panel })
+    for (const target of [panel, {}]) scroll({ target })
     expect(panel.open).toBe(true)
+    active.rect = { ...active.rect, left: 500 }
     scroll({ target: {} })
-    expect(panel.open).toBe(false)
-    open(ui)
+    expect(panel.open).toBe(true)
+    expect(panel.style.left).toBe('360px')
+    active.rect = { ...active.rect, top: 900 }
     const resize = calls.find(([name]) => name === 'resize')![1] as () => void
     resize()
-    expect(panel.open).toBe(false)
+    expect(panel.open).toBe(true)
+    expect(panel.style.top).toBe('692px')
   })
 
   it('keeps Escape on the gear from cancelling the board while its popover is open', () => {
