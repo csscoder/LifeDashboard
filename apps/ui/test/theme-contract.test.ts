@@ -151,7 +151,8 @@ describe('stylesheets', () => {
     })
   })
 
-  it('comfort.css makes a foreign widget opaque and unblurred in ld.comfort', () => {
+  it('comfort.css lets a widget on another theme keep its own glass', () => {
+    // An explicit Glass choice in the widget wins over the board theme; transparency: reduced will come with ComfortProfile.
     const decls: Record<string, string> = {}
     postcss.parse(styleFile('comfort.css')).walkRules('.widget--foreign', (rule) => {
       if ((rule.parent as AtRule | undefined)?.params !== 'ld.comfort') return
@@ -159,7 +160,7 @@ describe('stylesheets', () => {
         decls[decl.prop] = decl.value
       })
     })
-    expect(decls).toEqual({ '--ld-surface-1': 'var(--ld-surface-1-solid)', '--ld-blur': '0' })
+    expect(decls).toEqual({})
   })
 
   it('frame.css resets exactly the optional tokens on every theme scope', () => {

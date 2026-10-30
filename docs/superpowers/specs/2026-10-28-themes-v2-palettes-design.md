@@ -84,7 +84,7 @@ Migrated assignments become generated combinations: colours come from the LifeDa
 - Chain: widget → screen → space → dashboard default → `DEFAULT_THEME = { palette: 'builtin:lifedashboard', mode: 'dark', style: 'glass' }`. The first set choice with a known palette wins.
 - `useColorScheme()` (a composable over `matchMedia('(prefers-color-scheme: dark)')`, updating on `change`) turns `auto` into `light` or `dark`. Without `matchMedia`, `auto` resolves to `dark`.
 - The resolved theme is a combination key `<slug>-<mode>-<style>` with mode `light` or `dark`. Classes: `space--theme-<key>`, `widget--theme-<key>`, plus `space--skin-<style>` and `widget--skin-<style>` (or `widget--skin-bare`).
-- `resolveWidgetLook`: `'bare'` keeps the board key and skin `bare`; otherwise the widget's resolved key differs from the board's → `foreign: true` (opaque `surface-1`, as today).
+- `resolveWidgetLook`: `'bare'` keeps the board key and skin `bare`; otherwise the widget's resolved key differs from the board's → `foreign: true`. A foreign widget keeps its own style: an explicit Glass choice stays glass (amended 2026-10-30; it used to paint an opaque `surface-1`).
 - `context.theme` = `{ id: 'builtin:<key>', scheme: <resolved mode>, tokens }`. A system mode change re-reads tokens, so sandbox widgets update live.
 - The dashboard default keeps today's notice when its stored palette is unknown («Theme not found, showing the default theme»).
 
