@@ -1,4 +1,5 @@
 import { themeModules } from './helpers/theme-picker'
+import * as reka from 'reka-ui'
 import type { SpaceBoard, ScreenBoard } from '@lifedashboard/contracts/board'
 import { describe, expect, it, vi } from 'vitest'
 import { afterLoad, afterManage, afterSave, afterStaySave, connect, failureOutcome, useSpaceSync } from '../app/board/space-sync'
@@ -397,7 +398,8 @@ describe('unknown space palette', () => {
     expect(resolveTheme([space.theme, dashboard], 'dark')).toBe('builtin:gruvbox-light-solid')
     vi.stubGlobal('document', { addEventListener() {}, removeEventListener() {}, getElementById: () => null, querySelector: () => null })
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
-    const Picker = compileSfc(new URL('../app/spaces/SpacePicker.vue', import.meta.url), { ...themeModules, '@lifedashboard/contracts/space': contracts })
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callback(0); return 0 })
+    const Picker = compileSfc(new URL('../app/spaces/SpacePicker.vue', import.meta.url), { ...themeModules, '@lifedashboard/contracts/space': contracts, 'reka-ui': reka })
     const ui = mountComponent(Picker, { space, disabled: false, inherited: dashboard }, ['pick'])
     const icon = contracts.SPACE_ICONS.find(icon => icon !== space.icon)!
     ui.button(icon).props.onClick()

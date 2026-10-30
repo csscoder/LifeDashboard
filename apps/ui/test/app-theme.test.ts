@@ -26,6 +26,7 @@ const Settings = compileSfc(new URL('../app/SettingsPanel.vue', import.meta.url)
 })
 const SpacePicker = compileSfc(new URL('../app/spaces/SpacePicker.vue', import.meta.url), {
   ...themeModules, '@lifedashboard/contracts/space': spaces,
+  'reka-ui': { TabsRoot: passTab('tabs'), TabsList: passTab('tablist'), TabsTrigger: passTab('tab'), TabsContent: passTab('tabpanel') },
 })
 const scheme = Vue.ref<'dark' | 'light'>('dark')
 const schemeModule = { useColorScheme: () => Vue.readonly(scheme) }
