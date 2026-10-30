@@ -135,9 +135,16 @@ it('lists Theme default and the catalog in order in both selects', async () => {
     expect(fontSelect(ui, label).items.map(n => itemText(n))).toEqual(['Theme default', ...fonts.BUILTIN_FONTS.map(font => font.name)])
   }
 })
-it.each([null, 'bare'])('disables the font selects for %s', async modelValue => {
-  const ui = await mount({ modelValue })
-  for (const label of ['Heading font', 'Body font']) expect(fontSelect(ui, label).root.props.disabled).toBeTruthy()
+it('disables the font selects only for No frame, which has no theme to carry them', async () => {
+  const bare = await mount({ modelValue: 'bare', bare: true })
+  for (const label of ['Heading font', 'Body font']) expect(fontSelect(bare, label).root.props.disabled).toBeTruthy()
+  const inherited = await mount({ modelValue: null, inherit: true })
+  for (const label of ['Heading font', 'Body font']) expect(fontSelect(inherited, label).root.props.disabled).toBeFalsy()
+})
+it('copies the inherited choice when a font is chosen from Inherit', async () => {
+  const ui = await mount({ inherit: true, inherited: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid', heading: 'lora' } })
+  await fontSelect(ui, 'Body font').choose('Unbounded')
+  expect(ui.events.at(-1)).toEqual(['update:modelValue', { palette: 'builtin:gruvbox', mode: 'light', style: 'solid', heading: 'lora', body: 'unbounded' }])
 })
 it('shows Theme default for an unknown slug and keeps it when another key changes', async () => {
   const ui = await mount({ modelValue: { ...choice, heading: 'comic' } })

@@ -123,7 +123,7 @@ Below the Style group, `ThemePicker.vue` gets two `UiSelect` rows, `Heading font
 
 - Choosing `Theme default` removes the key; choosing a family sets its slug. Mode, style and the other font key are kept.
 - A sample line under the selects shows «Heading Заголовок» in the heading stack and «Body text Текст 123» in the body stack of the effective choice.
-- With Inherit or No frame selected, both rows are disabled, like Mode and Style. Choosing a palette tile from Inherit or No frame copies mode, style and fonts from `inherited`.
+- With No frame selected, both rows are disabled: a frameless widget has no theme to carry fonts. With Inherit they stay enabled: choosing a font copies the inherited choice (palette, mode, style, the other font) and sets that font, like a palette tile. Mode and Style stay disabled under Inherit. Choosing a palette tile from Inherit or No frame copies mode, style and fonts from `inherited`.
 - A choice with an unknown font slug shows `Theme default` for that row.
 - The four places using the picker (settings panel, space picker, screen popover, widget settings) need no change beyond what the picker emits.
 

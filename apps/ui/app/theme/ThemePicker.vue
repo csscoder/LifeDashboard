@@ -18,6 +18,8 @@ const effective = computed(() => selected.value ?? props.inherited ?? DEFAULT_TH
 const inheritedPaletteName = computed(() => BUILTIN_PALETTES.find(item => `builtin:${item.slug}` === (props.inherited ?? DEFAULT_THEME).palette)?.name ?? (props.inherited ?? DEFAULT_THEME).palette)
 const palette = computed(() => props.modelValue === 'bare' ? 'bare' : selected.value?.palette ?? 'inherit')
 const dimensionsDisabled = computed(() => props.disabled || !selected.value)
+// Fonts stay open under Inherit: a choice copies the inherited theme, like a palette tile. No frame has no theme to carry them.
+const fontsDisabled = computed(() => props.disabled || props.modelValue === 'bare')
 const modes = [{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'auto', label: 'Auto' }]
 const styles = [{ value: 'solid', label: 'Solid' }, { value: 'glass', label: 'Glass' }]
 const fontOptions = [{ value: '', label: 'Theme default' }, ...BUILTIN_FONTS.map(font => ({ value: font.slug, label: font.name }))]
@@ -26,8 +28,8 @@ const fontRows = [{ key: 'heading', label: 'Heading font' }, { key: 'body', labe
 const fontValue = (key: 'heading' | 'body') => { const slug = effective.value[key]; return slug && BUILTIN_FONT_SLUGS.has(slug) ? slug : '' }
 const sampleFamily = (variable: string) => fontVars(effective.value)[variable] ?? 'system-ui, sans-serif'
 function font(key: 'heading' | 'body', value: string) {
-  if (!selected.value || props.disabled) return
-  emit('update:modelValue', withFont(selected.value, key, value || null))
+  if (fontsDisabled.value) return
+  emit('update:modelValue', withFont(effective.value, key, value || null))
 }
 function choose(value: unknown) {
   if (props.disabled) return
@@ -59,7 +61,7 @@ function dimension(key: 'mode' | 'style', value: string) {
     <fieldset><legend :id="`${id}-style`">Style</legend><UiRadioGroup :aria-labelledby="`${id}-style`" :model-value="effective.style" :options="styles" :disabled="dimensionsDisabled" @update:model-value="dimension('style', $event)" /></fieldset>
     <div v-for="row in fontRows" :key="row.key" class="theme-picker__font">
       <label :for="`${id}-${row.key}`">{{ row.label }}</label>
-      <UiSelect :id="`${id}-${row.key}`" :model-value="fontValue(row.key)" :options="fontOptions" :disabled="dimensionsDisabled" @update:model-value="font(row.key, $event)" />
+      <UiSelect :id="`${id}-${row.key}`" :model-value="fontValue(row.key)" :options="fontOptions" :disabled="fontsDisabled" @update:model-value="font(row.key, $event)" />
     </div>
     <div class="theme-picker__font-sample" aria-hidden="true">
       <p :style="{ fontFamily: sampleFamily('--ld-font-heading') }">Heading Заголовок</p>
