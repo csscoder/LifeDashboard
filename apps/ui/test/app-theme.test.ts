@@ -17,9 +17,12 @@ import { ThemePicker, themeModules } from './helpers/theme-picker'
 import { compileSfc, mountComponent, unmountComponents } from './helpers/sfc-renderer'
 
 const Empty = Vue.defineComponent({ setup: () => () => null })
+// Tabs render every panel, so the theme picker is reachable without switching tabs.
+const passTab = (tag: string) => Vue.defineComponent({ setup: (_, { slots }) => () => Vue.h(tag, null, slots.default?.()) })
 const Settings = compileSfc(new URL('../app/SettingsPanel.vue', import.meta.url), {
   './theme/builtin': builtin, './theme/ThemePicker.vue': ThemePicker,
   '@lifedashboard/contracts/grid': grid, './ui/UiSelect.vue': Empty,
+  'reka-ui': { TabsRoot: passTab('tabs'), TabsList: passTab('tablist'), TabsTrigger: passTab('tab'), TabsContent: passTab('tabpanel') },
 })
 const SpacePicker = compileSfc(new URL('../app/spaces/SpacePicker.vue', import.meta.url), {
   ...themeModules, '@lifedashboard/contracts/space': spaces,

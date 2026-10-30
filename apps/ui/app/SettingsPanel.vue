@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, useTemplateRef } from 'vue'
+import { TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui'
 import { GRID_COLS } from '@lifedashboard/contracts/grid'
 import type { ThemeChoice } from '@lifedashboard/contracts/theme'
 import { DEFAULT_THEME } from './theme/builtin'
@@ -23,12 +24,14 @@ const props = defineProps<{
 const emit = defineEmits<{ pick: [key: string]; edit: []; library: []; theme: [choice: ThemeChoice] }>()
 const panel = useTemplateRef<HTMLElement>('panel')
 const open = ref(false)
+// The last tab stays chosen between openings.
+const tab = ref<'general' | 'theme'>('general')
 
 function close() {
   panel.value?.hidePopover()
 }
 
-// An action picker: its value stays '', so it shows «＋ Add widget…» again after each pick.
+// An action picker: its value stays '', so it shows «＋ Add» again after each pick.
 function pick(key: string) {
   if (!props.loaded || !props.viewing || !props.entries.some((entry) => entry.key === key)) return
   close()
@@ -67,39 +70,49 @@ function pick(key: string) {
         <button type="button" class="settings__close" aria-label="Close settings" popovertarget="dashboard-settings" popovertargetaction="hide">×</button>
       </header>
 
-      <div class="settings__section">
-        <p class="settings__caption">Current space</p>
-        <div class="settings__space">
-          <span class="settings__space-icon" aria-hidden="true">{{ spaceIcon }}</span>
-          <div class="settings__space-info">
-            <p class="settings__space-title" :title="spaceTitle">{{ spaceTitle || 'No space selected' }}</p>
-            <p class="settings__hint">{{ screenCount ? `Screen ${screenIndex + 1} of ${screenCount}` : 'Loading the board…' }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings__actions">
+      <!-- Board actions stay above the tabs: short labels, full names in aria-label and title. -->
+      <div class="settings__actions" role="group" aria-label="Board actions">
         <UiSelect
           class="settings__picker"
           aria-label="Add widget"
+          title="Add widget"
           model-value=""
-          placeholder="＋ Add widget…"
+          placeholder="＋ Add"
           :options="entries.map((entry) => ({ value: entry.key, label: entry.title }))"
           :disabled="!loaded || !viewing"
           @update:model-value="pick"
         />
-        <button type="button" class="settings__action" :disabled="!loaded || !viewing" @click="close(); emit('edit')">
-          <span aria-hidden="true">✎</span> Edit board <span class="settings__action-end" aria-hidden="true">↗</span>
+        <button type="button" class="settings__action" aria-label="Edit board" title="Edit board" :disabled="!loaded || !viewing" @click="close(); emit('edit')">
+          <span aria-hidden="true">✎</span> Edit
         </button>
-        <button type="button" class="settings__action" :disabled="!viewing" @click="close(); emit('library')">
-          <span aria-hidden="true">▦</span> Widget library <span class="settings__action-end" aria-hidden="true">↗</span>
+        <button type="button" class="settings__action" aria-label="Widget library" title="Widget library" :disabled="!viewing" @click="close(); emit('library')">
+          <span aria-hidden="true">▦</span> Library
         </button>
       </div>
 
-      <fieldset class="settings__themes">
-        <legend>Default dashboard theme</legend>
-        <ThemePicker :model-value="theme" :inherited="DEFAULT_THEME" @update:model-value="$event && $event !== 'bare' && emit('theme', $event)" />
-      </fieldset>
+      <!-- Both panels stay mounted (hidden), so the theme picker keeps its state across tab switches. -->
+      <TabsRoot v-model="tab" class="settings__tabs" :unmount-on-hide="false">
+        <TabsList class="settings__tab-list" aria-label="Settings sections">
+          <TabsTrigger value="general" class="settings__tab">General</TabsTrigger>
+          <TabsTrigger value="theme" class="settings__tab">Theme</TabsTrigger>
+        </TabsList>
+        <TabsContent value="general" class="settings__section">
+          <p class="settings__caption">Current space</p>
+          <div class="settings__space">
+            <span class="settings__space-icon" aria-hidden="true">{{ spaceIcon }}</span>
+            <div class="settings__space-info">
+              <p class="settings__space-title" :title="spaceTitle">{{ spaceTitle || 'No space selected' }}</p>
+              <p class="settings__hint">{{ screenCount ? `Screen ${screenIndex + 1} of ${screenCount}` : 'Loading the board…' }}</p>
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="theme" class="settings__section">
+          <fieldset class="settings__themes">
+            <legend>Default dashboard theme</legend>
+            <ThemePicker :model-value="theme" :inherited="DEFAULT_THEME" @update:model-value="$event && $event !== 'bare' && emit('theme', $event)" />
+          </fieldset>
+        </TabsContent>
+      </TabsRoot>
       <footer class="settings__footer">
         <span class="settings__status" :class="{ 'settings__status--down': apiDown }"><span />{{ apiLabel }}</span>
         <span v-if="loaded && rows !== null" class="settings__grid">{{ GRID_COLS }} × {{ rows }}</span>
@@ -163,14 +176,17 @@ function pick(key: string) {
 .settings__space-info { min-width: 0; }
 .settings__space-title { overflow: hidden; margin: 0 0 0.125rem; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--ld-weight-medium); }
 .settings__hint { font-size: 0.6875rem; }
-.settings__actions { display: grid; gap: 0.5rem; }
-.settings__action, .settings__actions :deep(.settings__picker) { width: 100%; min-height: 2.75rem; padding: 0.625rem 0.875rem; border: var(--ld-border-width) solid var(--ld-border-subtle); border-radius: 0.9375rem; background: var(--ld-state-hover); color: var(--ld-text-primary); font: inherit; cursor: pointer; }
-.settings__actions :deep(.settings__picker) { height: auto; margin-bottom: 0.375rem; border-color: var(--ld-info); background: var(--ld-info-subtle); color: var(--ld-info-text); }
+.settings__actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.375rem; padding: 0.75rem 0; }
+.settings__action, .settings__actions :deep(.settings__picker) { width: 100%; min-height: 2.25rem; padding: 0.375rem 0.625rem; border: var(--ld-border-width) solid var(--ld-border-subtle); border-radius: 0.75rem; background: var(--ld-state-hover); color: var(--ld-text-primary); font: inherit; white-space: nowrap; cursor: pointer; }
+.settings__actions :deep(.settings__picker) { height: auto; border-color: var(--ld-info); background: var(--ld-info-subtle); color: var(--ld-info-text); }
 .settings__actions :deep(.settings__picker .ui-select__icon) { color: var(--ld-info-text); }
-.settings__action { display: flex; align-items: center; gap: 0.625rem; text-align: left; }
-.settings__action-end { margin-left: auto; color: var(--ld-text-muted); }
+.settings__action { display: flex; align-items: center; justify-content: center; gap: 0.375rem; }
 .settings__action:hover:not(:disabled) { background: var(--ld-state-selected); }
-.settings__themes { min-width: 0; margin: 0.875rem 0 0; padding: 0.875rem 0; border: 0; border-top: var(--ld-border-width) solid var(--ld-border-subtle); }
+.settings__tab-list { display: flex; gap: 0.25rem; padding: 0.1875rem; border-radius: 0.75rem; background: var(--ld-state-hover); }
+.settings__tab { flex: 1; min-height: 1.875rem; padding: 0.25rem 0.75rem; border: 0; border-radius: 0.5625rem; background: transparent; color: var(--ld-text-secondary); font: inherit; font-weight: var(--ld-weight-medium); cursor: pointer; }
+.settings__tab:hover { color: var(--ld-text-primary); }
+.settings__tab[data-state='active'] { background: var(--ld-surface-3); color: var(--ld-text-primary); box-shadow: var(--ld-shadow-raised); }
+.settings__themes { min-width: 0; margin: 0; padding: 0; border: 0; }
 .settings__themes legend { width: 100%; margin-bottom: 0.625rem; padding: 0; color: var(--ld-text-muted); font-size: 0.75rem; }
 .settings__footer { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding-top: 0.75rem; border-top: var(--ld-border-width) solid var(--ld-border-subtle); color: var(--ld-text-muted); font-size: 0.6875rem; }
 .settings__status { display: flex; align-items: center; gap: 0.375rem; }

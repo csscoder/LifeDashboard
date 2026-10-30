@@ -1,10 +1,17 @@
 import * as Vue from 'vue'
-import { describe, expect, it } from 'vitest'
+import * as reka from 'reka-ui'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_THEME } from '../app/theme/builtin'
 import { loadAppearance } from '../app/theme/appearance'
 import { ThemePicker } from './helpers/theme-picker'
 import { GRID_COLS } from '@lifedashboard/contracts/grid'
 import { compileSfc, mountComponent, type HostNode } from './helpers/sfc-renderer'
+
+// The custom test renderer has no DOM; Reka only needs the class for instanceof checks, and TabsContent waits a frame.
+beforeEach(() => {
+  vi.stubGlobal('Element', class {})
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callback(0); return 0 })
+})
 
 const UiSelect = Vue.defineComponent({
   props: { modelValue: String, options: Array, placeholder: String, disabled: Boolean },
@@ -12,7 +19,7 @@ const UiSelect = Vue.defineComponent({
   setup: (props, { attrs, emit }) => () => Vue.h('ui-select', { ...attrs, ...props, pick: (value: string) => emit('update:modelValue', value) }),
 })
 const component = compileSfc(new URL('../app/SettingsPanel.vue', import.meta.url), {
-  './theme/builtin': { DEFAULT_THEME }, './theme/ThemePicker.vue': ThemePicker, '@lifedashboard/contracts/grid': { GRID_COLS }, './ui/UiSelect.vue': UiSelect,
+  './theme/builtin': { DEFAULT_THEME }, './theme/ThemePicker.vue': ThemePicker, '@lifedashboard/contracts/grid': { GRID_COLS }, './ui/UiSelect.vue': UiSelect, 'reka-ui': reka,
 })
 const picker = (ui: ReturnType<typeof mount>) => ui.nodes().find((el) => el.tag === 'ui-select')
 function mount(overrides: Record<string, unknown> = {}) {
@@ -29,7 +36,7 @@ describe('settings panel', () => {
     expect(ui.button('Board settings')?.props.title).toBe('Board settings')
     expect(ui.button('Close settings')).toBeDefined()
     expect(picker(ui)?.props['aria-label']).toBe('Add widget')
-    expect(picker(ui)?.props.placeholder).toBe('＋ Add widget…')
+    expect(picker(ui)?.props.placeholder).toBe('＋ Add')
     for (const text of ['Current space', 'Default dashboard theme']) expect(ui.text()).toContain(text)
     ui.props.spaceTitle = ''; ui.props.screenCount = 0
     return Vue.nextTick().then(() => {
@@ -116,6 +123,20 @@ describe('settings panel', () => {
   })
 })
 
+
+it('keeps the board actions above two tabs: General with the space, Theme with the default theme', async () => {
+  const ui = mount()
+  const panelOf = (node: HostNode | null): HostNode | null => node && (node.props.role === 'tabpanel' ? node : panelOf(node.parent))
+  const textOf = (n: HostNode): string => n.text + n.children.map(textOf).join('')
+  for (const action of [picker(ui)!, ui.button('Edit board'), ui.button('Widget library')]) expect(panelOf(action)).toBeNull()
+  const tabs = ui.nodes().filter((el) => el.props.role === 'tab')
+  expect(tabs.map(textOf)).toEqual(['General', 'Theme'])
+  expect(tabs.map((tab) => tab.props['aria-selected'])).toEqual(['true', 'false'])
+  const panels = ui.nodes().filter((el) => el.props.role === 'tabpanel')
+  expect(panels.map((panel) => textOf(panel).includes('Current space'))).toEqual([true, false])
+  expect(panels.map((panel) => textOf(panel).includes('Default dashboard theme'))).toEqual([false, true])
+  expect(textOf(ui.nodes().find((el) => el.tag === 'footer')!)).toContain('API: running')
+})
 
 it('keeps screen-specific controls out of dashboard settings', () => {
   const ui = mount()
