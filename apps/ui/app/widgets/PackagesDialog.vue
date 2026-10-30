@@ -5,6 +5,7 @@ import { secretsOf } from '@lifedashboard/contracts/widget-secrets'
 import { api, type ApiFailure } from '../api'
 import { bindingLine } from './secret-binding'
 import { AGENT_TASK, CREATE_COMMAND } from './starter-prompt'
+import UiSelect from '../ui/UiSelect.vue'
 import {
   CONFIRMABLE_PERMISSIONS,
   describeInstallFailure,
@@ -34,6 +35,8 @@ const MODES: Record<GrantMode, string> = {
   ask: 'Ask every time',
   allow: 'Allow',
 }
+const MODE_OPTIONS = Object.entries(MODES).map(([value, label]) => ({ value, label }))
+const modeId = (packageId: string, grant: Grant) => `mode-${packageId}-${grant.permission}`
 const VERSION_CONFLICT = 'This version is already installed with different contents'
 const TOO_MANY_UPLOADS = 'Too many unfinished installs, try again later'
 
@@ -212,22 +215,20 @@ async function remove(id: string) {
   await loadPackages(api)
 }
 
-async function changeMode(packageId: string, grant: Grant, event: Event) {
-  const select = event.target as HTMLSelectElement
+async function changeMode(packageId: string, grant: Grant, mode: string) {
   busy.value = true
-  const result = await api.setGrantMode(packageId, grant.permission, select.value as GrantMode)
+  const result = await api.setGrantMode(packageId, grant.permission, mode as GrantMode)
   if (result.ok) {
     message.value = null
     await loadPackages(api)
   } else {
-    // The list keeps showing the saved mode.
-    select.value = grant.mode
+    // The select stays bound to the saved mode.
     message.value = 'Could not save the mode'
   }
   busy.value = false
   // The select was disabled during the request; give keyboard focus back once it is enabled.
   await nextTick()
-  select.focus()
+  document.getElementById(modeId(packageId, grant))?.focus()
 }
 </script>
 
@@ -257,15 +258,13 @@ async function changeMode(packageId: string, grant: Grant, event: Event) {
       <ul class="packages__permissions">
         <li v-for="permission in manifest.permissions" :key="permission" class="packages__grant">
           {{ PERMISSIONS[permission] }}<template v-if="permission === 'network'">: {{ (manifest.network ?? []).join(', ') }}</template>
-          <select
+          <UiSelect
             v-if="modes[permission]"
-            v-model="modes[permission]"
-            class="packages__select"
             :aria-label="`${PERMISSIONS[permission]}: mode`"
-          >
-            <option value="ask">{{ MODES.ask }}</option>
-            <option value="allow">{{ MODES.allow }}</option>
-          </select>
+            :model-value="modes[permission]"
+            :options="MODE_OPTIONS"
+            @update:model-value="modes[permission] = $event as GrantMode"
+          />
           <span v-else-if="savedMode(heldGrants, permission)" class="packages__hint">
             {{ MODES[savedMode(heldGrants, permission)!] }} — change it in the widget list
           </span>
@@ -312,17 +311,15 @@ async function changeMode(packageId: string, grant: Grant, event: Event) {
             <template v-if="pkg.grants.length === 0">No permissions</template>
             <span v-for="grant in pkg.grants" :key="grant.permission" class="packages__grant">
               {{ PERMISSIONS[grant.permission] }}<template v-if="grant.permission === 'network'">: {{ pkg.origins.join(', ') }}</template>
-              <select
+              <UiSelect
                 v-if="CONFIRMABLE_PERMISSIONS.has(grant.permission)"
-                class="packages__select"
+                :id="modeId(pkg.id, grant)"
                 :aria-label="`${PERMISSIONS[grant.permission]}: mode`"
-                :value="grant.mode"
+                :model-value="grant.mode"
+                :options="MODE_OPTIONS"
                 :disabled="busy"
-                @change="changeMode(pkg.id, grant, $event)"
-              >
-                <option value="ask">{{ MODES.ask }}</option>
-                <option value="allow">{{ MODES.allow }}</option>
-              </select>
+                @update:model-value="changeMode(pkg.id, grant, $event)"
+              />
             </span>
           </span>
           <button type="button" class="packages__button" :disabled="busy" @click="remove(pkg.id)">Delete</button>
@@ -453,22 +450,9 @@ async function changeMode(packageId: string, grant: Grant, event: Event) {
   gap: 0.5rem;
 }
 
-.packages__select {
-  height: var(--ld-control-height);
-  padding: 0 0.5rem;
-  border: var(--ld-border-width) solid var(--ld-border-default);
-  border-radius: var(--ld-radius-control);
-  background: var(--ld-surface-3);
-  color: var(--ld-text-primary);
-  font: inherit;
-  min-width: 0;
-  max-width: 100%;
-  text-overflow: ellipsis;
-}
-
-.packages__select:focus-visible {
-  outline: 0.125rem solid var(--ld-focus-ring);
-  outline-offset: 0.125rem;
+.packages__grant :deep(.ui-select-field) {
+  flex: none;
+  width: 11rem;
 }
 
 .packages__hint {
