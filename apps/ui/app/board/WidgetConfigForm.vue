@@ -107,7 +107,7 @@ function messageFor(key: string): string | null {
       />
       <UiNumberField
         v-else-if="setting.type === 'integer' || setting.type === 'number'"
-        :model-value="Number(values[key])" :integer="setting.type === 'integer'" :min="setting.minimum" :max="setting.maximum"
+        :model-value="Number(values[key])" :integer="setting.type === 'integer'" stepper :min="setting.minimum" :max="setting.maximum"
         :aria-required="isRequiredSetting(schema, key) ? 'true' : undefined"
         @update:model-value="changeField(key, setting, $event)"
       />

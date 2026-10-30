@@ -29,7 +29,7 @@ function set(patch: Partial<FocusSettings>) {
 <template>
   <div class="pomodoro-settings">
     <SettingsRow v-for="[label, key] in numbers" :key="key" :label="label">
-      <UiNumberField :model-value="state.settings[key]" integer :min="FOCUS_LIMITS[key][0]" :max="FOCUS_LIMITS[key][1]" @update:model-value="set({ [key]: $event })" />
+      <UiNumberField :model-value="state.settings[key]" integer stepper :min="FOCUS_LIMITS[key][0]" :max="FOCUS_LIMITS[key][1]" @update:model-value="set({ [key]: $event })" />
     </SettingsRow>
     <SettingsRow v-for="[label, key] in switches" :key="key" :label="label">
       <UiSwitch :model-value="state.settings[key]" @update:model-value="set({ [key]: $event })" />

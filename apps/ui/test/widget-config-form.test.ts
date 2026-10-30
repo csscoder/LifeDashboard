@@ -24,6 +24,7 @@ describe('WidgetConfigForm controls', () => {
     expect(ui.nodes().filter(n => /^Ui/.test(n.tag)).map(n => n.tag)).toEqual(['UiTextField', 'UiSelect', 'UiSwitch', 'UiNumberField', 'UiNumberField', 'UiColorField', 'UiTextField', 'UiButton', 'UiButton'])
     expect(ui.nodes().filter(n => n.tag === 'input')).toHaveLength(0)
     expect(ui.nodes().filter(n => n.tag === 'UiNumberField').map(n => n.props.integer)).toEqual([true, false])
+    expect(ui.nodes().filter(n => n.tag === 'UiNumberField').map(n => 'stepper' in n.props)).toEqual([true, true])
     expect(ui.nodes().filter(n => n.tag === 'UiTextField')[1]!.props.type).toBe('password')
   })
   it('edits a color setting with the colour picker and applies only #rrggbb', () => {

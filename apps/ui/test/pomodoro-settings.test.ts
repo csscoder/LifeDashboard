@@ -30,6 +30,7 @@ describe('pomodoro settings', () => {
     for (const [label, min, max] of numbers) {
       expect(field(label).tag).toBe('ui-number-field')
       expect([field(label).props.min, field(label).props.max, field(label).props.integer]).toEqual([min, max, true])
+      expect('stepper' in field(label).props).toBe(true)
     }
     for (const label of ['Auto-start breaks', 'Auto-start focus', 'Sound']) expect(field(label).tag).toBe('ui-switch')
     expect(ui.text()).toContain('Shared by all Pomodoro widgets')
