@@ -426,7 +426,11 @@ html[data-desktop] .app__titlebar {
   display: flex;
   align-items: center;
   padding: 0 5rem 0 1rem;
+  pointer-events: none; /* clicks fall through to the widgets under it; only its controls take them */
 }
+
+.app__header .space-switcher,
+.app__start :is(input, button) { pointer-events: auto; }
 
 .app__start { min-width: 0; }
 
