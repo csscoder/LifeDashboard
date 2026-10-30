@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_SHADOW,
+  SHADOW_LIMITS,
   isUuid,
   normalizeAppearance,
   parseScreenBoard,
@@ -31,6 +32,15 @@ function mutated(change: (doc: any) => void): unknown {
   change(doc)
   return doc
 }
+
+describe('default shadow', () => {
+  it('is the look a new widget starts with, within the shadow limits', () => {
+    expect(DEFAULT_SHADOW).toEqual({ x: 20, y: 20, blur: 20, color: '#000000', opacity: 0.5 })
+    expect(DEFAULT_SHADOW.x).toBeLessThanOrEqual(SHADOW_LIMITS.x[1])
+    expect(DEFAULT_SHADOW.y).toBeLessThanOrEqual(SHADOW_LIMITS.y[1])
+    expect(DEFAULT_SHADOW.blur).toBeLessThanOrEqual(SHADOW_LIMITS.blur[1])
+  })
+})
 
 describe('isUuid', () => {
   it('accepts UUIDs in any case and rejects other values', () => {
@@ -268,7 +278,7 @@ describe('normalizeAppearance', () => {
   })
 
   it('rebuilds the canonical key order', () => {
-    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 16, y: 8, x: 0 }, theme: null, variant: null, scale: null }
+    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 20, y: 20, x: 20 }, theme: null, variant: null, scale: null }
     expect(JSON.stringify(normalizeAppearance(scrambled))).toBe(JSON.stringify({ theme: null, shadow: DEFAULT_SHADOW, variant: null, scale: null }))
   })
 })

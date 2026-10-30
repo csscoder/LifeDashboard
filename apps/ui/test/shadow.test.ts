@@ -4,7 +4,7 @@ import { shadowCss } from '../app/theme/shadow'
 
 describe('shadowCss', () => {
   it('formats the default shadow', () => {
-    expect(shadowCss(DEFAULT_SHADOW)).toBe('0px 8px 16px rgb(0 0 0 / 0.5)')
+    expect(shadowCss(DEFAULT_SHADOW)).toBe('20px 20px 20px rgb(0 0 0 / 0.5)')
   })
 
   it('converts any-case hex to rgb channels and keeps negative offsets', () => {

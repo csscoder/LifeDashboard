@@ -1,5 +1,6 @@
 import type { ThemeChoice } from '@lifedashboard/contracts/theme'
 import {
+  DEFAULT_SHADOW,
   normalizeAppearance,
   type ScreenBoard,
   type ScreenBackground,
@@ -16,10 +17,14 @@ import type { ParseResult } from '@lifedashboard/contracts/parse'
 /** Board interaction mode: display only, the builder draft, or editing the placed widgets. */
 export type BoardMode = 'view' | 'build' | 'edit'
 
+/** The look a widget starts with and returns to on reset. */
+const defaultAppearance = (theme: WidgetAppearance['theme']): WidgetAppearance =>
+  ({ theme, shadow: { ...DEFAULT_SHADOW }, variant: null, scale: null })
+
 /** The board with a new widget last in both lists. A `frameless` package widget starts with the bare theme (spec 2026-10-20). */
 export function addInstance(doc: ScreenBoard, id: string, source: WidgetSource, rect: Rect, frame: 'framed' | 'frameless' | undefined): ScreenBoard {
-  const appearance = frame === 'frameless' ? normalizeAppearance({ theme: 'bare', shadow: null, variant: null, scale: null }) : undefined
-  const instance: WidgetInstance = { id, source: { ...source }, configVersion: 1, config: {}, ...(appearance ? { appearance } : {}) }
+  const appearance = defaultAppearance(frame === 'frameless' ? 'bare' : null)
+  const instance: WidgetInstance = { id, source: { ...source }, configVersion: 1, config: {}, appearance }
   return {
     ...doc,
     instances: [...doc.instances, instance],
@@ -64,7 +69,7 @@ export function setConfig(board: ScreenBoard, instanceId: string, config: Record
 
 /** «Reset widget settings»: the widget's look and options go back to their defaults; secrets and version stay. */
 export function resetWidget(board: ScreenBoard, id: string): ScreenBoard {
-  return setConfig(setAppearance(board, id, null), id, {})
+  return setConfig(setAppearance(board, id, defaultAppearance(null)), id, {})
 }
 
 /** Switches an instance within its installed package, keeping its ID, data and position. */

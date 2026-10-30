@@ -39,7 +39,7 @@ export interface WidgetInstance {
 }
 
 export const SHADOW_LIMITS = { x: [-32, 32], y: [-32, 32], blur: [0, 48] } as const
-export const DEFAULT_SHADOW: DropShadow = { x: 0, y: 8, blur: 16, color: '#000000', opacity: 0.5 }
+export const DEFAULT_SHADOW: DropShadow = { x: 20, y: 20, blur: 20, color: '#000000', opacity: 0.5 }
 
 export interface WidgetPlacement extends Rect {
   instanceId: string

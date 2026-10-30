@@ -171,11 +171,11 @@ describe('setConfig', () => {
 })
 
 describe('resetWidget', () => {
-  it('drops the appearance and the config of one widget, keeping the rest of the board', () => {
+  it('returns one widget to the default look and empty config, keeping the rest of the board', () => {
     const styled = setAppearance(board, A, { theme: { palette: 'builtin:gruvbox', mode: 'light', style: 'solid' }, shadow: DEFAULT_SHADOW, variant: null, scale: null })
     styled.instances[0] = { ...styled.instances[0]!, configVersion: 2, config: { zone: 'Asia/Tokyo' } }
     const next = resetWidget(styled, A)
-    expect(next.instances[0]).toStrictEqual({ id: A, source: styled.instances[0]!.source, configVersion: 2, config: {} })
+    expect(next.instances[0]).toStrictEqual({ id: A, source: styled.instances[0]!.source, configVersion: 2, config: {}, appearance: { theme: null, shadow: DEFAULT_SHADOW, variant: null, scale: null } })
     expect(next.instances.slice(1)).toEqual(styled.instances.slice(1))
     expect(next.layout).toBe(styled.layout)
   })
@@ -195,7 +195,7 @@ describe('setAppearance', () => {
   })
 
   it('replaces an appearance and stores it in canonical key order', () => {
-    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 16, y: 8, x: 0 }, theme: null, variant: null, scale: null } as WidgetAppearance
+    const scrambled = { shadow: { opacity: 0.5, color: '#000000', blur: 20, y: 20, x: 20 }, theme: null, variant: null, scale: null } as WidgetAppearance
     const next = setAppearance(setAppearance(board, A, look), A, scrambled)
     expect(JSON.stringify(next.instances[0]!.appearance)).toBe(JSON.stringify({ theme: null, shadow: DEFAULT_SHADOW, variant: null, scale: null }))
   })
@@ -222,20 +222,20 @@ describe('addInstance', () => {
   const source = { kind: 'package', packageId: 'dev.a.clock', version: '1.0.0' } as const
   const rect = { x: 2, y: 4, w: 2, h: 2 }
 
-  it('places a frameless widget last with the bare theme and no shadow, without mutating its input', () => {
+  it('places a frameless widget last with the bare theme and the default shadow, without mutating its input', () => {
     const before = structuredClone(board)
     const next = addInstance(board, NEW, source, rect, 'frameless')
-    expect(next.instances.at(-1)).toStrictEqual({ id: NEW, source, configVersion: 1, config: {}, appearance: { theme: 'bare', shadow: null, variant: null, scale: null } })
+    expect(next.instances.at(-1)).toStrictEqual({ id: NEW, source, configVersion: 1, config: {}, appearance: { theme: 'bare', shadow: DEFAULT_SHADOW, variant: null, scale: null } })
     expect(next.layout.at(-1)).toStrictEqual({ instanceId: NEW, ...rect })
     expect(next.instances.slice(0, 3)).toEqual(board.instances)
     expect(parseScreenBoard(JSON.parse(JSON.stringify(next)))).toEqual({ ok: true, value: next })
     expect(board).toEqual(before)
   })
 
-  it.each([['framed' as const], [undefined]])('adds no appearance key for frame %s', (frame) => {
+  it.each([['framed' as const], [undefined]])('gives frame %s the board theme and the default shadow', (frame) => {
     const next = addInstance(board, NEW, source, rect, frame)
-    expect(next.instances.at(-1)).not.toHaveProperty('appearance')
-    expect(next.instances.at(-1)).toStrictEqual({ id: NEW, source, configVersion: 1, config: {} })
+    expect(next.instances.at(-1)).toStrictEqual({ id: NEW, source, configVersion: 1, config: {}, appearance: { theme: null, shadow: DEFAULT_SHADOW, variant: null, scale: null } })
+    expect(next.instances.at(-1)!.appearance!.shadow).not.toBe(DEFAULT_SHADOW)
     expect(next.layout.at(-1)).toStrictEqual({ instanceId: NEW, ...rect })
   })
 })

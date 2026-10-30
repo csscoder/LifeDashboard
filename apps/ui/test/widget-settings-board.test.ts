@@ -27,7 +27,7 @@ describe('board settings integration', () => {
     expect(panels).toBe(1)
   })
 
-  it('reset keeps secrets and clears the look after confirming the exact copy', async () => {
+  it('reset keeps secrets and returns the look to its defaults after confirming the exact copy', async () => {
     const working = { value: { id: 'screen', rows: 12, instances: [{ id: 'w1', source: { kind: 'builtin', type: 'clock-analog-1' }, config: { zone: 'UTC' }, appearance: { theme: 'bare', shadow: DEFAULT_SHADOW, variant: 'roman', scale: 40 } }], layout: [] } as ScreenBoard }
     const askDelete = vi.fn().mockResolvedValue(true)
     const api = { clearWidgetSecret: vi.fn() }
@@ -37,7 +37,7 @@ describe('board settings integration', () => {
     )
     await reset()
     expect(askDelete).toHaveBeenCalledWith(confirmation, { confirm: 'Reset', cancel: 'Cancel' })
-    expect(working.value.instances[0]!.appearance).toBeUndefined()
+    expect(working.value.instances[0]!.appearance).toEqual({ theme: null, shadow: DEFAULT_SHADOW, variant: null, scale: null })
     expect(working.value.instances[0]!.config).toEqual({})
     expect(api.clearWidgetSecret).not.toHaveBeenCalled()
   })
