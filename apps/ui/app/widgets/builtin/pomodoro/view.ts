@@ -40,8 +40,36 @@ export function toggleAction(run: FocusRun): 'start' | 'pause' | 'resume' {
   return run.status === 'ready' ? 'start' : run.status === 'running' ? 'pause' : 'resume'
 }
 
+/** The centre ▶: shown whenever the timer is not running, labelled by what it does. */
+export function playButton(run: FocusRun): 'Start' | 'Resume' | null {
+  return run.status === 'ready' ? 'Start' : run.status === 'paused' ? 'Resume' : null
+}
+
+/** The text on the tomato during a break, in place of the task, so a break never looks like a focus. */
+export function restText(run: FocusRun): string | null {
+  return run.phase === 'short' ? 'Take a break' : run.phase === 'long' ? 'Long break' : null
+}
+
+/** ⏭ only during a break: a focus, running or paused, is never closed by a stray click. */
+export function showsSkip(run: FocusRun): boolean {
+  return run.phase !== 'focus'
+}
+
 export function formatTotal(ms: number): string {
   const minutes = Math.floor(ms / 60_000)
   const hours = Math.floor(minutes / 60)
   return hours ? `${hours} h ${minutes % 60} min` : `${minutes} min`
+}
+
+const RECENT_SHOWN = 10
+
+/**
+ * Task picker list: before typing, the 10 most recent tasks with the current one first; while typing, every previous
+ * task containing the text. The typed or current task leads because Reka highlights the first item for Enter.
+ */
+export function taskSuggestions(labels: string[], typed: string, current = ''): string[] {
+  const query = typed.trim()
+  if (!query) return current ? [current, ...labels.filter((label) => label !== current)].slice(0, RECENT_SHOWN) : labels.slice(0, RECENT_SHOWN)
+  const needle = query.toLocaleLowerCase()
+  return [query, ...labels.filter((label) => label !== query && label.toLocaleLowerCase().includes(needle))]
 }

@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, useTemplateRef } from 'vue'
-import { FieldRoot, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
+import { computed, ref, shallowRef, useTemplateRef, watch } from 'vue'
+import {
+  ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxPortal, ComboboxRoot, ComboboxViewport,
+  FieldRoot, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger,
+} from 'reka-ui'
 import { nextColor, SPACE_COLORS, type SpaceColor } from '@lifedashboard/contracts/space'
 import UiButton from '../../../ui/UiButton.vue'
 import UiSelect from '../../../ui/UiSelect.vue'
 import UiTextField from '../../../ui/UiTextField.vue'
 import type { FocusStore } from '../../../focus/store'
+import { taskSuggestions } from './view'
 
 // The trigger (the label line) comes in the default slot. A change during a running focus applies to the current session (setTask).
 const props = defineProps<{ store: FocusStore }>()
@@ -14,6 +18,8 @@ const emit = defineEmits<{ close: [] }>()
 const state = props.store.state
 const open = ref(false)
 const draft = ref('')
+// What the user typed since opening; the list searches only after typing.
+const typed = ref('')
 const labelError = ref('')
 const adding = ref(false)
 const projectName = ref('')
@@ -30,12 +36,17 @@ const projects = computed(() => state.projects.filter(({ archivedAt }) => archiv
 const color = computed(() => picked.value ?? nextColor(projects.value.map((project) => project.color)))
 const options = computed(() => [{ value: '', label: 'No project' }, ...projects.value.map(({ id, name }) => ({ value: id, label: name }))])
 const label = computed(() => draft.value.trim() || null)
+const suggestions = computed(() => taskSuggestions(state.recentLabels, typed.value, state.run.label ?? ''))
+// Reka highlights the first item on input, before the new list renders; highlight it again once it has.
+const combobox = useTemplateRef<{ highlightFirstItem?: () => void }>('combobox')
+watch(suggestions, () => combobox.value?.highlightFirstItem?.(), { flush: 'post' })
 
 function onOpen(next: boolean) {
   open.value = next
   if (next) {
     portalTarget.value = trigger.value?.$el.closest<HTMLElement>('.space') ?? 'body'
     draft.value = state.run.label ?? ''
+    typed.value = ''
     labelError.value = projectError.value = projectName.value = ''
     adding.value = false
     picked.value = null
@@ -70,12 +81,21 @@ async function addProject() {
     <PopoverTrigger ref="trigger" as-child><slot /></PopoverTrigger>
     <PopoverPortal :to="portalTarget">
       <PopoverContent class="task-picker" side="top" :side-offset="6" aria-label="Task">
-        <FieldRoot><UiTextField v-model="draft" class="task-picker__label" aria-label="Task" placeholder="What are you working on?" :maxlength="120" @keydown.enter.prevent="apply(label, state.run.projectId)" /></FieldRoot>
+        <!-- The typed text is free: the list only suggests. Its first item is the typed text, so Enter on the highlighted
+             item keeps it; an Enter Reka does not take (nothing highlighted) bubbles to the anchor. -->
+        <ComboboxRoot ref="combobox" ignore-filter open-on-focus open-on-click :reset-search-term-on-blur="false" :reset-search-term-on-select="false" @update:model-value="apply(String($event), state.run.projectId)">
+          <ComboboxAnchor @keydown.enter.prevent="apply(label, state.run.projectId)">
+            <ComboboxInput :model-value="draft" class="ui-text-field" aria-label="Task" placeholder="What are you working on?" :maxlength="120" @update:model-value="draft = typed = $event" />
+          </ComboboxAnchor>
+          <ComboboxPortal :to="portalTarget">
+            <ComboboxContent class="task-picker__list" position="popper" :side-offset="4" hide-when-empty>
+              <ComboboxViewport>
+                <ComboboxItem v-for="item in suggestions" :key="item" :value="item" class="task-picker__option">{{ item }}</ComboboxItem>
+              </ComboboxViewport>
+            </ComboboxContent>
+          </ComboboxPortal>
+        </ComboboxRoot>
         <p v-if="labelError" class="task-picker__error" role="alert">{{ labelError }}</p>
-
-        <div v-if="state.recentLabels.length" class="task-picker__recent">
-          <UiButton v-for="recent in state.recentLabels" :key="recent" @click="apply(recent, state.run.projectId)">{{ recent }}</UiButton>
-        </div>
 
         <UiSelect aria-label="Project" :model-value="state.run.projectId ?? ''" :options="options" @update:model-value="apply(label, $event || null)" />
 
@@ -106,7 +126,10 @@ async function addProject() {
 
 <style>
 .task-picker { display: flex; flex-direction: column; gap: 0.5rem; width: 16rem; padding: 0.75rem; border: var(--ld-border-width) solid var(--ld-border-default); border-radius: var(--ld-radius-control); background: var(--ld-surface-2); color: var(--ld-text-primary); z-index: 10; }
-.task-picker__recent, .task-picker__colors { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.task-picker__colors { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.task-picker__list { box-sizing: border-box; width: var(--reka-combobox-trigger-width); max-height: min(16rem, var(--reka-combobox-content-available-height)); overflow-y: auto; padding: 0.25rem; border: var(--ld-border-width) solid var(--ld-border-default); border-radius: var(--ld-radius-control); background: var(--ld-surface-2); color: var(--ld-text-primary); box-shadow: var(--ld-shadow-raised); z-index: 11; }
+.task-picker__option { padding: 0.375rem 0.5rem; border-radius: var(--ld-radius-control); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.task-picker__option[data-highlighted] { background: var(--ld-surface-3); }
 .task-picker__new { display: flex; flex-direction: column; gap: 0.5rem; }
 .task-picker__error { margin: 0; color: var(--ld-danger-text); font-size: 0.8125rem; }
 .task-picker__swatch { width: 1.25rem; height: 1.25rem; border: 0; border-radius: 50%; cursor: pointer; }

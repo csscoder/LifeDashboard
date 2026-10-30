@@ -105,7 +105,8 @@ describe('focus', () => {
       const endedAt = new Date(Date.parse('2026-10-05T10:00:00.000Z') + i * 60_000).toISOString()
       await put({ run: run(), session: session(`s${i}`, { label: label || null, startedAt: '2026-10-05T09:00:00.000Z', endedAt }), expectedRevision: revision++ })
     }
-    expect((await get()).json().data.recentLabels).toEqual(['l12', 'l11', 'l10', 'l9', 'l8', 'l7', 'l6', 'l5', 'l4', 'l1'])
+    // The picker shows the first 10 and searches the rest.
+    expect((await get()).json().data.recentLabels).toEqual(['l12', 'l11', 'l10', 'l9', 'l8', 'l7', 'l6', 'l5', 'l4', 'l1', 'l3', 'l2'])
   })
 
   it('projects', async () => {

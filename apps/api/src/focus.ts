@@ -107,8 +107,9 @@ function readState(db: DatabaseSync, now: Date): FocusState {
   return transaction(db, () => {
     const row = ensureRow(db, now)
     const projects = (db.prepare(`${PROJECT_COLUMNS} ORDER BY created_at, id`).all() as unknown as ProjectRow[]).map(projectOf)
+    // shortcut: the 200 most recent labels feed the picker search; add a search endpoint if older tasks must be found.
     const labels = db
-      .prepare("SELECT label FROM focus_sessions WHERE label IS NOT NULL AND label <> '' GROUP BY label ORDER BY MAX(ended_at) DESC LIMIT 10")
+      .prepare("SELECT label FROM focus_sessions WHERE label IS NOT NULL AND label <> '' GROUP BY label ORDER BY MAX(ended_at) DESC LIMIT 200")
       .all() as unknown as { label: string }[]
     return {
       settings: JSON.parse(row.settings), run: JSON.parse(row.run), revision: row.revision,

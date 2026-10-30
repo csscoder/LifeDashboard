@@ -1,6 +1,7 @@
 import * as Vue from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import { nextColor, SPACE_COLORS } from '@lifedashboard/contracts/space'
+import * as viewModule from '../app/widgets/builtin/pomodoro/view'
 import { compileSfc, mountComponent } from './helpers/sfc-renderer'
 
 const pass = (tag: string) => Vue.defineComponent({ setup: (_, { slots }) => () => Vue.h(tag, null, slots.default?.()) })
@@ -9,6 +10,21 @@ const TextField = Vue.defineComponent({
   setup: (props, { attrs, emit }) => () => Vue.h('input', { ...attrs, value: props.modelValue, maxlength: props.maxlength, onInput: (event: any) => emit('update:modelValue', event.target.value) }),
 })
 const Button = Vue.defineComponent({ props: ['disabled'], setup: (props, { attrs, slots }) => () => Vue.h('button', { ...attrs, disabled: props.disabled }, slots.default?.()) })
+// Combobox parts: the root exposes `pick` to stand in for choosing an item; the input is a plain input.
+const highlightFirstItem = vi.fn()
+const ComboboxRoot = Vue.defineComponent({
+  emits: ['update:modelValue'],
+  setup: (_, { attrs, emit, expose, slots }) => {
+    expose({ highlightFirstItem })
+    return () => Vue.h('combobox', { ...attrs, pick: (value: string) => emit('update:modelValue', value) }, slots.default?.())
+  },
+})
+const ComboboxInput = Vue.defineComponent({
+  props: ['modelValue', 'maxlength'], emits: ['update:modelValue'],
+  setup: (props, { attrs, emit }) => () => Vue.h('input', { ...attrs, value: props.modelValue, maxlength: props.maxlength, onInput: (event: any) => emit('update:modelValue', event.target.value) }),
+})
+const ComboboxItem = Vue.defineComponent({ props: ['value'], setup: (props, { slots }) => () => Vue.h('option', { value: props.value }, slots.default?.()) })
+const passAttrs = (tag: string) => Vue.defineComponent({ setup: (_, { attrs, slots }) => () => Vue.h(tag, attrs, slots.default?.()) })
 const Select = Vue.defineComponent({ props: ['modelValue', 'options'], setup: (props, { attrs }) => () => Vue.h('ui-select', { ...attrs, options: props.options }) })
 const component = compileSfc(new URL('../app/widgets/builtin/pomodoro/TaskPicker.vue', import.meta.url), {
   'reka-ui': {
@@ -17,10 +33,13 @@ const component = compileSfc(new URL('../app/widgets/builtin/pomodoro/TaskPicker
     PopoverTrigger: pass('trigger'),
     PopoverPortal: Vue.defineComponent({ props: ['to', 'disabled'], setup: (props, { slots }) => () => Vue.h('portal', { ...props }, slots.default?.()) }),
     PopoverContent: pass('content'),
+    ComboboxRoot, ComboboxInput, ComboboxItem,
+    ComboboxAnchor: passAttrs('anchor'), ComboboxPortal: pass('combobox-portal'), ComboboxContent: pass('list'), ComboboxViewport: pass('viewport'),
   },
   '@lifedashboard/contracts/space': { nextColor, SPACE_COLORS },
   '../../../ui/UiButton.vue': Button,
   '../../../ui/UiSelect.vue': Select,
+  './view': viewModule,
   '../../../ui/UiTextField.vue': TextField,
 })
 
@@ -29,7 +48,7 @@ function mount(overrides: Record<string, unknown> = {}) {
     state: Vue.reactive({
       run: { label: null as string | null, projectId: 'p1' as string | null },
       projects: [{ id: 'p1', name: 'Home', color: 'violet', archivedAt: null }, { id: 'p2', name: 'Old', color: 'blue', archivedAt: 5 }],
-      recentLabels: ['Write spec'],
+      recentLabels: ['Write spec', 'Review', ...Array.from({ length: 10 }, (_, i) => `task ${i}`), 'Rewrite docs'],
     }),
     setTask: vi.fn((): string | null => null),
     createProject: vi.fn(async (_name: string, _color: string): Promise<any> => ({ ok: true, project: { id: 'new' } })),
@@ -38,7 +57,9 @@ function mount(overrides: Record<string, unknown> = {}) {
   const ui = mountComponent(component, { store }, ['close'])
   const input = (placeholder: string) => ui.nodes().find((el) => el.tag === 'input' && el.props.placeholder === placeholder)!
   const type = (placeholder: string, value: string) => input(placeholder).props.onInput({ target: { value } })
-  return { store, ui, input, type }
+  const anchor = () => ui.nodes().find((el) => el.tag === 'anchor')!
+  const options = () => ui.nodes().filter((el) => el.tag === 'option').map((el) => el.props.value)
+  return { store, ui, input, type, anchor, options }
 }
 const enter = (el: { props: Record<string, any> }) => el.props.onKeydown({ key: 'Enter', preventDefault() {} })
 
@@ -56,17 +77,41 @@ describe('pomodoro task picker', () => {
   })
 
   it('submits a trimmed label', async () => {
-    const { store, ui, input, type } = mount()
+    // Enter reaches the anchor only when no list item is highlighted; Reka stops it otherwise.
+    const { store, ui, anchor, type } = mount()
     type('What are you working on?', '  Refactor grid  ')
     await Vue.nextTick()
-    enter(input('What are you working on?'))
+    enter(anchor())
     expect(store.setTask).toHaveBeenCalledWith('Refactor grid', 'p1')
     expect(ui.events).toEqual([['close']])
   })
-  it('applies a recent label', () => {
+  it('lists the 10 most recent tasks in the dropdown, not as buttons, and searches all of them', async () => {
+    const { ui, type, options } = mount()
+    expect(options()).toEqual(['Write spec', 'Review', ...Array.from({ length: 8 }, (_, i) => `task ${i}`)])
+    expect(ui.button('Write spec')).toBeUndefined()
+    type('What are you working on?', 'write')
+    await Vue.nextTick()
+    expect(options()).toEqual(['write', 'Write spec', 'Rewrite docs'])
+  })
+  it('opens with the current task first among the recent ones, searching only after typing', async () => {
+    const { ui, store, type, options, input } = mount()
+    store.state.run.label = 'Review'
+    ui.nodes().find((el) => el.tag === 'popover')!.props.show()
+    await Vue.nextTick()
+    expect(input('What are you working on?').props.value).toBe('Review')
+    expect(options().slice(0, 3)).toEqual(['Review', 'Write spec', 'task 0'])
+    highlightFirstItem.mockClear()
+    type('What are you working on?', 'rev')
+    await Vue.nextTick()
+    expect(options()).toEqual(['rev', 'Review'])
+    // Reka highlights before the new list renders; the picker re-highlights the typed text once it has.
+    expect(highlightFirstItem).toHaveBeenCalled()
+  })
+  it('applies a picked task', () => {
     const { store, ui } = mount()
-    ui.button('Write spec').click()
-    expect(store.setTask).toHaveBeenCalledWith('Write spec', 'p1')
+    ui.nodes().find((el) => el.tag === 'combobox')!.props.pick('Review')
+    expect(store.setTask).toHaveBeenCalledWith('Review', 'p1')
+    expect(ui.events).toEqual([['close']])
   })
   it('creates a project in the next free colour and assigns it', async () => {
     const { store, ui, type } = mount()
@@ -124,9 +169,9 @@ describe('pomodoro task picker', () => {
     expect(ui.nodes().find((el) => el.tag === 'ui-select')!.props.options.map((o: any) => o.label)).toEqual(['No project', 'Home'])
   })
   it('shows a rejected label and stays open', async () => {
-    const { ui, input, type } = mount({ setTask: vi.fn(() => 'label must not contain control or hidden characters') })
+    const { ui, anchor, type } = mount({ setTask: vi.fn(() => 'label must not contain control or hidden characters') })
     type('What are you working on?', 'x')
-    enter(input('What are you working on?'))
+    enter(anchor())
     await Vue.nextTick()
     expect(ui.text()).toContain('label must not contain control or hidden characters')
     expect(ui.events).toEqual([])

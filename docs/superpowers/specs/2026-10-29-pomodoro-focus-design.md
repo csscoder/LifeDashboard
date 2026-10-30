@@ -136,7 +136,7 @@ Parsers follow the `ParseResult` style of `parseSpacePatch`: unknown keys, out-o
 
 | Method and path | Body | Result |
 | --- | --- | --- |
-| `GET /api/v1/focus` | — | `{ settings, run, revision, projects, recentLabels }`; `recentLabels` is the 10 most recent distinct non-empty labels. |
+| `GET /api/v1/focus` | — | `{ settings, run, revision, projects, recentLabels }`; `recentLabels` is the 200 most recent distinct non-empty labels, most recent first. |
 | `PUT /api/v1/focus` | `{ settings?, run, session?, expectedRevision }` | `{ revision }`. One transaction: write settings and run, insert the session. A stale revision is 409 `CONFLICT`. An unknown `projectId` is 400. |
 | `GET /api/v1/focus/sessions?from=YYYY-MM-DD&to=YYYY-MM-DD` | — | Sessions with `day` in the range, ordered by `ended_at`. The range is at most 366 days; a longer or invalid one is 400. |
 | `POST /api/v1/focus/projects` | `{ name, color }` | The created project. |
@@ -229,19 +229,20 @@ No manifest `settings`: settings are global. Files live in `apps/ui/app/widgets/
 
 ### Tile (`Pomodoro.vue`)
 
-- `tomato.webp` with an SVG ring around it; timer digits centred on the tomato; goal dots on top (current pomodoro outlined); the task label with the project colour dot at the bottom.
+- `tomato.webp` with an SVG ring around it; timer digits centred on the tomato; goal dots on top (current pomodoro outlined); the task label with the project colour dot on the tomato above the digits.
+- During a break the label reads «Take a break» (long break: «Long break») and still opens the task picker; the tomato sleeps: «z z Z» drift from its top-right shoulder and it breathes slowly (gsap, already a dependency); static letters under `prefers-reduced-motion`; animated only while `context.visible`.
 - Ring colours: focus red, breaks green, goal met gold (the tile then shows «8 / 8» and today's focus total).
 - A goal over 12 shows «5 / 16» instead of dots.
 - Compact layout when the tile is narrower or shorter than 5 cells: only the ring and digits.
-- Controls ⏸/▶, ⏭ (skip), ↺ (reset) appear on hover and on keyboard focus. Clicking the tomato or pressing Space toggles start/pause. Buttons have `aria-label`; the digits have `role="timer"`.
-- Paused: the ring blinks slowly. Ready: a ▶ button under the digits.
+- Controls ⏸/▶, ⏭ (skip, only during a break, so a focus is never closed by a stray click), ↺ (reset) appear on hover and on keyboard focus. Clicking the tomato or pressing Space toggles start/pause. Buttons have `aria-label`; the digits have `role="timer"`.
+- Paused: the ring blinks slowly. Ready and paused: a ▶ button under the digits; the digits stay centred either way.
 - The ring redraws with `requestAnimationFrame` only while `context.visible` and running.
 - `prefers-reduced-motion`: no blink, no glow animation.
 - Load failure: «Can't load focus» with «Retry».
 
 ### Task picker (`TaskPicker.vue`)
 
-A Reka popover from the label: input «What are you working on?» (≤ 120 characters), recent labels, a project select with «+ New project» (name and `SpaceColor`), «Clear». A change during a running focus applies to the current session.
+A Reka popover from the label: input «What are you working on?» (≤ 120 characters) with a dropdown of the 10 most recent labels that, while typing, lists every recent label containing the text (case-insensitive), the typed text first, a project select with «+ New project» (name and `SpaceColor`), «Clear». A change during a running focus applies to the current session.
 
 ### Statistics and projects (`FocusStatsDialog.vue`)
 

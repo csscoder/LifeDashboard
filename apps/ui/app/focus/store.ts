@@ -48,7 +48,7 @@ export interface FocusStore {
 const HEARTBEAT_MS = 30_000
 const RETRY_MS = [2000, 5000, 15_000]
 const RETRY_LATER_MS = 60_000
-const RECENT_LABELS = 10
+const RECENT_LABELS = 200 // the API's limit
 
 // Field by field: key order differs between engine spreads and the server's JSON.
 function sameRun(a: unknown, b: unknown): boolean {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_FOCUS_SETTINGS, initialRun, type FocusRun } from '@lifedashboard/contracts/focus'
-import { formatClock, formatTotal, goalDots, isCompact, ringProgress, ringTone, toggleAction } from '../app/widgets/builtin/pomodoro/view'
+import { formatClock, formatTotal, goalDots, isCompact, ringProgress, playButton, restText, ringTone, showsSkip, taskSuggestions, toggleAction } from '../app/widgets/builtin/pomodoro/view'
 
 const T0 = Date.UTC(2026, 9, 29, 9)
 const FOCUS = 1_500_000
@@ -51,5 +51,43 @@ describe('pomodoro view', () => {
   it('formats the focus total in hours and minutes', () => {
     expect(formatTotal(12_000_000)).toBe('3 h 20 min')
     expect(formatTotal(2_700_000)).toBe('45 min')
+  })
+  it('suggests the 10 most recent tasks for an empty field', () => {
+    const labels = Array.from({ length: 12 }, (_, i) => `task ${i}`)
+    expect(taskSuggestions(labels, '  ')).toEqual(labels.slice(0, 10))
+  })
+  it('puts the current task first among the 10 most recent until the user types', () => {
+    const labels = Array.from({ length: 12 }, (_, i) => `task ${i}`)
+    expect(taskSuggestions(labels, '', 'task 11')).toEqual(['task 11', ...labels.slice(0, 9)])
+    expect(taskSuggestions(labels, '', 'task 3')).toEqual(['task 3', 'task 0', 'task 1', 'task 2', 'task 4', 'task 5', 'task 6', 'task 7', 'task 8', 'task 9'])
+  })
+  it('searches every previous task by a case-insensitive match, the typed text first', () => {
+    const labels = ['Write report', 'Development', 'Article write', 'Review', ...Array.from({ length: 10 }, (_, i) => `x${i}`), 'Rewrite docs']
+    expect(taskSuggestions(labels, ' WRITE ')).toEqual(['WRITE', 'Write report', 'Article write', 'Rewrite docs'])
+  })
+  it('does not repeat the typed text when it is already a previous task', () => {
+    expect(taskSuggestions(['Write report', 'Review'], 'Review')).toEqual(['Review'])
+    // Reka highlights the first item, so Enter keeps the typed task even when a longer match is more recent.
+    expect(taskSuggestions(['Write report', 'Write'], 'Write')).toEqual(['Write', 'Write report'])
+  })
+  it('shows the centre play button whenever the timer is not running', () => {
+    expect(playButton(ready)).toBe('Start')
+    expect(playButton(paused)).toBe('Resume')
+    expect(playButton(running)).toBeNull()
+  })
+  it('tells the user to rest during a break, running or not', () => {
+    expect(restText(ready)).toBeNull()
+    expect(restText(paused)).toBeNull()
+    expect(restText({ ...ready, phase: 'short' })).toBe('Take a break')
+    expect(restText({ ...paused, phase: 'short' })).toBe('Take a break')
+    expect(restText({ ...running, phase: 'long' })).toBe('Long break')
+  })
+  it('offers skip only during a break, so a focus is never closed by accident', () => {
+    expect(showsSkip(paused)).toBe(false)
+    expect(showsSkip(running)).toBe(false)
+    expect(showsSkip(ready)).toBe(false)
+    expect(showsSkip({ ...running, phase: 'short' })).toBe(true)
+    expect(showsSkip({ ...paused, phase: 'long' })).toBe(true)
+    expect(showsSkip({ ...ready, phase: 'short' })).toBe(true)
   })
 })

@@ -3,10 +3,12 @@ import * as reka from 'reka-ui'
 import { describe, expect, it, vi } from 'vitest'
 import { nextColor, SPACE_COLORS } from '@lifedashboard/contracts/space'
 import * as statsModule from '../app/widgets/builtin/pomodoro/stats'
+import * as viewModule from '../app/widgets/builtin/pomodoro/view'
 import { compileSfc, mountComponent } from './helpers/sfc-renderer'
 
 // The custom test renderer has no DOM; Reka only needs the class for instanceof checks.
 vi.stubGlobal('Element', class {})
+vi.stubGlobal('window', { addEventListener: vi.fn(), removeEventListener: vi.fn() })
 
 // Real UiTextField (Reka FieldControl needs a FieldRoot ancestor); only the popover parts are pass-through.
 const pass = (tag: string) => Vue.defineComponent({ setup: (_, { slots }) => () => Vue.h(tag, null, slots.default?.()) })
@@ -18,6 +20,7 @@ const TaskPicker = compileSfc(new URL('../app/widgets/builtin/pomodoro/TaskPicke
   '@lifedashboard/contracts/space': { nextColor, SPACE_COLORS },
   '../../../ui/UiButton.vue': Vue.defineComponent({ setup: (_, { attrs, slots }) => () => Vue.h('button', { ...attrs, text: undefined }, slots.default?.()) }),
   '../../../ui/UiSelect.vue': stub('ui-select'),
+  './view': viewModule,
   '../../../ui/UiTextField.vue': UiTextField,
 })
 
@@ -42,6 +45,7 @@ describe('pomodoro text fields with the real UiTextField', () => {
       '../../../ui/UiButton.vue': Vue.defineComponent({ setup: (_, { attrs, slots }) => () => Vue.h('button', attrs, slots.default?.()) }),
       '../../../ui/UiTextField.vue': UiTextField,
       './stats': statsModule,
+      '../../widget-anchor': { anchoredBox: () => ({}) },
     })
     const ui = mountComponent(Dialog, { open: false }, [])
     ui.button('Projects').click()

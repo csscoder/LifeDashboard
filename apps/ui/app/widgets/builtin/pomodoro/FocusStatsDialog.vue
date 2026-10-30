@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useTemplateRef, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 import { FieldRoot } from 'reka-ui'
 import type { FocusSession } from '@lifedashboard/contracts/focus'
 import { SPACE_COLORS, type SpaceColor } from '@lifedashboard/contracts/space'
@@ -8,6 +8,7 @@ import { dayKey } from '../../../focus/engine'
 import { focusStore } from '../../../focus/store'
 import UiButton from '../../../ui/UiButton.vue'
 import UiTextField from '../../../ui/UiTextField.vue'
+import { anchoredBox } from '../../widget-anchor'
 import { focusHours, lastDays, projectShares, todaySessions, weekBars } from './stats'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -48,6 +49,17 @@ async function load() {
   else failed.value = true
 }
 
+// Centred on the widget card, at most 20 % larger; the window resizes the grid, so it follows.
+const place = ref<Record<string, string>>({})
+function anchor() {
+  const card = dialog.value?.closest('.widget')?.getBoundingClientRect()
+  if (!card) return
+  const box = anchoredBox(card, { width: window.innerWidth, height: window.innerHeight }, 16)
+  place.value = { '--x': `${box.x}px`, '--y': `${box.y}px`, '--max-w': `${box.maxWidth}px`, '--max-h': `${box.maxHeight}px` }
+}
+onMounted(() => window.addEventListener('resize', anchor))
+onUnmounted(() => window.removeEventListener('resize', anchor))
+
 async function patch(id: string, change: { name?: string; color?: SpaceColor; archived?: boolean }) {
   const result = await focusStore.updateProject(id, change)
   errors.value = { ...errors.value, [id]: result.ok ? '' : result.error }
@@ -60,6 +72,7 @@ watch(
     tab.value = 'Today'
     errors.value = {}
     void load()
+    anchor()
     dialog.value?.showModal()
   },
   { flush: 'post' },
@@ -67,7 +80,7 @@ watch(
 </script>
 
 <template>
-  <dialog ref="dialogBox" class="focus-stats" aria-labelledby="focus-stats-title" @close="open = false">
+  <dialog ref="dialogBox" class="focus-stats" :style="place" aria-labelledby="focus-stats-title" @close="open = false">
     <h2 id="focus-stats-title" class="focus-stats__title">Statistics</h2>
     <div class="focus-stats__tabs" role="group" aria-label="Period">
       <button v-for="name in TABS" :key="name" type="button" :aria-pressed="tab === name" @click="tab = name">{{ name }}</button>
@@ -81,11 +94,11 @@ watch(
     <template v-else>
       <ul v-if="tab === 'Today'" class="focus-stats__list">
         <li v-if="!todays.length" class="focus-stats__muted">No sessions today</li>
-        <li v-for="item in todays" :key="item.id">
+        <li v-for="item in todays" :key="item.id" class="focus-stats__session">
           <span class="focus-stats__time">{{ clock(item.startedAt) }}–{{ clock(item.endedAt) }}</span>
-          <span>{{ item.label || 'No task' }}</span>
+          <span class="focus-stats__clip">{{ item.label || 'No task' }}</span>
           <span class="focus-stats__project-tag">
-            <i :style="{ background: hue(projectOf(item.projectId)?.color ?? null) }" />{{ projectOf(item.projectId)?.name ?? 'No project' }}
+            <i :style="{ background: hue(projectOf(item.projectId)?.color ?? null) }" /><span class="focus-stats__clip">{{ projectOf(item.projectId)?.name ?? 'No project' }}</span>
           </span>
           <span class="focus-stats__muted">{{ Math.round(item.focusMs / 60_000) }} min</span>
           <span :aria-label="item.completed ? 'Completed' : 'Interrupted'" :title="item.completed ? 'Completed' : 'Interrupted'">{{ item.completed ? '✓' : '✗' }}</span>
@@ -148,14 +161,24 @@ watch(
 
 <style scoped>
 .focus-stats {
-  width: 34rem;
-  max-width: calc(100vw - 2rem);
+  position: fixed;
+  inset: auto;
+  left: var(--x, 50%);
+  top: var(--y, 50%);
+  translate: -50% -50%;
+  box-sizing: border-box;
+  width: min(34rem, var(--max-w, calc(100vw - 2rem)));
+  max-width: none;
+  max-height: var(--max-h, calc(100vh - 2rem));
+  overflow: auto;
   padding: 1.5rem;
   border: var(--ld-border-width) solid var(--ld-border-default);
   border-radius: var(--ld-radius-card);
   background: var(--ld-surface-1-solid);
   color: var(--ld-text-primary);
   font-family: var(--ld-font-ui);
+  margin: 0;
+  font-size: 1rem; /* rendered inside the widget body: never follow its text size setting */
 }
 .focus-stats::backdrop { background: var(--ld-scrim); }
 .focus-stats__title { margin: 0 0 1rem; font-size: 1.125rem; }
@@ -166,14 +189,16 @@ watch(
 .focus-stats button:focus-visible { outline: 0.125rem solid var(--ld-focus-ring); outline-offset: 0.125rem; }
 .focus-stats__list { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
 .focus-stats__list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.focus-stats__list .focus-stats__session { display: grid; grid-template-columns: max-content minmax(0, 1fr) minmax(0, max-content) max-content max-content; }
+.focus-stats__clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .focus-stats__muted { color: var(--ld-text-muted); font-size: 0.8125rem; }
 .focus-stats__time { font-variant-numeric: tabular-nums; }
 .focus-stats__bars { display: flex; align-items: flex-end; gap: 0.5rem; }
 .focus-stats__bar { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0.125rem; }
 .focus-stats__plot { position: relative; display: flex; align-items: flex-end; width: 100%; height: 7rem; }
 .focus-stats__goal-line { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--ld-text-muted); }
-.focus-stats__project-tag { display: inline-flex; align-items: center; gap: 0.375rem; color: var(--ld-text-secondary); font-size: 0.8125rem; }
-.focus-stats__project-tag i { width: 0.5rem; height: 0.5rem; border-radius: 50%; }
+.focus-stats__project-tag { display: inline-flex; min-width: 0; align-items: center; gap: 0.375rem; color: var(--ld-text-secondary); font-size: 0.8125rem; }
+.focus-stats__project-tag i { flex: none; width: 0.5rem; height: 0.5rem; border-radius: 50%; }
 .focus-stats__column { width: 100%; min-height: 1px; border-radius: 0.125rem; background: oklch(0.64 0.22 27); }
 .focus-stats__column--goal { background: oklch(0.82 0.15 85); }
 .focus-stats__share > :first-child { width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

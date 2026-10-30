@@ -105,3 +105,95 @@ it('sizes the placeholder text in em, not in rem-based utilities', () => {
   css.walkDecls(decl => { declared[decl.prop] = decl.value })
   expect(declared).toMatchObject({ 'font-size': '1.5em', 'line-height': 'calc(4 / 3)' })
 })
+it('sizes the Pomodoro text so it follows the text size setting', () => {
+  const { descriptor } = parse(readFileSync(new URL('../app/widgets/builtin/pomodoro/Pomodoro.vue', import.meta.url), 'utf8'))
+  const css = postcss.parse(descriptor.styles.map(style => style.content).join('\n'))
+  const fontSizes: string[] = []
+  css.walkDecls(decl => {
+    if (decl.prop === 'font-size') fontSizes.push(decl.value)
+    if (/^(font-size|width|height|min-width|gap|padding)$/.test(decl.prop)) expect(decl.value, `${decl.prop}: ${decl.value}`).not.toMatch(/\drem\b/)
+  })
+  expect(fontSizes.length).toBeGreaterThan(0)
+  for (const value of fontSizes) expect(value).toMatch(/\dem\b|--ld-content-scale/)
+})
+it('keeps the Pomodoro statistics dialog at the dashboard text size, centred on the widget', () => {
+  // The dialog lives inside the widget body, which the text size setting scales; anchoredBox gives its centre and limits.
+  const { descriptor } = parse(readFileSync(new URL('../app/widgets/builtin/pomodoro/FocusStatsDialog.vue', import.meta.url), 'utf8'))
+  const css = postcss.parse(descriptor.styles.map(style => style.content).join('\n'))
+  const declared: Record<string, string> = {}
+  css.walkRules('.focus-stats', rule => rule.walkDecls(decl => { declared[decl.prop] = decl.value }))
+  expect(declared).toMatchObject({ 'font-size': '1rem', margin: '0', left: 'var(--x, 50%)', top: 'var(--y, 50%)', translate: '-50% -50%' })
+})
+it('keeps each Pomodoro session on one line in a narrow statistics dialog', () => {
+  const { descriptor } = parse(readFileSync(new URL('../app/widgets/builtin/pomodoro/FocusStatsDialog.vue', import.meta.url), 'utf8'))
+  expect(descriptor.template!.content).toContain('class="focus-stats__session"')
+  const css = postcss.parse(descriptor.styles.map(style => style.content).join('\n'))
+  const declared: Record<string, string> = {}
+  css.walkRules('.focus-stats__list .focus-stats__session', rule => rule.walkDecls(decl => { declared[decl.prop] = decl.value }))
+  expect(declared).toMatchObject({ display: 'grid', 'grid-template-columns': 'max-content minmax(0, 1fr) minmax(0, max-content) max-content max-content' })
+})
+it('keeps room for the focus ring of the Pomodoro corner buttons', () => {
+  // The ring is 0.125rem wide at a 0.125rem offset; the widget card clips anything past its edge.
+  const { descriptor } = parse(readFileSync(new URL('../app/widgets/builtin/pomodoro/Pomodoro.vue', import.meta.url), 'utf8'))
+  const css = postcss.parse(descriptor.styles.map(style => style.content).join('\n'))
+  const declared = (selector: string) => {
+    const found: Record<string, string> = {}
+    css.walkRules(selector, rule => rule.walkDecls(decl => { found[decl.prop] = decl.value }))
+    return found
+  }
+  // The bottom controls mirror the statistics button: the same 0.25rem from the card's edges.
+  expect(declared('.pomodoro__controls')).toMatchObject({ right: '0.25rem', bottom: '0.25rem' })
+  // A child of the tile, beside the statistics button, not of the ring's box.
+  expect(descriptor.template!.content).toMatch(/\n {6}<div class="pomodoro__controls">/)
+  expect(declared('.pomodoro__stats')).toMatchObject({ top: '0.25rem', right: '0.25rem' })
+})
+it('fills the tile with the Pomodoro ring, the tomato close inside it', () => {
+  const { descriptor } = parse(readFileSync(new URL('../app/widgets/builtin/pomodoro/Pomodoro.vue', import.meta.url), 'utf8'))
+  const css = postcss.parse(descriptor.styles.map(style => style.content).join('\n'))
+  const declared = (selector: string) => {
+    const found: Record<string, string> = {}
+    css.walkRules(selector, rule => rule.walkDecls(decl => { found[decl.prop] = decl.value }))
+    return found
+  }
+  // All the height left after the top padding, the goal line and the gap, keeping the top padding free below the ring.
+  expect(declared('.pomodoro')['--face']).toBe('min(100cqw, calc(100cqh - 17cqmin))')
+  expect(declared('.pomodoro__tomato')).toMatchObject({ inset: '8.5%', width: '83%', height: '83%' })
+})
+it('keeps the Pomodoro clock centred whether or not the play button shows', () => {
+  const { descriptor } = parse(readFileSync(new URL('../app/widgets/builtin/pomodoro/Pomodoro.vue', import.meta.url), 'utf8'))
+  const css = postcss.parse(descriptor.styles.map(style => style.content).join('\n'))
+  const declared = (selector: string) => {
+    const found: Record<string, string> = {}
+    css.walkRules(selector, rule => rule.walkDecls(decl => { found[decl.prop] = decl.value }))
+    return found
+  }
+  // The top padding sets the centre on the tomato's body, below the stalk.
+  expect(declared('.pomodoro__center')).toMatchObject({ display: 'grid', 'grid-template-rows': '1fr auto 1fr', 'padding-top': 'calc(var(--face) * 0.19)' })
+  expect(declared('.pomodoro__clock')['grid-row']).toBe('2')
+  expect(declared('.pomodoro__play')).toMatchObject({ 'grid-row': '3', 'align-self': 'start', 'margin-top': 'calc(var(--face) * 0.032)' })
+})
+it('stacks the Pomodoro goal, ring and task from the top, leaving the free space to the controls below', () => {
+  const { descriptor } = parse(readFileSync(new URL('../app/widgets/builtin/pomodoro/Pomodoro.vue', import.meta.url), 'utf8'))
+  const css = postcss.parse(descriptor.styles.map(style => style.content).join('\n'))
+  const declared = (selector: string) => {
+    const found: Record<string, string> = {}
+    css.walkRules(selector, rule => rule.walkDecls(decl => { found[decl.prop] = decl.value }))
+    return found
+  }
+  expect(declared('.pomodoro')).toMatchObject({ 'justify-content': 'flex-start', gap: '1cqmin', 'padding-top': '4cqmin' })
+  expect(declared('.pomodoro__error')['margin-block']).toBe('auto')
+})
+it('puts the Pomodoro task on the tomato above the centred clock, with sleeping Zzz on its shoulder', () => {
+  const { descriptor } = parse(readFileSync(new URL('../app/widgets/builtin/pomodoro/Pomodoro.vue', import.meta.url), 'utf8'))
+  const css = postcss.parse(descriptor.styles.map(style => style.content).join('\n'))
+  const declared = (selector: string) => {
+    const found: Record<string, string> = {}
+    css.walkRules(selector, rule => rule.walkDecls(decl => { found[decl.prop] = decl.value }))
+    return found
+  }
+  expect(declared('.pomodoro__label')).toMatchObject({ 'grid-row': '1', 'align-self': 'end', 'pointer-events': 'auto' })
+  expect(declared('.pomodoro__zzz')).toMatchObject({ position: 'absolute', 'pointer-events': 'none' })
+  const template = descriptor.template!.content
+  expect(template.indexOf('class="pomodoro__label"')).toBeGreaterThan(template.indexOf('class="pomodoro__center"'))
+  expect(template).toContain('class="pomodoro__zzz" aria-hidden="true"')
+})

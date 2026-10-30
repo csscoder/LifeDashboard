@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, useTemplateRef, watch } from 'vue'
+import { gsap } from 'gsap'
 import { useWidget } from '@lifedashboard/widget-sdk'
 import { SPACE_COLORS } from '@lifedashboard/contracts/space'
 import { alerts } from '../../../focus/alerts'
@@ -7,7 +8,7 @@ import { focusStore, useFocusPresence } from '../../../focus/store'
 import FocusStatsDialog from './FocusStatsDialog.vue'
 import TaskPicker from './TaskPicker.vue'
 import tomato from './tomato.webp'
-import { formatClock, formatTotal, goalDots, isCompact, remainingMs, ringProgress, ringTone, toggleAction } from './view'
+import { formatClock, formatTotal, goalDots, isCompact, playButton, remainingMs, restText, ringProgress, ringTone, showsSkip, toggleAction } from './view'
 
 const { context } = useWidget()
 useFocusPresence()
@@ -23,6 +24,7 @@ const dots = computed(() => goalDots(state.today.count, state.settings.dailyGoal
 const goalMet = computed(() => state.today.count >= state.settings.dailyGoal)
 const compact = computed(() => isCompact(context.size))
 const project = computed(() => state.projects.find(({ id }) => id === run.value.projectId))
+const rest = computed(() => restText(run.value))
 const phaseName = computed(() => (run.value.phase === 'focus' ? 'Focus' : run.value.phase === 'short' ? 'Short break' : 'Long break'))
 
 // The ring redraws only while it moves and someone can see it.
@@ -44,6 +46,41 @@ watch(
   { immediate: true },
 )
 onUnmounted(stop)
+
+// During a break the tomato sleeps: Zzz drift from its shoulder and it breathes; still letters under reduced motion.
+const face = useTemplateRef<HTMLElement>('face')
+let sleep: gsap.Context | undefined
+function wake() {
+  sleep?.revert()
+  sleep = undefined
+}
+// The face element is part of the source: the first run happens in setup, before it exists.
+watch(
+  () => (rest.value !== null && context.visible ? face.value : null),
+  (target) => {
+    wake()
+    if (!target) return
+    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+    sleep = gsap.context(() => {
+      const letters = gsap.utils.toArray<HTMLElement>('.pomodoro__zzz span')
+      if (reduced) {
+        letters.forEach((letter, index) => gsap.set(letter, { x: `${index * 0.6}em`, y: `${-index * 0.9}em`, scale: 0.7 + index * 0.25, opacity: 1 }))
+        return
+      }
+      const drift = gsap.timeline({ repeat: -1 })
+      letters.forEach((letter, index) => {
+        const at = index * 0.9
+        drift
+          .fromTo(letter, { x: 0, y: 0, scale: 0.5, rotation: -12 }, { x: '1.4em', y: '-2.4em', scale: 1.15, rotation: 10, duration: 2.6, ease: 'sine.out' }, at)
+          .fromTo(letter, { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'power1.out' }, at)
+          .to(letter, { opacity: 0, duration: 0.9, ease: 'power1.in' }, at + 1.7)
+      })
+      gsap.to('.pomodoro__tomato', { scaleX: 1.015, scaleY: 0.985, duration: 2.2, ease: 'sine.inOut', yoyo: true, repeat: -1, transformOrigin: '50% 90%' })
+    }, target)
+  },
+  { flush: 'post', immediate: true },
+)
+onUnmounted(wake)
 
 /** ▶/⏸, the tomato and Space. Ruling 14: act now; prime in the same gesture so the phase-end chime and notification may play. */
 function toggle() {
@@ -90,7 +127,7 @@ function onKey(event: KeyboardEvent) {
         </span>
       </div>
 
-      <div class="pomodoro__face">
+      <div ref="face" class="pomodoro__face">
         <svg class="pomodoro__ring" viewBox="0 0 100 100" aria-hidden="true">
           <circle class="pomodoro__track" cx="50" cy="50" r="46" />
           <!-- v-if: a round cap draws a dot at zero length. -->
@@ -107,22 +144,26 @@ function onKey(event: KeyboardEvent) {
           />
         </svg>
         <img class="pomodoro__tomato" :src="tomato" alt="" draggable="false" @click="toggle">
+        <div v-if="rest" class="pomodoro__zzz" aria-hidden="true"><span>z</span><span>z</span><span>Z</span></div>
         <div class="pomodoro__center">
+          <!-- The task sits on the tomato above the clock; a break shows the rest text, and the picker still opens. -->
+          <TaskPicker v-if="!compact" :store="focusStore">
+            <button type="button" class="pomodoro__label" :aria-label="run.label || 'Set task'" :disabled="!state.loaded">
+              <template v-if="rest"><span>{{ rest }}</span></template>
+              <template v-else>
+                <i v-if="project" class="pomodoro__project" :style="{ background: `oklch(0.7 0.15 ${SPACE_COLORS[project.color]})` }" :title="project.name" />
+                <span :class="{ 'pomodoro__muted': !run.label }">{{ run.label || project?.name || 'No task' }}</span>
+              </template>
+            </button>
+          </TaskPicker>
           <span class="pomodoro__clock" role="timer" :aria-label="`${phaseName}, ${clock} left`">{{ clock }}</span>
-          <button v-if="run.status === 'ready'" type="button" class="pomodoro__play" aria-label="Start" :disabled="!state.loaded" @click="toggle">▶</button>
+          <button v-if="playButton(run)" type="button" class="pomodoro__play" :aria-label="playButton(run)!" :disabled="!state.loaded" @click="toggle">▶</button>
         </div>
       </div>
 
-      <TaskPicker v-if="!compact" :store="focusStore">
-        <button type="button" class="pomodoro__label" :aria-label="run.label || 'Set task'" :disabled="!state.loaded">
-          <i v-if="project" class="pomodoro__project" :style="{ background: `oklch(0.7 0.15 ${SPACE_COLORS[project.color]})` }" :title="project.name" />
-          <span :class="{ 'pomodoro__muted': !run.label }">{{ run.label || project?.name || 'No task' }}</span>
-        </button>
-      </TaskPicker>
-
       <div class="pomodoro__controls">
         <button type="button" :aria-label="run.status === 'running' ? 'Pause' : 'Start'" :disabled="!state.loaded" @click="toggle">{{ run.status === 'running' ? '⏸' : '▶' }}</button>
-        <button type="button" aria-label="Skip" :disabled="!state.loaded" @click="focusStore.skip()">⏭</button>
+        <button v-if="showsSkip(run)" type="button" aria-label="Skip" :disabled="!state.loaded" @click="focusStore.skip()">⏭</button>
         <!-- aria-disabled, not disabled: stays focusable while ready, where reset changes nothing. -->
         <button type="button" aria-label="Reset" :aria-disabled="run.status === 'ready'" :disabled="!state.loaded" @click="focusStore.reset()">↺</button>
       </div>
@@ -135,14 +176,18 @@ function onKey(event: KeyboardEvent) {
 <style scoped>
 .pomodoro {
   --tone: oklch(0.64 0.22 27);
-  --face: min(100cqw, 74cqh);
+  /* The ring takes the height left after the 4cqmin top padding, the goal line (≈7.5cqmin), the 1cqmin gap and an
+     equal 4cqmin below it; the tomato fills 83 % of the ring. */
+  --face: min(100cqw, calc(100cqh - 17cqmin));
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2cqmin;
+  justify-content: flex-start; /* the free space below is left to the controls */
+  gap: 1cqmin;
+  box-sizing: border-box;
   height: 100%;
+  padding-top: 4cqmin;
   color: var(--ld-text-primary);
   outline: none;
 }
@@ -151,7 +196,7 @@ function onKey(event: KeyboardEvent) {
 .pomodoro--goal { --tone: oklch(0.82 0.15 85); }
 .pomodoro--compact { --face: min(100cqw, 100cqh); }
 
-.pomodoro__goal { color: var(--ld-text-secondary); font-size: max(0.625rem, 5cqmin); font-variant-numeric: tabular-nums; }
+.pomodoro__goal { color: var(--ld-text-secondary); font-size: max(0.625em, calc(5cqmin * var(--ld-content-scale, 1))); font-variant-numeric: tabular-nums; }
 .pomodoro__dots { display: flex; gap: 1.5cqmin; }
 .pomodoro__dot { width: 3.5cqmin; height: 3.5cqmin; border-radius: 50%; background: var(--ld-border-default); }
 .pomodoro__dot--done { background: var(--tone); }
@@ -163,65 +208,104 @@ function onKey(event: KeyboardEvent) {
 .pomodoro__arc { fill: none; stroke: var(--tone); stroke-width: 3; stroke-linecap: round; filter: drop-shadow(0 0 1.5px var(--tone)); }
 .pomodoro--running .pomodoro__arc { animation: pomodoro-glow 3s ease-in-out infinite; }
 .pomodoro--paused .pomodoro__ring { animation: pomodoro-blink 2.4s ease-in-out infinite; }
-.pomodoro__tomato { position: absolute; inset: 15%; width: 70%; height: 70%; object-fit: contain; cursor: pointer; user-select: none; }
+.pomodoro__tomato { position: absolute; inset: 8.5%; width: 83%; height: 83%; object-fit: contain; cursor: pointer; user-select: none; }
 
 .pomodoro__center {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: calc(var(--face) * 0.02);
-  padding-top: calc(var(--face) * 0.06);
+  /* Equal outer rows keep the clock centred; ▶ hangs in the bottom one. */
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  justify-items: center;
+  gap: calc(var(--face) * 0.024);
+  padding-top: calc(var(--face) * 0.19);
   pointer-events: none;
 }
 .pomodoro__clock {
+  grid-row: 2;
   color: #fff;
   font-family: var(--ld-font-mono);
-  font-size: calc(var(--face) * 0.16);
+  font-size: calc(var(--face) * 0.19 * var(--ld-content-scale, 1));
   font-weight: var(--ld-weight-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   text-shadow: 0 0.05em 0.15em oklch(0.2 0.08 27 / 0.7);
 }
 .pomodoro__play {
+  grid-row: 3;
+  align-self: start;
+  margin-top: calc(var(--face) * 0.032);
   pointer-events: auto;
-  width: calc(var(--face) * 0.14);
-  height: calc(var(--face) * 0.14);
+  width: calc(var(--face) * 0.17);
+  height: calc(var(--face) * 0.17);
   border: 0;
   border-radius: 50%;
   background: oklch(1 0 0 / 0.85);
   color: oklch(0.45 0.18 27);
-  font-size: calc(var(--face) * 0.06);
+  font-size: calc(var(--face) * 0.072 * var(--ld-content-scale, 1));
   cursor: pointer;
 }
 
-.pomodoro__label { display: flex; border: 0; background: none; font: inherit; cursor: pointer; align-items: center; gap: 1.5cqmin; max-width: 100%; color: var(--ld-text-primary); font-size: max(0.625rem, 5cqmin); }
+/* On the red of the tomato, like the clock: white with the same shadow, kept within the tomato's width. */
+.pomodoro__label {
+  grid-row: 1;
+  align-self: end;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  max-width: calc(var(--face) * 0.6);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  font-size: calc(var(--face) * 0.06 * var(--ld-content-scale, 1));
+  font-weight: var(--ld-weight-strong);
+  text-shadow: 0 0.05em 0.15em oklch(0.2 0.08 27 / 0.7);
+  cursor: pointer;
+  pointer-events: auto;
+}
 .pomodoro__label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pomodoro__project { flex: none; width: 3cqmin; height: 3cqmin; border-radius: 50%; }
-.pomodoro__muted { color: var(--ld-text-muted); }
+.pomodoro__project { flex: none; width: 0.6em; height: 0.6em; border-radius: 50%; box-shadow: 0 0 0 0.1em #fff; }
+.pomodoro__muted { opacity: 0.75; }
 
+/* The tomato's top-right shoulder; gsap moves the letters from here. */
+.pomodoro__zzz {
+  position: absolute;
+  top: 30%;
+  right: 17%;
+  color: #fff;
+  font-family: var(--ld-font-mono);
+  font-size: calc(var(--face) * 0.07 * var(--ld-content-scale, 1));
+  font-weight: var(--ld-weight-strong);
+  line-height: 1;
+  text-shadow: 0 0.05em 0.15em oklch(0.2 0.08 27 / 0.7);
+  pointer-events: none;
+}
+.pomodoro__zzz span { position: absolute; right: 0; bottom: 0; opacity: 0; }
+
+/* Corner buttons sit 0.25rem in: the focus ring (0.125rem at a 0.125rem offset) would be clipped by the card. */
 .pomodoro__controls {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  right: 0.25rem;
+  bottom: 0.25rem;
   display: flex;
-  gap: 0.25rem;
+  gap: 0.25em;
   opacity: 0;
   transition: opacity var(--ld-duration-fast) var(--ld-ease-standard);
 }
 .pomodoro:hover .pomodoro__controls,
 .pomodoro:focus-within .pomodoro__controls { opacity: 1; }
-.pomodoro__stats { position: absolute; top: 0; right: 0; opacity: 0; transition: opacity var(--ld-duration-fast) var(--ld-ease-standard); }
+.pomodoro__stats { position: absolute; top: 0.25rem; right: 0.25rem; opacity: 0; transition: opacity var(--ld-duration-fast) var(--ld-ease-standard); }
 .pomodoro:hover .pomodoro__stats,
 .pomodoro:focus-within .pomodoro__stats { opacity: 1; }
 
 .pomodoro__controls button,
 .pomodoro__stats,
 .pomodoro__retry {
-  min-width: 1.75rem;
-  height: 1.75rem;
+  min-width: 1.75em;
+  height: 1.75em;
   border: var(--ld-border-width) solid var(--ld-border-default);
   border-radius: var(--ld-radius-control);
   background: var(--ld-surface-3);
@@ -233,8 +317,8 @@ function onKey(event: KeyboardEvent) {
 .pomodoro button:disabled,
 .pomodoro button[aria-disabled='true'] { opacity: 0.6; cursor: default; }
 
-.pomodoro__error { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; color: var(--ld-text-secondary); }
-.pomodoro__retry { padding: 0 0.5rem; }
+.pomodoro__error { margin-block: auto; display: flex; flex-direction: column; align-items: center; gap: 0.5em; color: var(--ld-text-secondary); }
+.pomodoro__retry { padding: 0 0.5em; }
 
 @keyframes pomodoro-glow { 50% { filter: drop-shadow(0 0 3.5px var(--tone)); } }
 @keyframes pomodoro-blink { 50% { opacity: 0.35; } }
