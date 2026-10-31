@@ -6,7 +6,13 @@ LifeDashboard is an open-source, customizable, widget-based personal workspace. 
 
 The long-term goal is a beautiful, local-first desktop environment that can also serve as a visual interface for a personal AI agent. **Hermes Agent** is the planned AI integration, not a requirement for using the dashboard or ordinary widgets.
 
-> **Status: early development.** The project currently runs as a local web application. The Widget SDK and installable widget packages have an initial implementation; a local macOS desktop build exists (unsigned, arm64 only); Hermes integration and many planned widgets are not available yet. Interfaces and package contracts may evolve before a stable release.
+> **Status: early development.** The project currently runs as a local web application. The Widget SDK and installable widget packages have an initial implementation; a local macOS desktop build exists (ad-hoc signed, arm64 only); Hermes integration and many planned widgets are not available yet. Interfaces and package contracts may evolve before a stable release.
+
+## Running on macOS
+
+![LifeDashboard desktop app on macOS: a wooden analog clock and a large Pomodoro timer over a dark, dimmed screen background](docs/images/macos-desktop-app.jpg)
+
+The local macOS desktop build with the built-in **Clock: forest** and **Pomodoro** widgets on a screen with a dimmed background.
 
 ## Widget showcase
 
@@ -14,13 +20,13 @@ The long-term goal is a beautiful, local-first desktop environment that can also
 
 Example prompts paired with real widgets running in a LifeDashboard development build. Create widgets with Codex and the open Widget SDK, then install each result as an independent package in your local workspace.
 
-See the [full dashboard capture](docs/images/widget-showcase.png) or the [illustration source](docs/images/widget-prompt-to-dashboard.svg). The illustration summarizes the workflow; it is not a recorded chat session.
+See the [full dashboard capture](docs/images/widget-showcase.png) or the [illustration source](docs/images/widget-prompt-to-dashboard.svg). The illustration summarizes the workflow; it is not a recorded chat session. These captures show the first versions of the examples; the clock now also has three looks and a time zone, and shows the zone name instead of «LOCAL TIME».
 
 These three examples use the public SDK and the dashboard's theme tokens. Each builds into its own installable widget folder and includes its sources and tests.
 
 | Widget | Demonstrates | Source and build instructions |
 | --- | --- | --- |
-| [Analog clock](docs/images/widget-showcase-clock.png) | Frameless SVG, local time and date, visibility and reduced-motion support. | [showcase-clock](examples/widgets/showcase-clock) |
+| [Analog clock](docs/images/widget-showcase-clock.png) | Frameless SVG, three looks, a configurable time zone, visibility and reduced-motion support. | [showcase-clock](examples/widgets/showcase-clock) |
 | [Focus sessions](docs/images/widget-showcase-counter.png) | Interactive progress, configurable goal, named modal workspace and saved state across reloads. | [showcase-counter](examples/widgets/showcase-counter) |
 | [Live weather](docs/images/widget-showcase-weather.png) | Real weather data through the permission-controlled HTTP gateway; no API key. | [showcase-weather](examples/widgets/showcase-weather) |
 
@@ -49,14 +55,15 @@ The following describes the implementation in the repository as of **October 202
 | Widget board | 24-column fluid grid; configurable number of rows; add, move, resize, and remove widgets; pointer and keyboard controls. |
 | Persistence | Boards and widget instances saved through the local Fastify API to SQLite, with revision-based conflict detection. |
 | Appearance | 11 palettes × light/dark modes × Solid/Glass styles (44 combinations); dashboard, space and screen defaults with inheritance; per-widget overrides, a per-widget text size (50–150 %), a frameless style, custom shadows, and heading and body fonts from 12 self-hosted families. |
-| Built-in widgets | Animated analog clock and a placeholder. The built-in library is still small. |
+| Built-in widgets | Animated analog clock with a selectable time zone, a Pomodoro focus timer, and a placeholder. The built-in library is still small. |
+| Focus sessions | One dashboard-wide Pomodoro run with projects, per-day history and statistics, stored in SQLite; toasts from other widgets wait until focus stops; phase ends raise a sound and a system notification. |
 | Installable widgets | Widget folders built by ld-widget build: code up to 10 MB, unlimited media, bundled sources; installed through the UI into the userwidgets library with permission review. |
 | Widget SDK | Initial `useWidget()` API, `ld-widget build` CLI, reactive widget context, persisted state, and host notifications. |
 | Isolation | Third-party widget packages run in sandboxed iframes with a restricted bridge to the host and API. |
 | Local access | Pairing code, authenticated browser sessions, and local API origin checks. |
 | Spaces and screens | Spaces are managed from the corner switcher (create, rename, icon and theme, delete); screens are added and deleted in edit mode; the last open space and screen are remembered per browser. |
 | Hermes Agent | Planned; no Hermes adapter or chat UI is implemented in the current application. |
-| Desktop app | Local macOS (Apple Silicon) build with Tauri: the app runs the same API and UI; ad-hoc signed, not notarized or distributed. |
+| Desktop app | Local macOS (Apple Silicon) build with Tauri: the app runs the same API and UI and sends focus alerts as macOS notifications; ad-hoc signed, not notarized or distributed. |
 | Screen backgrounds | Import a local video (MP4/M4V/MOV/WebM) or image (PNG/JPEG/WebP/AVIF), or paste a YouTube link; Pixi cover rendering, independent background/grid opacity, dimming, and an optional pixel PNG microtexture. Codec support depends on the browser. |
 
 The newest appearance features have not yet completed the full documented browser-acceptance checks. Treat the current code as a development build.
@@ -68,9 +75,22 @@ There are two widget types:
 1. **Built-in widgets** are trusted Vue components bundled with LifeDashboard. They use the same widget-facing API as external widgets.
 2. **Installable widgets** are separately built Vue components distributed as built widget folders. The host validates the folder, asks for its declared permissions, and executes it in a sandboxed iframe.
 
-Widgets declare their preferred, minimum, and maximum sizes. The host provides a reactive context containing the current size, size class, theme tokens, configuration, locale, and visibility.
+Widgets declare their preferred, minimum, and maximum sizes. The host provides a reactive context containing the current size, size class, theme tokens, configuration, locale, visibility, and focus status.
 
 **The intended ecosystem is open-ended:** the official library is only a starting point. Anyone should be able to create, install, share, or independently distribute widgets and themed packs. An online marketplace is not required for this model.
+
+### Built-in widgets
+
+**Clock: forest** ([`clocks/analog_1`](apps/ui/app/widgets/builtin/clocks/analog_1)) shows the system time by default. Turn **System time** off to pick an offset and a time zone from the zones the browser knows, with UTC or GMT notation. The offset includes daylight saving time, and an unknown zone falls back to the system time.
+
+**Pomodoro** ([`pomodoro`](apps/ui/app/widgets/builtin/pomodoro)) draws the remaining time as a ring around a tomato:
+
+- **Timer:** focus, short-break and long-break lengths, the long-break interval, a daily goal, auto-start for breaks and focus, and a sound. Settings are shared by all Pomodoro widgets and apply from the next phase.
+- **Task:** a free-text label and an optional project per focus interval. Recent labels are searchable.
+- **Statistics:** Today, Week and Projects tabs. A completed focus interval counts toward the daily goal. A skipped or reset interval of at least 1 minute adds focus time only; breaks are not recorded.
+- **One run per dashboard:** the timer pauses when no Pomodoro widget is on the active screen and resumes when one returns. Switching to another application does not pause it. A reload restores the run paused.
+- **Quiet focus:** while a focus interval runs, toasts from other widgets are held (up to 50) and shown when it stops: up to 5, then a count of the rest.
+- **Alerts:** a phase end plays a chime and raises a macOS notification in the desktop app or a browser notification, with an in-app toast as the fallback.
 
 ### Widget SDK
 
@@ -79,17 +99,22 @@ The initial SDK lives at [`packages/widget-sdk`](packages/widget-sdk). It curren
 | API | Purpose |
 | --- | --- |
 | `useWidget()` | Access the host-provided widget API from a Vue component. |
-| `widget.context` | Reactive `variant`, size, `sizeClass`, `frame` (framed or frameless), theme, `rootFontSize`, `contentScale`, config, locale, and visibility. |
+| `widget.context` | Reactive `variant`, size, `sizeClass`, `frame` (framed or frameless), theme, `rootFontSize`, `contentScale`, config, locale, visibility, and `focus`. |
 | `widget.state.get<T>()` | Read instance-specific persisted state and its revision. |
 | `widget.state.set(data, expectedRevision)` | Save state with optimistic concurrency control. |
 | `widget.notify({ title, body })` | Request a notification displayed by LifeDashboard. |
 | `widget.http.get(url, { accept })` / `widget.http.send(request)` | Typed HTTP through the gateway; requires the `network` permission. Available since sdk 2. |
+| `widget.modal.open(view, options)` / `widget.modal.close()` | Open or close a named modal workspace exported by the widget; one modal at a time. Available since sdk 4. |
 | `widget.call(op, input)` | Typed low-level gateway call, kept for sdk 1 widgets. |
+| `ld-widget dev [dir] [--poll]` | Run the widget in the dev shell: allowed sizes, built-in themes, framed and frameless, a settings form and a log of gateway calls and errors. |
 | `ld-widget check [dir]` | Check a widget project and write diagnostics to `.ld-widget/check.json`. |
 | `ld-widget build [dir] [--no-source]` | Build a widget project into an installable folder `dist/<id>-<version>/`. |
+| `ld-widget shot [dir] [--size <w>x<h>] [--theme <id\|all>] [--frame <framed\|frameless>]` | Render the widget in a headless Chromium-based browser and write images to `.ld-widget/shots/`. |
 | `create-widget [title] [--slug <slug>] [--sdk <spec>] [--no-install]` | Create `lifedashboard-<slug>/` from the widget template, with `AGENTS.md` and the widget skill for Claude Code and Codex, then install dependencies. `--sdk` sets the SDK source: a version, a folder, or a `.tgz` tarball. |
 
 **Gateway operations:** `state.get`, `state.set`, `notifications.send`, `http.get` and `http.send`. HTTP goes through the LifeDashboard API to the exact origins a widget lists in `widget.json` `network` (together with the `network` permission) and the user approves at install; a new version with a new origin lists it for review at install, like a new permission. Redirects are not followed, no cookies are sent, the request body is at most 64 KB, the response at most 100 KB, and the upstream timeout is 4 s. The API injects a widget's secret settings only into requests to their bound origin; exact and URL-encoded copies are redacted from responses. LifeDashboard data sources, local device actions and Hermes are planned; they are not available through the SDK today.
+
+`context.focus` (sdk 7) needs no permission and reports only the Pomodoro phase, whether it runs and its end time. Widgets never see the task label, project or history and cannot change focus state.
 
 A widget project contains at least:
 
@@ -101,7 +126,7 @@ my-widget/
     └── index.vue     # Vue single-file component
 ```
 
-`widget.json` may set `"frame": "framed"` (default) or `"frameless"`; `frame` needs `"sdk": 3`. `ld-widget build` writes `dist/<id>-<version>/`: `widget.json` (`"format": 2`, `"sdk": 4`), compiled code (`.js`, `.mjs`, `.css`, `.wasm`, up to **10 MB** in total), `assets/` copied from the project (images, video, audio, fonts, models — **no size limit**) and `source/`, an allow-list of project files: `widget.json`, `package.json`, lock files (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`), `tsconfig*.json`, `widget-env.d.ts`, `AGENTS.md`, `CLAUDE.md`, `README*`, `src/` and `test/`. Dotfiles at any depth and `node_modules/` are excluded. The build prints the included source files. `--no-source` leaves `source/` out.
+`widget.json` may set `"frame": "framed"` (default) or `"frameless"`; `frame` needs `"sdk": 3`. `ld-widget build` writes `dist/<id>-<version>/`: `widget.json` (`"format": 2`, `"sdk": 7`), compiled code (`.js`, `.mjs`, `.css`, `.wasm`, up to **10 MB** in total), `assets/` copied from the project (images, video, audio, fonts, models — **no size limit**) and `source/`, an allow-list of project files: `widget.json`, `package.json`, lock files (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`), `tsconfig*.json`, `widget-env.d.ts`, `AGENTS.md`, `CLAUDE.md`, `README*`, `src/` and `test/`. Dotfiles at any depth and `node_modules/` are excluded. The build prints the included source files. `--no-source` leaves `source/` out.
 
 Reference media by URL, for example `<video src="assets/bg.mp4">` or `fetch('assets/model.glb')`; importing a video, audio or a media file over 100 KB into code fails the build. Template `src` attributes are never bundled (`transformAssetUrls: false`), so an image used as `<img src="./x.png">` must live in `assets/` and be referenced by URL. Workers start from a `blob:` URL. A widget loads files only from its own folder; network requests go through `http.get` and `http.send`.
 
@@ -126,7 +151,7 @@ Then start LifeDashboard and select **«Board settings» → «Widget library» 
 
 A package already used by a board cannot be removed until its widget instances are removed. Installed versions are immutable: increment `widget.json.version` before importing changed code. Placed instances remain associated with their selected version.
 
-To update or roll back an instance, enter edit mode, open its settings, select an installed **«Version»** and press **«Apply version»**. This saves the board's pending edits, keeps the instance ID, persisted state, appearance and compatible settings, and fits its size to the new limits if there is room. Secret values are kept only when the setting key and network binding are unchanged; changed bindings need a new value. Widget authors remain responsible for reading or migrating their own persisted state format across versions.
+To update or roll back an instance, enter edit mode, open its settings, select an installed **«Version»** on the **Package** tab and press **«Apply version»**. This saves the board's pending edits, keeps the instance ID, persisted state, appearance and compatible settings, and fits its size to the new limits if there is room. Secret values are kept only when the setting key and network binding are unchanged; changed bindings need a new value. Widget authors remain responsible for reading or migrating their own persisted state format across versions.
 
 ### Creating widgets with Claude Code, Codex, or other AI tools
 
@@ -180,14 +205,14 @@ LifeDashboard treats visual design as a first-class feature:
 - A responsive-to-window-width board with square grid cells and explicit drag/resize editing.
 - 11 built-in palettes: **LifeDashboard**, **Catppuccin**, **Gruvbox**, **GitHub**, **Solarized**, **Tokyo Night**, **Rosé Pine**, **Everforest**, **One**, **Kanagawa**, and **Ayu**. Each offers **Light** and **Dark** modes with **Solid** and **Glass** styles: 44 combinations.
 - Theme priority: widget override → screen → space → dashboard default. An unset or unavailable theme inherits from the next scope.
-- Set a space theme in its icon/theme editor; set the dashboard default in the settings panel. In board edit mode, the gear beside the active screen bullet opens a panel above it with screen-theme selection and confirmed deletion. Screen theme choices preview with the board draft and follow Done/Cancel. Every screen deletion asks for confirmation, including empty screens.
+- Set a space theme on the **Theme** tab of its editor; set the dashboard default on the **Theme** tab of the settings panel. In board edit mode, the gear beside the active screen bullet opens a panel above it with **Theme** and **Background** tabs, an **Overlay** tab once the screen has a background, and confirmed deletion. Screen theme choices preview with the board draft and follow Done/Cancel. Every screen deletion asks for confirmation, including empty screens.
 - Space and screen assignments persist in SQLite. The dashboard default remains local to the browser.
-- The active-screen gear also imports video or image backgrounds. Background settings preview in the draft and follow Done/Cancel. A copy of the file lives in the application data directory; the original file is not modified.
-- Background controls include dimming, background opacity, and a separate optional pixel PNG microtexture: diagonal, squares, crosses, circles, triangles or diamonds. Native repeating cells are 2×2 px for diagonal, 3×3 px for squares/crosses/triangles/diamonds, and 6×6 px for circles, with integer enlargement from 1× to 4× and no smoothing. Colour and grid opacity are independent. Turning the grid off preserves its other settings during editing.
+- The **Background** tab imports video or image backgrounds and takes YouTube links. Background settings preview in the draft and follow Done/Cancel. A copy of the file lives in the application data directory; the original file is not modified.
+- The **Background** tab sets background opacity. The **Overlay** tab holds dimming and a separate optional pixel PNG microtexture: diagonal, squares, crosses, circles, triangles or diamonds. Native repeating cells are 2×2 px for diagonal, 3×3 px for squares/crosses/triangles/diamonds, and 6×6 px for circles, with integer enlargement from 1× to 4× and no smoothing. Colour and grid opacity are independent. Turning the grid off preserves its other settings during editing.
 - One Pixi canvas displays the active screen only. Video loops muted, pauses when the page is hidden, and respects reduced motion. Static images render on settings/size changes. Browser codec/GPU failures restore the theme backdrop with a notice. No transcoding is performed.
-- A YouTube background plays muted and looped in an embed under the same canvas, so dimming and the microtexture draw over it. It pauses when the page is hidden and respects reduced motion. Video quality (Auto, 1080p, 720p) caps the player size; a video without that size plays the best it has. The desktop app presses the player's Skip button when it appears.
+- A YouTube background accepts a watch, share, live, embed or Shorts link, or a bare video ID. It plays muted and looped in a `youtube-nocookie.com` embed under the same canvas, so dimming and the microtexture draw over it. It needs network access, and no video copy is stored. It pauses when the page is hidden and respects reduced motion. Video quality (Auto, 1080p, 720p) caps the player size; a video without that size plays the best it has. The desktop app presses the player's Skip button when it appears; unskippable ads still play muted.
 - Files are streamed rather than buffered in API memory. Saved screen references and renewable leases protect active drafts/playback across tabs; unused app copies are reclaimed after release, with a 24-hour fallback expiry for abandoned imports/leases.
-- Per-widget appearance: inherit the resolved screen theme, use another theme, or remove the frame.
+- Per-widget appearance: inherit the resolved screen theme, use another theme, or remove the frame. Widget settings are split into **Widget**, **Style**, **Display** and **Package** tabs; **Widget** and **Package** appear only where they apply.
 - Configurable widget shadows, including shadows that can follow the shape of frameless content. New and reset widgets start with X 20, Y 20, Blur 20, black at 50 %.
 - A shared design-token vocabulary for consistent UI across widgets.
 - Animations where they improve the experience, with consideration for reduced-motion preferences.
@@ -227,6 +252,7 @@ LifeDashboard UI (Nuxt 4 / Vue 3)
 LifeDashboard Core (Fastify)
   ├── Authentication and pairing
   ├── Spaces and board persistence
+  ├── Focus settings, runs and session history
   ├── Widget package registry and gateway
   └── SQLite storage
 
@@ -240,6 +266,7 @@ Tauri desktop host (local macOS build); planned: optional Hermes Agent adapter
 | [`apps/desktop`](apps/desktop) | Tauri 2 macOS wrapper: Node sidecar with the bundled API, one window on the API origin. |
 | [`packages/contracts`](packages/contracts) | Shared TypeScript contracts, validation, grid and package formats. |
 | [`packages/widget-sdk`](packages/widget-sdk) | Public widget-facing API, sandbox runtime, and build CLI. |
+| [`packages/create-widget`](packages/create-widget) | `npm create @lifedashboard/widget` tool: widget template, `AGENTS.md` and the widget skill. |
 | [`examples/widgets`](examples/widgets) | Example and security-test widget projects. |
 | [`docs/theme-contract.md`](docs/theme-contract.md) | Theme token contract and validation rules. |
 
@@ -290,14 +317,14 @@ Environment variables can be set in a root `.env` file or passed through the pro
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `LIFEDASHBOARD_API_PORT` | `3001` | Fastify port and target for the Nuxt development proxy. |
-| `LIFEDASHBOARD_DATA_DIR` | OS-specific user data directory | Directory containing `lifedashboard.db`. |
+| `LIFEDASHBOARD_DATA_DIR` | OS-specific user data directory | Directory for `lifedashboard.db`, installed widgets (`userwidgets/`) and imported backgrounds (`background-media/`). |
 | `LIFEDASHBOARD_UI_ORIGINS` | `http://127.0.0.1:3000` | Comma-separated origins permitted to call the API. |
 
 On macOS, the default data directory is `~/Library/Application Support/LifeDashboard`. Environment variables override the values in `.env`. See [`.env.example`](.env.example).
 
 ### Desktop app (macOS, local build)
 
-Requirements: Apple Silicon, Node.js 24, Rust (`rustup`), Xcode Command Line Tools.
+Requirements: Apple Silicon, macOS 15.7 or later, Node.js 24, Rust (`rustup`), Xcode Command Line Tools.
 
 ```bash
 pnpm install
@@ -315,10 +342,10 @@ The roadmap describes intended directions rather than release promises or delive
 
 1. **Widget experience:** polish the board editor, broaden the built-in library, improve animations and appearance controls, and extend image/video background effects.
 2. **Widget SDK developer experience:** stable versioned contracts and richer asset support.
-3. **Workspace organization:** multiple editable spaces/screens, presets, portable layouts, and import/export of configurations.
+3. **Workspace organization:** presets, portable layouts, and import/export of configurations.
 4. **Widget ecosystem:** practical and decorative widget collections, themed packs, easier package discovery and updates, and optional independently sold premium packs.
 5. **Data and AI integrations:** permission-controlled data sources, external service access, device integrations, and Hermes sessions/conversations and AI-powered widgets.
-6. **Desktop release:** Tauri packaging, native lifecycle and security checks, installation, and platform-specific testing.
+6. **Desktop release:** signed and notarized builds, native lifecycle and security checks, installation, and platform-specific testing.
 
 The order may change based on actual usage and implementation constraints. **A strong, delightful widget platform comes before a large collection of unrelated productivity features.**
 
@@ -331,6 +358,8 @@ Installable widgets run inside sandboxed iframes and communicate with the host t
 Widgets can declare secret settings bound to an approved network origin and a header or query parameter. The API injects the secret into requests; the widget never receives the secret value, only whether it is set.
 
 Sandboxing **reduces risk but is not a guarantee against all malicious or resource-intensive code**. Only install widget packages from sources you trust. Future native or AI capabilities will require separate security review and explicit authorization.
+
+A YouTube screen background is an opt-in exception to local-only playback: the browser loads the embed from `youtube-nocookie.com`, so YouTube receives that request.
 
 There is no mandatory cloud account or hosted backend in the current architecture. A mobile app, cloud sync, and multi-user service are not initial goals.
 

@@ -1,8 +1,9 @@
 # Analog clock
 
-A frameless SVG clock for LifeDashboard. It shows the device's local time and date,
-with a smooth second hand and a 24-hour digital complication. All colours and fonts
-follow the host's theme tokens, including light themes.
+A frameless SVG clock for LifeDashboard. It shows the time and date of the `zone` setting
+(default `UTC`; an unknown zone falls back to `UTC`), with a smooth second hand and a
+24-hour digital complication. It has three looks: Classic, Minimal and Roman numerals.
+All colours and fonts follow the host's theme tokens, including light themes.
 
 From the repository root, after `pnpm install --frozen-lockfile`:
 
@@ -12,7 +13,7 @@ pnpm -C examples/widgets/showcase-clock check
 pnpm -C examples/widgets/showcase-clock build
 ```
 
-Install `dist/dev.lifedashboard.showcase.clock-1.0.0/` through LifeDashboard's widget package dialog.
+Install `dist/dev.lifedashboard.showcase.clock-1.1.0/` through LifeDashboard's widget package dialog.
 The widget defaults to 6×6 cells, supports 3×3 through 10×10, and keeps its circular
 dial within the smaller side of a rectangular widget.
 
@@ -27,5 +28,5 @@ pnpm -C examples/widgets/showcase-clock test
 pnpm -C examples/widgets/showcase-clock typecheck
 ```
 
-Tests cover hand positions, subsecond carry, visibility, motion preferences, and
-resource cleanup. The widget uses only Vue and the workspace widget SDK.
+Tests cover hand positions, time zones, subsecond carry, visibility, motion preferences,
+and resource cleanup. The widget uses only Vue and the workspace widget SDK.
