@@ -10,9 +10,9 @@ The long-term goal is a beautiful, local-first desktop environment that can also
 
 ## Running on macOS
 
-![LifeDashboard desktop app on macOS: a wooden analog clock and a large Pomodoro timer over a dark, dimmed screen background](docs/images/macos-desktop-app.jpg)
+![LifeDashboard desktop app on macOS: a wooden analog clock and a large Pomodoro timer over a dark, dimmed YouTube video background](docs/images/macos-desktop-app.jpg)
 
-The local macOS desktop build with the built-in **Clock: forest** and **Pomodoro** widgets on a screen with a dimmed background.
+The local macOS desktop build with the built-in **Clock: forest** and **Pomodoro** widgets on a screen with a dimmed YouTube background.
 
 ## Widget showcase
 
