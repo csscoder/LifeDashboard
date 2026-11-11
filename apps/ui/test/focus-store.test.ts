@@ -282,7 +282,32 @@ describe('focus store', () => {
     expect(store.saveSettings({ ...S, focusMin: 50 })).toBeNull()
     await flush()
     expect(server.settings.focusMin).toBe(50)
-    expect(store.state.run.durationMs).toBe(FOCUS)
+    // A ready phase takes the new length at once.
+    expect(store.state.run).toMatchObject({ status: 'ready', durationMs: 3_000_000, remainingMs: 3_000_000 })
+    expect(server.run).toMatchObject({ durationMs: 3_000_000, remainingMs: 3_000_000 })
+  })
+
+  it('a longer length moves the deadline of the running phase', async () => {
+    const { store, onPhaseEnd } = await loaded()
+    store.start()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(store.saveSettings({ ...S, focusMin: 50 })).toBeNull()
+    expect(store.status.value.endsAt).toBe(T0 + 3_000_000)
+    await vi.advanceTimersByTimeAsync(FOCUS)
+    expect(onPhaseEnd).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(3_000_000 - FOCUS - 60_000)
+    expect(onPhaseEnd.mock.calls).toEqual([[{ from: 'focus', to: 'short', nextMinutes: 5 }]])
+  })
+
+  it('a length below the elapsed time ends the running focus now and counts it', async () => {
+    const { store, server, onPhaseEnd } = await loaded()
+    store.start()
+    await vi.advanceTimersByTimeAsync(900_000)
+    expect(store.saveSettings({ ...S, focusMin: 10 })).toBeNull()
+    expect(onPhaseEnd.mock.calls).toEqual([[{ from: 'focus', to: 'short', nextMinutes: 5 }]])
+    expect(store.state.today).toMatchObject({ count: 1, focusMs: 900_000 })
+    await flush()
+    expect([...server.sessions.values()]).toEqual([expect.objectContaining({ completed: true, focusMs: 900_000, plannedMs: 600_000 })])
   })
 
   it('saveSettings and setTask before load or after a failed load return an error', async () => {
@@ -437,6 +462,137 @@ describe('focus store', () => {
     expect(onPhaseEnd).toHaveBeenCalledTimes(1)
     store.dispose()
     expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+describe('focus time zone', () => {
+  const original = process.env.TZ
+  const tokyo = { ...S, systemTime: false, zone: 'Asia/Tokyo' }
+  afterEach(() => {
+    if (original === undefined) delete process.env.TZ
+    else process.env.TZ = original
+  })
+
+  it('today follows the settings zone, not the OS one', async () => {
+    process.env.TZ = 'Asia/Tokyo'
+    vi.setSystemTime(Date.UTC(2026, 9, 29, 23))
+    const { store, api } = await loaded({ settings: { ...S, systemTime: false, zone: 'UTC' } })
+    expect(api.focusSessions).toHaveBeenCalledWith('2026-10-29', '2026-10-29')
+    expect(store.state.today.day).toBe('2026-10-29')
+    await vi.advanceTimersByTimeAsync(3_601_000)
+    expect(store.state.today.day).toBe('2026-10-30')
+  })
+
+  it('an unknown zone falls back to the OS day', async () => {
+    process.env.TZ = 'Asia/Tokyo'
+    vi.setSystemTime(Date.UTC(2026, 9, 29, 23))
+    const { api } = await loaded({ settings: { ...S, systemTime: false, zone: 'Mars/Olympus' } })
+    expect(api.focusSessions).toHaveBeenCalledWith('2026-10-30', '2026-10-30')
+  })
+
+  it('a zone already on another day reloads today, unconfirmed sessions included', async () => {
+    process.env.TZ = 'UTC'
+    vi.setSystemTime(Date.UTC(2026, 9, 29, 14, 40)) // 23:40 in Tokyo
+    const stored = [session('a', FOCUS, true, '2026-10-30'), session('b', 600_000, false, '2026-10-30')]
+    const { store, server, api } = await loaded({ settings: tokyo }, stored)
+    expect(store.state.today).toEqual({ day: '2026-10-29', count: 0, focusMs: 0 })
+    // A focus completing after Tokyo midnight is filed under 2026-10-30; its save stays in flight.
+    store.start()
+    await flush()
+    server.saveOutcomes.push(deferred().promise)
+    await vi.advanceTimersByTimeAsync(FOCUS)
+    expect(store.state.today).toEqual({ day: '2026-10-30', count: 1, focusMs: FOCUS })
+    expect(store.saveSettings({ ...tokyo, systemTime: true })).toBeNull()
+    await flush()
+    expect(api.focusSessions).toHaveBeenLastCalledWith('2026-10-29', '2026-10-29')
+    expect(store.state.today).toEqual({ day: '2026-10-29', count: 0, focusMs: 0 })
+    expect(store.saveSettings(tokyo)).toBeNull()
+    await flush()
+    expect(api.focusSessions).toHaveBeenLastCalledWith('2026-10-30', '2026-10-30')
+    expect(store.state.today).toEqual({ day: '2026-10-30', count: 2, focusMs: 2 * FOCUS + 600_000 })
+  })
+
+  it('a reload answered after the zone changed back is ignored', async () => {
+    process.env.TZ = 'UTC'
+    vi.setSystemTime(Date.UTC(2026, 9, 29, 20))
+    const { store, api } = await loaded({}, [session('a', FOCUS, true, '2026-10-30')])
+    const gate = deferred()
+    api.focusSessions.mockImplementationOnce(async () => {
+      await gate.promise
+      return { ok: true, data: [session('a', FOCUS, true, '2026-10-30')] }
+    })
+    expect(store.saveSettings(tokyo)).toBeNull()
+    expect(store.saveSettings({ ...tokyo, systemTime: true })).toBeNull()
+    gate.resolve()
+    await flush()
+    expect(store.state.today).toEqual({ day: '2026-10-29', count: 0, focusMs: 0 })
+  })
+
+  it('a failed reload keeps today and says so', async () => {
+    process.env.TZ = 'UTC'
+    vi.setSystemTime(Date.UTC(2026, 9, 29, 20))
+    const { store, api, notice } = await loaded({}, [session('a', FOCUS, true)])
+    api.focusSessions.mockResolvedValueOnce(unavailable)
+    expect(store.saveSettings(tokyo)).toBeNull()
+    await flush()
+    expect(api.focusSessions).toHaveBeenLastCalledWith('2026-10-30', '2026-10-30')
+    expect(store.state.today).toEqual({ day: '2026-10-29', count: 1, focusMs: FOCUS })
+    expect(notice).toHaveBeenCalledWith('Focus statistics not reloaded')
+  })
+
+  it('a day that failed to reload is loaded again, not zeroed, when it comes up', async () => {
+    process.env.TZ = 'UTC'
+    vi.setSystemTime(Date.UTC(2026, 9, 29, 20))
+    const { store, api } = await loaded({}, [session('a', FOCUS, true), session('b', FOCUS, true, '2026-10-30')])
+    api.focusSessions.mockResolvedValueOnce(unavailable)
+    expect(store.saveSettings(tokyo)).toBeNull()
+    await flush()
+    expect(store.state.today.day).toBe('2026-10-29')
+    // The re-armed midnight timer checks within an hour and finds Tokyo on 2026-10-30.
+    await vi.advanceTimersByTimeAsync(3_600_000)
+    expect(store.state.today).toEqual({ day: '2026-10-30', count: 1, focusMs: FOCUS })
+  })
+
+  it('a rejected write that reverts the zone reloads today for the server zone', async () => {
+    process.env.TZ = 'UTC'
+    vi.setSystemTime(Date.UTC(2026, 9, 29, 20))
+    const { store, server } = await loaded({}, [session('a', FOCUS, true)])
+    server.saveOutcomes.push('invalid')
+    expect(store.saveSettings(tokyo)).toBeNull()
+    await flush()
+    expect(store.state.settings.systemTime).toBe(true)
+    expect(store.state.today).toEqual({ day: '2026-10-29', count: 1, focusMs: FOCUS })
+  })
+
+  it('a new zone re-arms the midnight timer', async () => {
+    process.env.TZ = 'UTC'
+    vi.setSystemTime(Date.UTC(2026, 9, 29, 14, 30)) // 23:30 in Tokyo
+    const { store } = await loaded()
+    expect(store.saveSettings(tokyo)).toBeNull()
+    expect(store.state.today.day).toBe('2026-10-29')
+    await vi.advanceTimersByTimeAsync(30 * 60_000 + 1000)
+    expect(store.state.today.day).toBe('2026-10-30')
+  })
+
+  it('the loaded zone arms the midnight timer', async () => {
+    process.env.TZ = 'UTC'
+    vi.setSystemTime(Date.UTC(2026, 9, 29, 14, 30)) // 23:30 in Tokyo
+    const { store } = await loaded({ settings: tokyo })
+    await vi.advanceTimersByTimeAsync(30 * 60_000 + 1000)
+    expect(store.state.today.day).toBe('2026-10-30')
+  })
+
+  it('a zone change from another tab reloads today too', async () => {
+    process.env.TZ = 'UTC'
+    vi.setSystemTime(Date.UTC(2026, 9, 29, 20))
+    const { store, server, api, notice } = await loaded()
+    server.settings = tokyo
+    server.revision++
+    store.start()
+    await flush()
+    expect(notice).toHaveBeenCalledWith(CONFLICT)
+    expect(api.focusSessions).toHaveBeenLastCalledWith('2026-10-30', '2026-10-30')
+    expect(store.state.today.day).toBe('2026-10-30')
   })
 })
 

@@ -5,11 +5,42 @@ export type Step = { run: FocusRun; session?: FocusSessionInput }
 const iso = (ms: number) => new Date(ms).toISOString()
 const step = (run: FocusRun, session?: FocusSessionInput): Step => (session ? { run, session } : { run })
 
-export function dayKey(epochMs: number): string {
-  const date = new Date(epochMs)
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+/** The zone the day follows: null for the OS time zone. */
+export function focusZone(settings: FocusSettings): string | null {
+  return settings.systemTime ? null : settings.zone
 }
+
+// Wall-clock parts of `epochMs` in `zone`; the OS time zone for null or a zone this browser does not know.
+function wallTime(epochMs: number, zone: string | null): { year: number; month: number; day: number; h: number; m: number; s: number } {
+  if (zone !== null) {
+    try {
+      const format = new Intl.DateTimeFormat('en-US', {
+        timeZone: zone, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23',
+      })
+      const parts = Object.fromEntries(format.formatToParts(epochMs).map(({ type, value }) => [type, Number(value)]))
+      return { year: parts.year!, month: parts.month!, day: parts.day!, h: parts.hour!, m: parts.minute!, s: parts.second! }
+    } catch {
+      // Falls through to the OS time zone.
+    }
+  }
+  const date = new Date(epochMs)
+  return { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate(), h: date.getHours(), m: date.getMinutes(), s: date.getSeconds() }
+}
+
+export function dayKey(epochMs: number, zone: string | null = null): string {
+  const { year, month, day } = wallTime(epochMs, zone)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${year}-${pad(month)}-${pad(day)}`
+}
+
+/** Milliseconds to the next midnight on the wall clock of `zone`; off by the shift on a daylight saving day. */
+export function msToMidnight(epochMs: number, zone: string | null): number {
+  const { h, m, s } = wallTime(epochMs, zone)
+  return 86_400_000 - ((h * 60 + m) * 60 + s) * 1000 - (((epochMs % 1000) + 1000) % 1000)
+}
+
+const phaseMs = (phase: FocusPhase, settings: FocusSettings) =>
+  (phase === 'focus' ? settings.focusMin : phase === 'short' ? settings.shortBreakMin : settings.longBreakMin) * 60_000
 
 function startRun(run: FocusRun, now: number): FocusRun {
   return {
@@ -19,8 +50,7 @@ function startRun(run: FocusRun, now: number): FocusRun {
 }
 
 function begin(run: FocusRun, phase: FocusPhase, settings: FocusSettings, autoStart: boolean, now: number): FocusRun {
-  const minutes = phase === 'focus' ? settings.focusMin : phase === 'short' ? settings.shortBreakMin : settings.longBreakMin
-  const durationMs = minutes * 60_000
+  const durationMs = phaseMs(phase, settings)
   const next: FocusRun = {
     ...run, phase, status: 'ready', durationMs, endsAt: null, remainingMs: durationMs, resumedAt: null, pausedBy: null,
     phaseStartedAt: null, focusedMs: 0, seenAt: null,
@@ -34,18 +64,18 @@ function afterFocus(run: FocusRun, settings: FocusSettings, streak: number, auto
   return begin({ ...run, streak: long ? 0 : streak }, long ? 'long' : 'short', settings, autoStart, now)
 }
 
-function record(run: FocusRun, endedMs: number, focusMs: number, completed: boolean, newId: () => string): FocusSessionInput {
+function record(settings: FocusSettings, run: FocusRun, endedMs: number, focusMs: number, completed: boolean, newId: () => string): FocusSessionInput {
   return {
-    id: newId(), day: dayKey(endedMs), startedAt: run.phaseStartedAt ?? iso(endedMs), endedAt: iso(endedMs),
+    id: newId(), day: dayKey(endedMs, focusZone(settings)), startedAt: run.phaseStartedAt ?? iso(endedMs), endedAt: iso(endedMs),
     plannedMs: run.durationMs, focusMs, completed, label: run.label, projectId: run.projectId,
   }
 }
 
 // A focus ended early is recorded only with at least a minute of focus.
-function interrupted(run: FocusRun, now: number, newId: () => string): FocusSessionInput | undefined {
+function interrupted(settings: FocusSettings, run: FocusRun, now: number, newId: () => string): FocusSessionInput | undefined {
   if (run.phase !== 'focus') return undefined
   const focusMs = run.focusedMs + (run.status === 'running' && run.resumedAt !== null ? now - run.resumedAt : 0)
-  return focusMs >= FOCUS_LIMITS.minRecordedMs ? record(run, now, focusMs, false, newId) : undefined
+  return focusMs >= FOCUS_LIMITS.minRecordedMs ? record(settings, run, now, focusMs, false, newId) : undefined
 }
 
 // Deadline first: an overdue running phase ends at its endsAt before the action applies to the next running phase.
@@ -83,7 +113,7 @@ export function skip(settings: FocusSettings, run: FocusRun, now: number, newId:
     const next = current.phase === 'focus'
       ? afterFocus(current, settings, current.streak, false, now)
       : begin(current, 'focus', settings, false, now)
-    return step(next, interrupted(current, now, newId))
+    return step(next, interrupted(settings, current, now, newId))
   })
 }
 
@@ -94,8 +124,18 @@ export function reset(settings: FocusSettings, run: FocusRun, now: number, newId
       ...current, status: 'ready', endsAt: null, remainingMs: current.durationMs, resumedAt: null, pausedBy: null,
       phaseStartedAt: null, focusedMs: 0, seenAt: null,
     }
-    return step(next, interrupted(current, now, newId))
+    return step(next, interrupted(settings, current, now, newId))
   })
+}
+
+/** The current phase takes its length from `settings`; shortened below its elapsed time, it ends now. Same run when unchanged. */
+export function retime(settings: FocusSettings, run: FocusRun, now: number): Step {
+  const durationMs = phaseMs(run.phase, settings)
+  const delta = durationMs - run.durationMs
+  if (delta === 0) return { run }
+  if (run.status === 'ready') return { run: { ...run, durationMs, remainingMs: durationMs } }
+  if (run.status === 'paused') return { run: { ...run, durationMs, remainingMs: Math.max(0, run.remainingMs + delta) } }
+  return { run: { ...run, durationMs, endsAt: run.endsAt === null ? null : Math.max(now, run.endsAt + delta) } }
 }
 
 export function advance(settings: FocusSettings, run: FocusRun, now: number, newId: () => string): Step {
@@ -107,7 +147,7 @@ export function advance(settings: FocusSettings, run: FocusRun, now: number, new
       continue
     }
     if (session) break
-    session = record(run, end, run.focusedMs + end - run.resumedAt, true, newId)
+    session = record(settings, run, end, run.focusedMs + end - run.resumedAt, true, newId)
     run = afterFocus(run, settings, run.streak + 1, settings.autoStartBreak, end)
   }
   return step(run, session)

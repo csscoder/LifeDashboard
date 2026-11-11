@@ -112,7 +112,8 @@ function readState(db: DatabaseSync, now: Date): FocusState {
       .prepare("SELECT label FROM focus_sessions WHERE label IS NOT NULL AND label <> '' GROUP BY label ORDER BY MAX(ended_at) DESC LIMIT 200")
       .all() as unknown as { label: string }[]
     return {
-      settings: JSON.parse(row.settings), run: JSON.parse(row.run), revision: row.revision,
+      // Rows saved before a settings key existed read it with its default.
+      settings: { ...DEFAULT_FOCUS_SETTINGS, ...JSON.parse(row.settings) }, run: JSON.parse(row.run), revision: row.revision,
       projects, recentLabels: labels.map(({ label }) => label),
     }
   })

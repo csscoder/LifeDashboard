@@ -10,6 +10,11 @@ export interface FocusSettings {
   autoStartBreak: boolean
   autoStartFocus: boolean
   sound: boolean
+  /** The daily reset follows the OS time zone; otherwise `zone`. */
+  systemTime: boolean
+  notation: 'UTC' | 'GMT'
+  // A plain string, as on the clock: zone lists differ between engines, the UI falls back to system time for an unknown one.
+  zone: string
 }
 
 export type FocusPhase = 'focus' | 'short' | 'long'
@@ -87,6 +92,9 @@ export const DEFAULT_FOCUS_SETTINGS: FocusSettings = {
   autoStartBreak: true,
   autoStartFocus: false,
   sound: true,
+  systemTime: true,
+  notation: 'UTC',
+  zone: 'UTC',
 }
 
 export function initialRun(settings: FocusSettings): FocusRun {
@@ -97,7 +105,7 @@ export function initialRun(settings: FocusSettings): FocusRun {
   }
 }
 
-const SETTINGS_KEYS = ['focusMin', 'shortBreakMin', 'longBreakMin', 'longBreakEvery', 'dailyGoal', 'autoStartBreak', 'autoStartFocus', 'sound']
+const SETTINGS_KEYS = ['focusMin', 'shortBreakMin', 'longBreakMin', 'longBreakEvery', 'dailyGoal', 'autoStartBreak', 'autoStartFocus', 'sound', 'systemTime', 'notation', 'zone']
 const RUN_KEYS = ['phase', 'status', 'durationMs', 'endsAt', 'remainingMs', 'resumedAt', 'pausedBy', 'phaseStartedAt', 'focusedMs', 'streak', 'label', 'projectId', 'seenAt']
 const SESSION_KEYS = ['id', 'day', 'startedAt', 'endedAt', 'plannedMs', 'focusMs', 'completed', 'label', 'projectId']
 const PUT_KEYS = ['settings', 'run', 'session', 'expectedRevision']
@@ -149,11 +157,13 @@ export function parseFocusSettings(raw: unknown): ParseResult<FocusSettings> {
     if (!Number.isInteger(value) || (value as number) < min || (value as number) > max) return fail(`${key} must be an integer ${min}..${max}`)
     out[key] = value as number
   }
-  for (const key of ['autoStartBreak', 'autoStartFocus', 'sound'] as const) {
+  for (const key of ['autoStartBreak', 'autoStartFocus', 'sound', 'systemTime'] as const) {
     if (typeof raw[key] !== 'boolean') return fail(`${key} must be a boolean`)
     out[key] = raw[key]
   }
-  return { ok: true, value: out as unknown as FocusSettings }
+  if (raw.notation !== 'UTC' && raw.notation !== 'GMT') return fail('notation must be UTC or GMT')
+  if (typeof raw.zone !== 'string' || raw.zone === '' || raw.zone.length > 64) return fail('zone must be a string of 1..64 characters')
+  return { ok: true, value: { ...out, notation: raw.notation, zone: raw.zone } as unknown as FocusSettings }
 }
 
 export function parseFocusRun(raw: unknown): ParseResult<FocusRun> {

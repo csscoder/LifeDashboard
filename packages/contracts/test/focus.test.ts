@@ -48,8 +48,17 @@ describe('parseFocusSettings', () => {
   })
   it.each([
     { focusMin: 121 }, { focusMin: 0 }, { longBreakEvery: 1 }, { dailyGoal: 25 }, { focusMin: 2.5 }, { extra: 1 }, { sound: 'yes' },
+    { systemTime: 'no' }, { notation: 'CET' }, { zone: '' }, { zone: 'x'.repeat(65) }, { zone: 3 },
   ])('rejects %j', (patch) => {
     expect(parseFocusSettings({ ...DEFAULT_FOCUS_SETTINGS, ...patch }).ok).toBe(false)
+  })
+  it('defaults to the system time', () => {
+    expect(DEFAULT_FOCUS_SETTINGS).toMatchObject({ systemTime: true, notation: 'UTC', zone: 'UTC' })
+  })
+  it('accepts a chosen zone and rejects a missing time zone key', () => {
+    expect(parseFocusSettings({ ...DEFAULT_FOCUS_SETTINGS, systemTime: false, notation: 'GMT', zone: 'Asia/Tokyo' }).ok).toBe(true)
+    const { zone: _zone, ...missing } = DEFAULT_FOCUS_SETTINGS
+    expect(parseFocusSettings(missing).ok).toBe(false)
   })
   it('rejects a non-object', () => {
     expect(parseFocusSettings(null).ok).toBe(false)

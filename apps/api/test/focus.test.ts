@@ -35,6 +35,15 @@ describe('focus', () => {
     })
   })
 
+  it('a row saved before the time zone settings reads with their defaults and saves again', async () => {
+    await get()
+    const { systemTime: _s, notation: _n, zone: _z, ...legacy } = { ...DEFAULT_FOCUS_SETTINGS, focusMin: 30 }
+    t.db.prepare('UPDATE focus SET settings = ? WHERE id = 1').run(JSON.stringify(legacy))
+    const state = (await get()).json().data
+    expect(state.settings).toEqual({ ...DEFAULT_FOCUS_SETTINGS, focusMin: 30 })
+    expect((await put({ settings: state.settings, run: run(), expectedRevision: 1 })).statusCode).toBe(200)
+  })
+
   it('put stores run and session in one write', async () => {
     const next = run({ status: 'paused', remainingMs: 1000, pausedBy: 'user' })
     const response = await put({ run: next, session: session('s1'), expectedRevision: 1 })

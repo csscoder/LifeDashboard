@@ -40,7 +40,7 @@ describe('pomodoro text fields with the real UiTextField', () => {
       'reka-ui': reka,
       '@lifedashboard/contracts/space': { nextColor, SPACE_COLORS },
       '../../../api': { api: {} },
-      '../../../focus/engine': { dayKey: () => '2026-10-29' },
+      '../../../focus/engine': { dayKey: () => '2026-10-29', focusZone: () => null },
       '../../../focus/store': { focusStore: { state: Vue.reactive({ settings: { dailyGoal: 8 }, projects: [{ id: 'p1', name: 'Home', color: 'blue', archivedAt: null }] }), updateProject: async () => ({ ok: true }) } },
       '../../../ui/UiButton.vue': Vue.defineComponent({ setup: (_, { attrs, slots }) => () => Vue.h('button', attrs, slots.default?.()) }),
       '../../../ui/UiTextField.vue': UiTextField,

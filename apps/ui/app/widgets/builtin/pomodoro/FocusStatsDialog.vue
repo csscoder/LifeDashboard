@@ -4,7 +4,7 @@ import { FieldRoot } from 'reka-ui'
 import type { FocusSession } from '@lifedashboard/contracts/focus'
 import { SPACE_COLORS, type SpaceColor } from '@lifedashboard/contracts/space'
 import { api } from '../../../api'
-import { dayKey } from '../../../focus/engine'
+import { dayKey, focusZone } from '../../../focus/engine'
 import { focusStore } from '../../../focus/store'
 import UiButton from '../../../ui/UiButton.vue'
 import UiTextField from '../../../ui/UiTextField.vue'
@@ -21,7 +21,7 @@ const tab = ref<(typeof TABS)[number]>('Today')
 const range = ref<'Week' | 'Month'>('Week')
 const sessions = ref<FocusSession[]>([])
 const failed = ref(false)
-const today = ref(dayKey(Date.now()))
+const today = ref(dayKey(Date.now(), focusZone(state.settings)))
 // Per-project rejection text from updateProject.
 const errors = ref<Record<string, string>>({})
 
@@ -42,7 +42,7 @@ let request = 0
 async function load() {
   const mine = ++request
   failed.value = false
-  today.value = dayKey(Date.now())
+  today.value = dayKey(Date.now(), focusZone(state.settings))
   const result = await api.focusSessions(lastDays(today.value, MONTH)[0]!, today.value)
   if (mine !== request) return
   if (result.ok) sessions.value = result.data

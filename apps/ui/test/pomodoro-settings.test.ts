@@ -1,22 +1,29 @@
 import * as Vue from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_FOCUS_SETTINGS, FOCUS_LIMITS } from '@lifedashboard/contracts/focus'
+import * as timeZones from '../app/widgets/builtin/clocks/analog_1/time-zones'
 import { compileSfc, mountComponent } from './helpers/sfc-renderer'
 
 const control = (tag: string) => Vue.defineComponent({
-  props: { modelValue: null, min: Number, max: Number, integer: Boolean }, emits: ['update:modelValue'],
+  props: { modelValue: null, min: Number, max: Number, integer: Boolean, options: Array }, emits: ['update:modelValue'],
   setup: (props, { attrs, emit }) => () => Vue.h(tag, { ...attrs, ...props, pick: (value: unknown) => emit('update:modelValue', value) }),
 })
 const Row = Vue.defineComponent({ props: ['label'], setup: (props, { slots }) => () => Vue.h('settings-row', { label: props.label }, slots.default?.()) })
 
-function mount(saveResult: string | null = null, props: Record<string, unknown> = {}) {
-  const store = { state: Vue.reactive({ settings: { ...DEFAULT_FOCUS_SETTINGS } }), saveSettings: vi.fn((): string | null => saveResult) }
+const groups = timeZones.offsetGroups(new Date())
+const offsetOf = (zone: string) => groups.find((group) => group.zones.includes(zone))!.offset
+
+function mount(saveResult: string | null = null, props: Record<string, unknown> = {}, settings: Record<string, unknown> = {}) {
+  const store = { state: Vue.reactive({ settings: { ...DEFAULT_FOCUS_SETTINGS, ...settings } }), saveSettings: vi.fn((): string | null => saveResult) }
   const component = compileSfc(new URL('../app/widgets/builtin/pomodoro/PomodoroSettings.vue', import.meta.url), {
     '@lifedashboard/contracts/focus': { FOCUS_LIMITS },
     '../../../focus/store': { focusStore: store },
     '../../../board/SettingsRow.vue': Row,
     '../../../ui/UiNumberField.vue': control('ui-number-field'),
     '../../../ui/UiSwitch.vue': control('ui-switch'),
+    '../../../ui/UiRadioGroup.vue': control('ui-radio-group'),
+    '../../../ui/UiSelect.vue': control('ui-select'),
+    '../clocks/analog_1/time-zones': timeZones,
   })
   const ui = mountComponent(component, props, ['change'])
   const field = (label: string) => ui.nodes().find((el) => el.tag === 'settings-row' && el.props.label === label)!.children[0]!
@@ -48,6 +55,43 @@ describe('pomodoro settings', () => {
     expect([root.props.onChange, root.props.config, root.props.schema]).toEqual([undefined, undefined, undefined])
     field('Focus, min').dispatchEvent(new Event('change', { bubbles: true }))
     expect(ui.events).toEqual([])
+  })
+  it('shows only the system time switch while it is on', () => {
+    const { ui, field } = mount()
+    expect(field('System time').tag).toBe('ui-switch')
+    expect(field('System time').props.modelValue).toBe(true)
+    expect(ui.nodes().filter((el) => el.tag === 'ui-select' || el.tag === 'ui-radio-group')).toHaveLength(0)
+  })
+  it('clearing system time saves it with the stored zone', () => {
+    const { store, field } = mount(null, {}, { notation: 'GMT', zone: 'Asia/Tokyo' })
+    field('System time').props.pick(false)
+    expect(store.saveSettings).toHaveBeenCalledWith({ ...DEFAULT_FOCUS_SETTINGS, systemTime: false, notation: 'GMT', zone: 'Asia/Tokyo' })
+  })
+  it('a chosen zone shows its notation, offset and zone lists', () => {
+    const { field } = mount(null, {}, { systemTime: false, notation: 'GMT', zone: 'Asia/Tokyo' })
+    expect(field('Notation').props.modelValue).toBe('GMT')
+    expect(field('Offset').props.modelValue).toBe(String(offsetOf('Asia/Tokyo')))
+    expect(field('Offset').props.options).toContainEqual({ value: String(offsetOf('Asia/Tokyo')), label: 'GMT+9' })
+    expect(field('Time zone').props.modelValue).toBe('Asia/Tokyo')
+    const zones = groups.find((group) => group.offset === offsetOf('Asia/Tokyo'))!.zones
+    expect(field('Time zone').props.options).toEqual(zones.map((zone) => ({ value: zone, label: zone })))
+  })
+  it('picking an offset saves its first zone; picking a zone or a notation saves it', () => {
+    const { store, field } = mount(null, {}, { systemTime: false, zone: 'Asia/Tokyo' })
+    const chosen = { ...DEFAULT_FOCUS_SETTINGS, systemTime: false, zone: 'Asia/Tokyo' }
+    const target = groups.find((group) => group.offset !== offsetOf('Asia/Tokyo'))!
+    field('Offset').props.pick(String(target.offset))
+    field('Time zone').props.pick('Asia/Seoul')
+    field('Notation').props.pick('GMT')
+    expect(store.saveSettings.mock.calls).toEqual([
+      [{ ...chosen, zone: target.zones[0] }],
+      [{ ...chosen, zone: 'Asia/Seoul' }],
+      [{ ...chosen, notation: 'GMT' }],
+    ])
+  })
+  it('an unknown stored zone shows the UTC offset group', () => {
+    const { field } = mount(null, {}, { systemTime: false, zone: 'Mars/Olympus' })
+    expect(field('Offset').props.modelValue).toBe('0')
   })
   it('shows a settings error', async () => {
     const { ui, field } = mount('focus must be between 1 and 120')

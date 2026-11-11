@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { DEFAULT_FOCUS_SETTINGS, initialRun, type FocusRun } from '@lifedashboard/contracts/focus'
-import { advance, dayKey, pause, publicStatus, reset, restore, resume, skip, start } from '../app/focus/engine'
+import { advance, dayKey, focusZone, msToMidnight, pause, publicStatus, reset, restore, resume, retime, skip, start } from '../app/focus/engine'
 
 const S = DEFAULT_FOCUS_SETTINGS
 const T0 = Date.UTC(2026, 9, 29, 9)
@@ -149,6 +149,85 @@ describe('focus engine', () => {
       expect(dayKey(Date.parse('2026-10-29T23:05:00Z'))).toBe('2026-10-30')
       process.env.TZ = 'UTC'
       expect(dayKey(Date.parse('2026-10-29T23:05:00Z'))).toBe('2026-10-29')
+    })
+  })
+
+  describe('time zone', () => {
+    const original = process.env.TZ
+    afterEach(() => {
+      if (original === undefined) delete process.env.TZ
+      else process.env.TZ = original
+    })
+    const tokyo = { ...S, systemTime: false, zone: 'Asia/Tokyo' }
+
+    it('focusZone is null while the system time is on', () => {
+      expect(focusZone(S)).toBeNull()
+      expect(focusZone({ ...S, zone: 'Asia/Tokyo' })).toBeNull()
+      expect(focusZone(tokyo)).toBe('Asia/Tokyo')
+    })
+
+    it('dayKey with a zone ignores the OS time zone', () => {
+      process.env.TZ = 'Europe/Berlin'
+      expect(dayKey(Date.parse('2026-10-29T23:05:00Z'), 'Asia/Tokyo')).toBe('2026-10-30')
+      expect(dayKey(Date.parse('2026-10-29T23:05:00Z'), 'America/New_York')).toBe('2026-10-29')
+      expect(dayKey(Date.parse('2026-10-29T23:05:00Z'), 'UTC')).toBe('2026-10-29')
+    })
+
+    it('an unknown zone falls back to the local day', () => {
+      process.env.TZ = 'Europe/Berlin'
+      expect(dayKey(Date.parse('2026-10-29T23:05:00Z'), 'Mars/Olympus')).toBe('2026-10-30')
+    })
+
+    it('a session is filed under the day of the settings zone', () => {
+      process.env.TZ = 'UTC'
+      const late = Date.parse('2026-10-29T15:00:00Z') // 00:00 + 25 min in Tokyo
+      const step = advance(tokyo, start(tokyo, initialRun(tokyo), late - FOCUS, id).run, late, id)
+      expect(step.session?.day).toBe('2026-10-30')
+      expect(skip(tokyo, start(tokyo, initialRun(tokyo), late - 600_000, id).run, late, id).session).toMatchObject({ completed: false, day: '2026-10-30' })
+    })
+
+    it('msToMidnight counts to midnight in the zone', () => {
+      process.env.TZ = 'Europe/Berlin'
+      expect(msToMidnight(Date.parse('2026-10-29T23:30:00.250Z'), 'UTC')).toBe(1_799_750)
+      expect(msToMidnight(Date.parse('2026-10-29T14:00:00Z'), 'Asia/Tokyo')).toBe(3_600_000)
+      process.env.TZ = 'UTC'
+      expect(msToMidnight(Date.parse('2026-10-29T23:00:00Z'), null)).toBe(3_600_000)
+    })
+  })
+
+  describe('retime', () => {
+    const longer = { ...S, focusMin: 50 }
+    const shorter = { ...S, focusMin: 10 }
+
+    it('an unchanged length returns the same run', () => {
+      const run = running()
+      expect(retime({ ...S, shortBreakMin: 9 }, run, T0 + 1000).run).toBe(run)
+    })
+
+    it('a ready phase takes the new length', () => {
+      expect(retime(longer, initialRun(S), T0)).toEqual({ run: { ...initialRun(S), durationMs: 3_000_000, remainingMs: 3_000_000 } })
+    })
+
+    it('a running phase moves its deadline', () => {
+      expect(retime(longer, running(), T0 + 60_000).run).toMatchObject({ status: 'running', durationMs: 3_000_000, endsAt: T0 + 3_000_000 })
+      expect(retime(shorter, running(), T0 + 60_000).run).toMatchObject({ status: 'running', durationMs: 600_000, endsAt: T0 + 600_000 })
+    })
+
+    it('a running phase shortened below its elapsed time ends now', () => {
+      const run = retime(shorter, running(), T0 + 900_000).run
+      expect(run).toMatchObject({ durationMs: 600_000, endsAt: T0 + 900_000 })
+      expect(advance(shorter, run, T0 + 900_000, id).session).toMatchObject({ completed: true, focusMs: 900_000, plannedMs: 600_000 })
+    })
+
+    it('a running break uses its own length', () => {
+      const short = advance(S, running(), T0 + FOCUS, id).run
+      expect(retime({ ...S, shortBreakMin: 10 }, short, T0 + FOCUS).run).toMatchObject({ phase: 'short', durationMs: 600_000, endsAt: T0 + FOCUS + 600_000 })
+    })
+
+    it('a paused phase changes its remaining time, never below zero', () => {
+      const paused = pause(S, running(), T0 + 600_000, 'user', id).run
+      expect(retime(longer, paused, T0 + 700_000).run).toMatchObject({ status: 'paused', durationMs: 3_000_000, remainingMs: 2_400_000 })
+      expect(retime({ ...S, focusMin: 5 }, paused, T0 + 700_000).run).toMatchObject({ status: 'paused', durationMs: 300_000, remainingMs: 0 })
     })
   })
 

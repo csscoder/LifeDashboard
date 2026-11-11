@@ -85,7 +85,7 @@ Widgets declare their preferred, minimum, and maximum sizes. The host provides a
 
 **Pomodoro** ([`pomodoro`](apps/ui/app/widgets/builtin/pomodoro)) draws the remaining time as a ring around a tomato:
 
-- **Timer:** focus, short-break and long-break lengths, the long-break interval, a daily goal, auto-start for breaks and focus, and a sound. Settings are shared by all Pomodoro widgets and apply from the next phase.
+- **Timer:** focus, short-break and long-break lengths, the long-break interval, a daily goal, auto-start for breaks and focus, a sound, and the time zone whose midnight resets the daily count (the system time by default). Settings are shared by all Pomodoro widgets; a new length applies to the current phase at once, and one shorter than the time already spent ends it.
 - **Task:** a free-text label and an optional project per focus interval. Recent labels are searchable.
 - **Statistics:** Today, Week and Projects tabs. A completed focus interval counts toward the daily goal. A skipped or reset interval of at least 1 minute adds focus time only; breaks are not recorded.
 - **One run per dashboard:** the timer pauses when no Pomodoro widget is on the active screen and resumes when one returns. Switching to another application does not pause it. A reload restores the run paused.

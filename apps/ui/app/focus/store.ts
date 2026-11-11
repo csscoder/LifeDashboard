@@ -49,6 +49,8 @@ const HEARTBEAT_MS = 30_000
 const RETRY_MS = [2000, 5000, 15_000]
 const RETRY_LATER_MS = 60_000
 const RECENT_LABELS = 200 // the API's limit
+// The midnight timer re-checks at least hourly, so a daylight saving shift never delays the reset by more.
+const MIDNIGHT_CHECK_MS = 3_600_000
 
 // Field by field: key order differs between engine spreads and the server's JSON.
 function sameRun(a: unknown, b: unknown): boolean {
@@ -96,9 +98,50 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
     }
   }
 
+  const zone = () => engine.focusZone(state.settings)
+
+  // Bumped by every zone change: a slower answer for an earlier zone is ignored.
+  let todayRequest = 0
+  // A day whose totals failed to load after a zone change: when it comes up it is loaded, never zeroed (Ruling 13).
+  let unloadedDay: string | null = null
+
   function rollToday(now: number) {
-    const day = engine.dayKey(now)
-    if (day !== state.today.day) state.today = { day, count: 0, focusMs: 0 }
+    const day = engine.dayKey(now, zone())
+    if (day === state.today.day) return
+    if (day === unloadedDay) void loadToday(day)
+    else state.today = { day, count: 0, focusMs: 0 }
+  }
+
+  // Server sessions of `day` plus the ones not confirmed yet. False when the request failed.
+  async function loadToday(day: string): Promise<boolean> {
+    const current = generation
+    const mine = todayRequest
+    const result = await deps.api.focusSessions(day, day)
+    if (current !== generation || mine !== todayRequest) return true // a disposed store or an earlier zone reports nothing
+    if (!result.ok) return false
+    if (day === unloadedDay) unloadedDay = null
+    const stored = new Set(result.data.map(({ id }) => id))
+    const sessions = [...result.data, ...unconfirmed.filter((item) => item.day === day && !stored.has(item.id))]
+    state.today = { day, count: sessions.filter(({ completed }) => completed).length, focusMs: sessions.reduce((sum, { focusMs }) => sum + focusMs, 0) }
+    return true
+  }
+
+  // A new zone moves the next midnight and may already be on another day.
+  function zoneChanged(previous: string | null) {
+    if (zone() === previous) return
+    todayRequest++
+    unloadedDay = null
+    if (armed) {
+      clearTimeout(midnight)
+      armMidnight()
+    }
+    const day = engine.dayKey(deps.now(), zone())
+    if (day === state.today.day) return
+    void loadToday(day).then((ok) => {
+      if (ok) return
+      unloadedDay = day
+      deps.notice('Focus statistics not reloaded')
+    })
   }
 
   function commit(step: engine.Step) {
@@ -154,12 +197,10 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
   }
 
   function armMidnight() {
-    const next = new Date(deps.now())
-    next.setHours(24, 0, 0, 0)
     midnight = setTimeout(() => {
       rollToday(deps.now())
       armMidnight()
-    }, next.getTime() - deps.now())
+    }, Math.min(engine.msToMidnight(deps.now(), zone()), MIDNIGHT_CHECK_MS))
   }
 
   // Ruling 2: nothing is armed at construction.
@@ -172,10 +213,13 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
   }
 
   function adopt(server: FocusState, run = server.run) {
+    const previous = zone()
     revision = server.revision
     state.settings = server.settings
     dirty = settingsDirty = false
     setRun(run)
+    // On load this only re-arms the midnight timer armed before the zone was known: today is already loaded for it.
+    zoneChanged(previous)
   }
 
   function write() {
@@ -251,16 +295,13 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
         state.loadError = true
         return
       }
-      const day = engine.dayKey(deps.now())
-      const sessions = await deps.api.focusSessions(day, day)
+      const ok = await loadToday(engine.dayKey(deps.now(), engine.focusZone(result.data.settings)))
       if (current !== generation) return
       // Ruling 13: today's totals never silently read as zero.
-      if (!sessions.ok) {
+      if (!ok) {
         state.loadError = true
         return
       }
-      const today = sessions.data
-      state.today = { day, count: today.filter(({ completed }) => completed).length, focusMs: today.reduce((sum, { focusMs }) => sum + focusMs, 0) }
       // A hidden pause resumes only within the app session that made it.
       const stored: FocusRun = result.data.run.pausedBy === 'hidden' ? { ...result.data.run, pausedBy: 'user' } : result.data.run
       const step = engine.restore(result.data.settings, stored, deps.newId)
@@ -336,10 +377,14 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
       const parsed = parseFocusSettings(settings)
       if (!parsed.ok) return parsed.error
       if (!state.loaded) return "Focus settings aren't loaded"
-      // The current phase ends under the settings it began with.
       catchUp()
+      const previous = zone()
       state.settings = parsed.value
       settingsDirty = true
+      // The current phase takes the new length at once; shortened below its elapsed time, it ends now.
+      commit(engine.retime(state.settings, state.run, deps.now()))
+      catchUp()
+      zoneChanged(previous)
       write()
       return null
     },
