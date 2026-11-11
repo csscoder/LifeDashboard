@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { DEFAULT_FOCUS_SETTINGS, initialRun, type FocusRun } from '@lifedashboard/contracts/focus'
-import { advance, dayKey, focusZone, msToMidnight, pause, publicStatus, reset, restore, resume, retime, skip, start } from '../app/focus/engine'
+import { advance, clockTime, dayKey, focusZone, msToMidnight, pause, publicStatus, reset, restore, resume, retime, skip, start } from '../app/focus/engine'
 
 const S = DEFAULT_FOCUS_SETTINGS
 const T0 = Date.UTC(2026, 9, 29, 9)
@@ -184,6 +184,15 @@ describe('focus engine', () => {
       const step = advance(tokyo, start(tokyo, initialRun(tokyo), late - FOCUS, id).run, late, id)
       expect(step.session?.day).toBe('2026-10-30')
       expect(skip(tokyo, start(tokyo, initialRun(tokyo), late - 600_000, id).run, late, id).session).toMatchObject({ completed: false, day: '2026-10-30' })
+    })
+
+    it('clockTime shows the wall clock of the zone, the OS time zone for null or an unknown zone', () => {
+      process.env.TZ = 'Europe/Berlin'
+      const at = '2026-10-29T23:05:00Z'
+      expect(clockTime(at, 'Asia/Tokyo', 'en-GB')).toBe('08:05')
+      expect(clockTime(at, 'UTC', 'en-GB')).toBe('23:05')
+      expect(clockTime(at, null, 'en-GB')).toBe('00:05')
+      expect(clockTime(at, 'Mars/Olympus', 'en-GB')).toBe('00:05')
     })
 
     it('msToMidnight counts to midnight in the zone', () => {

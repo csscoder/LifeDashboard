@@ -27,6 +27,9 @@ export interface HostNode {
   dispatchEvent(event: Event): boolean
   click(): void
   focus(): void
+  blur(): void
+  contains(other: HostNode | null): boolean
+  readonly parentElement: HostNode | null
   scrollIntoView(): void
   querySelectorAll(selector: string): HostNode[]
   querySelector(selector: string): HostNode | null
@@ -70,6 +73,9 @@ const node = (tag: string, text = ''): HostNode => {
     const descriptor = Object.getOwnPropertyDescriptor(document, 'activeElement')
     if (descriptor?.writable) (document as any).activeElement = this
   } this.dispatchEvent(new Event('focus')); this.dispatchEvent(new Event('focusin', { bubbles: true })) },
+  blur() { this.focused = false; if (typeof document !== 'undefined' && (document as any).activeElement === this) (document as any).activeElement = null },
+  contains(other) { for (let el = other; el; el = el.parent) if (el === this) return true; return false },
+  get parentElement() { return this.parent },
   scrollIntoView() {},
   querySelector(selector) {
     return this.children.flatMap(descendants).find(el => selector.startsWith('.')

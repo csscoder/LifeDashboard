@@ -33,6 +33,16 @@ export function dayKey(epochMs: number, zone: string | null = null): string {
   return `${year}-${pad(month)}-${pad(day)}`
 }
 
+/** Hours and minutes of `iso` on the wall clock of `zone`; the OS time zone for null or a zone this browser does not know. */
+export function clockTime(iso: string, zone: string | null, locale?: string): string {
+  const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
+  try {
+    return new Date(iso).toLocaleTimeString(locale, zone === null ? options : { ...options, timeZone: zone })
+  } catch {
+    return new Date(iso).toLocaleTimeString(locale, options)
+  }
+}
+
 /** Milliseconds to the next midnight on the wall clock of `zone`; off by the shift on a daylight saving day. */
 export function msToMidnight(epochMs: number, zone: string | null): number {
   const { h, m, s } = wallTime(epochMs, zone)

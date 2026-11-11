@@ -4,7 +4,7 @@ import { FieldRoot } from 'reka-ui'
 import type { FocusSession } from '@lifedashboard/contracts/focus'
 import { SPACE_COLORS, type SpaceColor } from '@lifedashboard/contracts/space'
 import { api } from '../../../api'
-import { dayKey, focusZone } from '../../../focus/engine'
+import { clockTime, dayKey, focusZone } from '../../../focus/engine'
 import { focusStore } from '../../../focus/store'
 import UiButton from '../../../ui/UiButton.vue'
 import UiTextField from '../../../ui/UiTextField.vue'
@@ -34,7 +34,7 @@ const shareMax = computed(() => Math.max(1, ...shares.value.map(({ minutes }) =>
 const todays = computed(() => todaySessions(sessions.value, today.value))
 
 const hue = (color: SpaceColor | null) => (color ? `oklch(0.7 0.15 ${SPACE_COLORS[color]})` : 'var(--ld-text-muted)')
-const clock = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+const clock = (iso: string) => clockTime(iso, focusZone(state.settings))
 const projectOf = (id: string | null) => state.projects.find((project) => project.id === id)
 
 // Bumped by every load: an older answer is ignored.
@@ -63,6 +63,14 @@ onUnmounted(() => window.removeEventListener('resize', anchor))
 async function patch(id: string, change: { name?: string; color?: SpaceColor; archived?: boolean }) {
   const result = await focusStore.updateProject(id, change)
   errors.value = { ...errors.value, [id]: result.ok ? '' : result.error }
+}
+
+// WebKit restores focus to the widget with a visible ring even after a mouse click, which keeps its corner buttons up.
+// A click from the keyboard has detail 0 and keeps the restored focus.
+function closeByButton(event: MouseEvent) {
+  dialog.value?.close()
+  const back = document.activeElement as HTMLElement | null
+  if (event.detail > 0 && dialog.value?.parentElement?.contains(back)) back?.blur()
 }
 
 watch(
@@ -155,7 +163,7 @@ watch(
       </div>
     </template>
 
-    <div class="focus-stats__footer"><UiButton @click="open = false">Close</UiButton></div>
+    <div class="focus-stats__footer"><UiButton @click="closeByButton">Close</UiButton></div>
   </dialog>
 </template>
 

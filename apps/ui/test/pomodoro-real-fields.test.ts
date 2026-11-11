@@ -24,6 +24,18 @@ const TaskPicker = compileSfc(new URL('../app/widgets/builtin/pomodoro/TaskPicke
   '../../../ui/UiTextField.vue': UiTextField,
 })
 
+const Dialog = compileSfc(new URL('../app/widgets/builtin/pomodoro/FocusStatsDialog.vue', import.meta.url), {
+  'reka-ui': reka,
+  '@lifedashboard/contracts/space': { nextColor, SPACE_COLORS },
+  '../../../api': { api: { focusSessions: async () => ({ ok: true, data: [] }) } },
+  '../../../focus/engine': { dayKey: () => '2026-10-29', focusZone: () => null },
+  '../../../focus/store': { focusStore: { state: Vue.reactive({ settings: { dailyGoal: 8 }, projects: [{ id: 'p1', name: 'Home', color: 'blue', archivedAt: null }] }), updateProject: async () => ({ ok: true }) } },
+  '../../../ui/UiButton.vue': Vue.defineComponent({ setup: (_, { attrs, slots }) => () => Vue.h('button', attrs, slots.default?.()) }),
+  '../../../ui/UiTextField.vue': UiTextField,
+  './stats': statsModule,
+  '../../widget-anchor': { anchoredBox: () => ({}) },
+})
+
 describe('pomodoro text fields with the real UiTextField', () => {
   it('the task picker mounts its label and project name inputs', async () => {
     const store = { state: Vue.reactive({ run: { label: null, projectId: null }, projects: [], recentLabels: [] }), setTask: () => null, createProject: async () => ({ ok: true }) }
@@ -36,20 +48,38 @@ describe('pomodoro text fields with the real UiTextField', () => {
   })
 
   it('the statistics dialog mounts the project name inputs', async () => {
-    const Dialog = compileSfc(new URL('../app/widgets/builtin/pomodoro/FocusStatsDialog.vue', import.meta.url), {
-      'reka-ui': reka,
-      '@lifedashboard/contracts/space': { nextColor, SPACE_COLORS },
-      '../../../api': { api: {} },
-      '../../../focus/engine': { dayKey: () => '2026-10-29', focusZone: () => null },
-      '../../../focus/store': { focusStore: { state: Vue.reactive({ settings: { dailyGoal: 8 }, projects: [{ id: 'p1', name: 'Home', color: 'blue', archivedAt: null }] }), updateProject: async () => ({ ok: true }) } },
-      '../../../ui/UiButton.vue': Vue.defineComponent({ setup: (_, { attrs, slots }) => () => Vue.h('button', attrs, slots.default?.()) }),
-      '../../../ui/UiTextField.vue': UiTextField,
-      './stats': statsModule,
-      '../../widget-anchor': { anchoredBox: () => ({}) },
-    })
     const ui = mountComponent(Dialog, { open: false }, [])
     ui.button('Projects').click()
     await Vue.nextTick()
     expect(ui.nodes().some((el) => el.tag === 'input' && el.props['aria-label'] === 'Name of Home')).toBe(true)
   })
 })
+
+describe('closing the pomodoro statistics dialog', () => {
+  // WebKit hands focus back to the widget with a visible ring even after a mouse click; the ring keeps the corner buttons up.
+  async function closeWith(detail: number) {
+    vi.stubGlobal('document', { activeElement: null })
+    const ui = mountComponent(Dialog, { open: false }, [])
+    const box = ui.nodes().find((el) => el.tag === 'dialog')!
+    const tile = box.parent!
+    ui.props.open = true
+    await Vue.nextTick()
+    tile.focus() // what the browser restores on close
+    ui.button('Close').dispatchEvent(Object.assign(new Event('click', { bubbles: true }), { detail }))
+    await Vue.nextTick()
+    return { box, tile }
+  }
+
+  it('a mouse click on Close leaves no focus inside the widget', async () => {
+    const { box, tile } = await closeWith(1)
+    expect(box.open).toBe(false)
+    expect(tile.focused).toBe(false)
+  })
+
+  it('Close pressed from the keyboard keeps the restored focus', async () => {
+    const { box, tile } = await closeWith(0)
+    expect(box.open).toBe(false)
+    expect(tile.focused).toBe(true)
+  })
+})
+
