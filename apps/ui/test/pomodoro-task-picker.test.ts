@@ -25,15 +25,15 @@ const ComboboxInput = Vue.defineComponent({
 })
 const ComboboxItem = Vue.defineComponent({ props: ['value'], setup: (props, { slots }) => () => Vue.h('option', { value: props.value }, slots.default?.()) })
 const passAttrs = (tag: string) => Vue.defineComponent({ setup: (_, { attrs, slots }) => () => Vue.h(tag, attrs, slots.default?.()) })
-const Select = Vue.defineComponent({ props: ['modelValue', 'options'], setup: (props, { attrs }) => () => Vue.h('ui-select', { ...attrs, options: props.options }) })
+const Select = Vue.defineComponent({ props: ['modelValue', 'options'], setup: (props, { attrs }) => () => Vue.h('ui-select', { ...attrs, value: props.modelValue, options: props.options }) })
 const component = compileSfc(new URL('../app/widgets/builtin/pomodoro/TaskPicker.vue', import.meta.url), {
   'reka-ui': {
     FieldRoot: pass('field'),
-    PopoverRoot: Vue.defineComponent({ emits: ['update:open'], setup: (_, { emit, slots }) => () => Vue.h('popover', { show: () => emit('update:open', true) }, slots.default?.()) }),
+    PopoverRoot: Vue.defineComponent({ emits: ['update:open'], setup: (_, { emit, slots }) => () => Vue.h('popover', { show: () => emit('update:open', true), hide: () => emit('update:open', false) }, slots.default?.()) }),
     PopoverTrigger: pass('trigger'),
     PopoverPortal: Vue.defineComponent({ props: ['to', 'disabled'], setup: (props, { slots }) => () => Vue.h('portal', { ...props }, slots.default?.()) }),
-    PopoverContent: pass('content'),
-    ComboboxRoot, ComboboxInput, ComboboxItem,
+    PopoverContent: passAttrs('content'),
+    ComboboxRoot, ComboboxInput, ComboboxItem, ComboboxTrigger: passAttrs('combobox-trigger'),
     ComboboxAnchor: passAttrs('anchor'), ComboboxPortal: pass('combobox-portal'), ComboboxContent: pass('list'), ComboboxViewport: pass('viewport'),
   },
   '@lifedashboard/contracts/space': { nextColor, SPACE_COLORS },
@@ -59,8 +59,14 @@ function mount(overrides: Record<string, unknown> = {}) {
   const type = (placeholder: string, value: string) => input(placeholder).props.onInput({ target: { value } })
   const anchor = () => ui.nodes().find((el) => el.tag === 'anchor')!
   const options = () => ui.nodes().filter((el) => el.tag === 'option').map((el) => el.props.value)
-  return { store, ui, input, type, anchor, options }
+  const select = () => ui.nodes().find((el) => el.tag === 'ui-select')!
+  const popover = () => ui.nodes().find((el) => el.tag === 'popover')!
+  const pick = (value: string) => ui.nodes().find((el) => el.tag === 'combobox')!.props.pick(value)
+  return { store, ui, input, type, anchor, options, select, popover, pick }
 }
+const TASK = 'What are you working on?'
+// A real mouse click has detail 1; a click from the keyboard (or the helper's click()) has none.
+const mouseClick = (el: { dispatchEvent(event: Event): boolean }) => el.dispatchEvent(Object.assign(new Event('click', { bubbles: true }), { detail: 1 }))
 const enter = (el: { props: Record<string, any> }) => el.props.onKeydown({ key: 'Enter', preventDefault() {} })
 
 describe('pomodoro task picker', () => {
@@ -76,14 +82,149 @@ describe('pomodoro task picker', () => {
     expect(ui.nodes().find((el) => el.tag === 'portal')!.props.to).toBe(space)
   })
 
-  it('submits a trimmed label', async () => {
+  it('[EC-04][EC-07] Enter with nothing highlighted saves a trimmed label and closes', async () => {
     // Enter reaches the anchor only when no list item is highlighted; Reka stops it otherwise.
     const { store, ui, anchor, type } = mount()
-    type('What are you working on?', '  Refactor grid  ')
+    type(TASK, '  Refactor grid  ')
     await Vue.nextTick()
     enter(anchor())
     expect(store.setTask).toHaveBeenCalledWith('Refactor grid', 'p1')
     expect(ui.events).toEqual([['close']])
+  })
+  it('[EC-01] opens with the saved task and project without saving', async () => {
+    const { store, ui, input, select, popover } = mount()
+    store.state.run.label = 'Review'
+    popover().props.show()
+    await Vue.nextTick()
+    expect(input(TASK).props.value).toBe('Review')
+    expect(select().props.value).toBe('p1')
+    expect(store.setTask).not.toHaveBeenCalled()
+    expect(ui.events).toEqual([])
+  })
+  it('[EC-02] a picked task fills the field and keeps the picker open', async () => {
+    const { store, ui, input, pick } = mount()
+    pick('Review')
+    await Vue.nextTick()
+    expect(input(TASK).props.value).toBe('Review')
+    expect(store.setTask).not.toHaveBeenCalled()
+    expect(ui.events).toEqual([])
+  })
+  it('[EC-03] a chosen project changes the draft only', async () => {
+    const { store, ui, select } = mount()
+    select().props['onUpdate:modelValue']('')
+    await Vue.nextTick()
+    expect(select().props.value).toBe('')
+    expect(store.setTask).not.toHaveBeenCalled()
+    expect(ui.events).toEqual([])
+  })
+  it('[EC-04] Save applies the draft once and closes', async () => {
+    const { store, ui, type, pick, select } = mount()
+    type(TASK, 'x')
+    pick('Review')
+    select().props['onUpdate:modelValue']('')
+    await Vue.nextTick()
+    ui.button('Save').click()
+    expect(store.setTask).toHaveBeenCalledTimes(1)
+    expect(store.setTask).toHaveBeenCalledWith('Review', null)
+    expect(ui.events).toEqual([['close']])
+  })
+  it('[EC-05] Save with a blank task saves no label', async () => {
+    const { store, ui, type } = mount()
+    type(TASK, '   ')
+    await Vue.nextTick()
+    ui.button('Save').click()
+    expect(store.setTask).toHaveBeenCalledWith(null, 'p1')
+  })
+  it('[EC-08] Clear empties the form without saving; Save then clears the task', async () => {
+    const { store, ui, input, select, type } = mount({ setTask: vi.fn().mockReturnValueOnce('label must not contain control or hidden characters').mockReturnValue(null) })
+    type(TASK, 'x')
+    await Vue.nextTick()
+    ui.button('Save').click()
+    await Vue.nextTick()
+    expect(ui.text()).toContain('label must not contain control or hidden characters')
+    ui.button('Clear').click()
+    await Vue.nextTick()
+    expect(input(TASK).props.value).toBe('')
+    expect(select().props.value).toBe('')
+    expect(ui.text()).not.toContain('label must not contain')
+    expect(store.setTask).toHaveBeenCalledTimes(1)
+    expect(ui.events).toEqual([])
+    ui.button('Save').click()
+    expect(store.setTask).toHaveBeenLastCalledWith(null, null)
+  })
+  it('[EC-09] closing without Save keeps nothing of the draft', async () => {
+    const { store, ui, input, select, type, popover } = mount()
+    store.state.run.label = 'Review'
+    popover().props.show()
+    await Vue.nextTick()
+    type(TASK, 'Draft')
+    select().props['onUpdate:modelValue']('')
+    popover().props.hide()
+    popover().props.show()
+    await Vue.nextTick()
+    expect(store.setTask).not.toHaveBeenCalled()
+    expect(input(TASK).props.value).toBe('Review')
+    expect(select().props.value).toBe('p1')
+  })
+  it('[EC-10] an arrow button opens the list of recent tasks', () => {
+    const { ui } = mount()
+    const trigger = ui.nodes().find((el) => el.tag === 'combobox-trigger')!
+    expect(trigger.props['aria-label']).toBe('Show recent tasks')
+    expect(trigger.parent!.tag).toBe('anchor')
+  })
+  it('[EC-11] a clear button shows for a non-empty field and empties it', async () => {
+    const { ui, input, type } = mount()
+    expect(ui.button('Clear task')).toBeUndefined()
+    type(TASK, 'Draft')
+    await Vue.nextTick()
+    ui.button('Clear task').click()
+    await Vue.nextTick()
+    expect(input(TASK).props.value).toBe('')
+    expect(ui.button('Clear task')).toBeUndefined()
+  })
+  it('[EC-14] Save waits while a project is created', async () => {
+    let finish!: (value: unknown) => void
+    const { store, ui, type } = mount({ createProject: vi.fn(() => new Promise((resolve) => { finish = resolve })) })
+    ui.button('+ New project').click()
+    await Vue.nextTick()
+    type('Project name', 'Work')
+    await Vue.nextTick()
+    ui.button('Add').click()
+    await Vue.nextTick()
+    expect(ui.button('Save').props.disabled).toBe(true)
+    finish({ ok: true, project: { id: 'new' } })
+    await vi.waitFor(() => expect(ui.button('Save').props.disabled).toBe(false))
+    expect(store.setTask).not.toHaveBeenCalled()
+  })
+  it('[EC-18] Save ignores a project name that was never added', async () => {
+    const { store, ui, type } = mount()
+    ui.button('+ New project').click()
+    await Vue.nextTick()
+    type('Project name', 'Work')
+    await Vue.nextTick()
+    ui.button('Save').click()
+    expect(store.createProject).not.toHaveBeenCalled()
+    expect(store.setTask).toHaveBeenCalledWith(null, 'p1')
+  })
+  it('[EC-19] a mouse Save leaves focus off the task button; Enter and Escape return it', async () => {
+    const autoFocus = () => {
+      const event = { preventDefault: vi.fn() }
+      ui.nodes().find((el) => el.tag === 'content')!.props.onCloseAutoFocus(event)
+      return event.preventDefault
+    }
+    const { ui, anchor, popover } = mount()
+    popover().props.show()
+    await Vue.nextTick()
+    mouseClick(ui.button('Save'))
+    expect(autoFocus()).toHaveBeenCalled()
+    popover().props.show()
+    await Vue.nextTick()
+    enter(anchor())
+    expect(autoFocus()).not.toHaveBeenCalled()
+    popover().props.show()
+    await Vue.nextTick()
+    popover().props.hide()
+    expect(autoFocus()).not.toHaveBeenCalled()
   })
   it('lists the 10 most recent tasks in the dropdown, not as buttons, and searches all of them', async () => {
     const { ui, type, options } = mount()
@@ -107,22 +248,21 @@ describe('pomodoro task picker', () => {
     // Reka highlights before the new list renders; the picker re-highlights the typed text once it has.
     expect(highlightFirstItem).toHaveBeenCalled()
   })
-  it('applies a picked task', () => {
-    const { store, ui } = mount()
-    ui.nodes().find((el) => el.tag === 'combobox')!.props.pick('Review')
-    expect(store.setTask).toHaveBeenCalledWith('Review', 'p1')
-    expect(ui.events).toEqual([['close']])
-  })
-  it('creates a project in the next free colour and assigns it', async () => {
-    const { store, ui, type } = mount()
+  it('[EC-12] creates a project in the next free colour and selects it, saving only on Save', async () => {
+    const { store, ui, type, select } = mount()
     ui.button('+ New project').click()
     await Vue.nextTick()
     expect(ui.button('Add').props.disabled).toBe(true)
     type('Project name', ' LifeDashboard ')
     await Vue.nextTick()
     ui.button('Add').click()
-    await vi.waitFor(() => expect(store.setTask).toHaveBeenCalledWith(null, 'new'))
+    await vi.waitFor(() => expect(select().props.value).toBe('new'))
     expect(store.createProject).toHaveBeenCalledWith('LifeDashboard', nextColor(['violet']))
+    expect(ui.button('+ New project')).toBeDefined()
+    expect(store.setTask).not.toHaveBeenCalled()
+    expect(ui.events).toEqual([])
+    ui.button('Save').click()
+    expect(store.setTask).toHaveBeenCalledWith(null, 'new')
   })
   it('creates a project once while the request runs (Enter, then clicks)', async () => {
     let finish!: (value: unknown) => void
@@ -138,24 +278,7 @@ describe('pomodoro task picker', () => {
     expect(store.createProject).toHaveBeenCalledTimes(1)
     expect(ui.button('Add').props.disabled).toBe(true)
     finish({ ok: true, project: { id: 'new' } })
-    await vi.waitFor(() => expect(store.setTask).toHaveBeenCalledWith(null, 'new'))
-  })
-  it('a rejected assignment after a create never creates the project again', async () => {
-    const { store, ui, type } = mount({ setTask: vi.fn(() => 'label must not contain control or hidden characters') })
-    ui.button('+ New project').click()
-    await Vue.nextTick()
-    type('Project name', 'Work')
-    await Vue.nextTick()
-    ui.button('Add').click()
-    await vi.waitFor(() => expect(ui.text()).toContain('label must not contain control or hidden characters'))
-    ui.button('Add')?.click()
-    await Vue.nextTick()
-    expect(store.createProject).toHaveBeenCalledTimes(1)
-  })
-  it('clears the task', () => {
-    const { store, ui } = mount()
-    ui.button('Clear').click()
-    expect(store.setTask).toHaveBeenCalledWith(null, null)
+    await vi.waitFor(() => expect(ui.button('+ New project')).toBeDefined())
   })
   it('limits the label and the project name', async () => {
     const { ui, input } = mount()
@@ -168,7 +291,7 @@ describe('pomodoro task picker', () => {
     const { ui } = mount()
     expect(ui.nodes().find((el) => el.tag === 'ui-select')!.props.options.map((o: any) => o.label)).toEqual(['No project', 'Home'])
   })
-  it('shows a rejected label and stays open', async () => {
+  it('[EC-06] shows a rejected label and stays open', async () => {
     const { ui, anchor, type } = mount({ setTask: vi.fn(() => 'label must not contain control or hidden characters') })
     type('What are you working on?', 'x')
     enter(anchor())
@@ -176,14 +299,15 @@ describe('pomodoro task picker', () => {
     expect(ui.text()).toContain('label must not contain control or hidden characters')
     expect(ui.events).toEqual([])
   })
-  it('shows a project error without assigning', async () => {
-    const { store, ui, type } = mount({ createProject: vi.fn(async () => ({ ok: false, error: 'name must be 1..40 characters' })) })
+  it('[EC-13] shows a project error without changing the project', async () => {
+    const { store, ui, type, select } = mount({ createProject: vi.fn(async () => ({ ok: false, error: 'name must be 1..40 characters' })) })
     ui.button('+ New project').click()
     await Vue.nextTick()
     type('Project name', 'x')
     await Vue.nextTick()
     ui.button('Add').click()
     await vi.waitFor(() => expect(ui.text()).toContain('name must be 1..40 characters'))
+    expect(select().props.value).toBe('p1')
     expect(store.setTask).not.toHaveBeenCalled()
   })
 })
