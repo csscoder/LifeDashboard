@@ -295,11 +295,10 @@ function onKey(event: KeyboardEvent) {
   opacity: 0;
   transition: opacity var(--ld-duration-fast) var(--ld-ease-standard);
 }
-.pomodoro:hover .pomodoro__controls,
-.pomodoro:focus-within .pomodoro__controls { opacity: 1; }
+/* :focus-visible, not :focus-within: the tile is focusable, so a click would keep the buttons up after the pointer left. */
+.pomodoro:is(:hover, :focus-visible, :has(:focus-visible)) .pomodoro__controls { opacity: 1; }
 .pomodoro__stats { position: absolute; top: 0.25rem; right: 0.25rem; opacity: 0; transition: opacity var(--ld-duration-fast) var(--ld-ease-standard); }
-.pomodoro:hover .pomodoro__stats,
-.pomodoro:focus-within .pomodoro__stats { opacity: 1; }
+.pomodoro:is(:hover, :focus-visible, :has(:focus-visible)) .pomodoro__stats { opacity: 1; }
 
 .pomodoro__controls button,
 .pomodoro__stats,

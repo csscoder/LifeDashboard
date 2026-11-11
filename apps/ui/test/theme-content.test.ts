@@ -197,3 +197,18 @@ it('puts the Pomodoro task on the tomato above the centred clock, with sleeping 
   expect(template.indexOf('class="pomodoro__label"')).toBeGreaterThan(template.indexOf('class="pomodoro__center"'))
   expect(template).toContain('class="pomodoro__zzz" aria-hidden="true"')
 })
+it('reveals the Pomodoro corner buttons on hover or keyboard focus, not after a mouse click', () => {
+  // The tile is focusable: :focus-within would keep the buttons up after a click until focus moved elsewhere.
+  const { descriptor } = parse(readFileSync(new URL('../app/widgets/builtin/pomodoro/Pomodoro.vue', import.meta.url), 'utf8'))
+  const css = postcss.parse(descriptor.styles.map(style => style.content).join('\n'))
+  const revealing: string[] = []
+  css.walkRules(rule => {
+    if (/pomodoro__(controls|stats)\b/.test(rule.selector) && rule.nodes.some(node => node.type === 'decl' && node.prop === 'opacity' && node.value === '1')) revealing.push(rule.selector)
+  })
+  expect(revealing.length).toBeGreaterThan(0)
+  for (const selector of revealing) {
+    expect(selector).not.toContain(':focus-within')
+    expect(selector).toContain(':hover')
+    expect(selector).toContain(':focus-visible')
+  }
+})
