@@ -379,6 +379,20 @@ describe('focus store', () => {
     expect(onPhaseEnd).toHaveBeenCalledTimes(1)
   })
 
+  it('the first focus of the day starts a new long-break cycle', async () => {
+    const { store } = await loaded({ run: { ...initialRun(S), streak: 3 } })
+    store.start()
+    await vi.advanceTimersByTimeAsync(FOCUS)
+    expect(store.state.run).toMatchObject({ phase: 'short', streak: 1 })
+  })
+
+  it('the long-break cycle continues within a day', async () => {
+    const { store } = await loaded({ run: { ...initialRun(S), streak: 3 } }, [session('done', FOCUS, true)])
+    store.start()
+    await vi.advanceTimersByTimeAsync(FOCUS)
+    expect(store.state.run).toMatchObject({ phase: 'long', streak: 0 })
+  })
+
   it('a deadline timer that fires before the store clock reaches endsAt re-arms', async () => {
     let lag = 0
     const { store, onPhaseEnd } = setup({ run: paused(10_000) }, undefined, () => Date.now() - lag)

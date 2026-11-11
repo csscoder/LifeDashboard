@@ -359,7 +359,9 @@ export function createFocusStore(deps: FocusStoreDeps): FocusStore {
     state,
     status,
     load,
-    start: () => act((run, now) => engine.start(state.settings, run, now, deps.newId)),
+    // The first focus of the day starts a new long-break cycle.
+    start: () => act((run, now) =>
+      engine.start(state.settings, state.today.count === 0 && run.phase === 'focus' ? { ...run, streak: 0 } : run, now, deps.newId)),
     pause: () => act((run, now) => engine.pause(state.settings, run, now, 'user', deps.newId)),
     resume: () => act((run, now) => engine.resume(state.settings, run, now, deps.newId)),
     skip: () => act((run, now) => engine.skip(state.settings, run, now, deps.newId)),
